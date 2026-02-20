@@ -8,5 +8,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
+  if (session.user.mustResetPassword) {
+    redirect('/first-access');
+  }
+
   return <>{children}</>;
 }
