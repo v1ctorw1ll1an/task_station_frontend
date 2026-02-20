@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import Link from 'next/link';
 import { loginSchema, LoginFormData } from '@/lib/schemas/login.schema';
 import { loginAction, LoginActionState } from '@/actions/login.action';
 import { Button } from '@/components/ui/button';
@@ -53,7 +54,15 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Senha</FormLabel>
+              <div className="flex items-center justify-between">
+                <FormLabel>Senha</FormLabel>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                >
+                  Esqueceu a senha?
+                </Link>
+              </div>
               <FormControl>
                 <Input
                   type="password"
