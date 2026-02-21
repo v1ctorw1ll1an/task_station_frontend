@@ -49,5 +49,6 @@ export async function updateCompanyAction(
   }
 
   revalidatePath('/superadmin/empresas');
+  revalidatePath(`/superadmin/empresas/${id}`);
   return { success: true };
 }

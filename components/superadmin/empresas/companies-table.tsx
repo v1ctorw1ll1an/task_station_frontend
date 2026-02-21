@@ -2,7 +2,8 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCallback } from 'react';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { Search, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,9 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { EditCompanyForm } from './edit-company-form';
-import { CompanyActions } from './company-actions';
-
 interface Company {
   id: string;
   legalName: string;
@@ -125,11 +123,12 @@ export function CompaniesTable({ data, total, page, limit }: CompaniesTableProps
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(company.createdAt).toLocaleDateString('pt-BR')}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-1">
-                      <EditCompanyForm company={company} />
-                      <CompanyActions id={company.id} isActive={company.isActive} />
-                    </div>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href={`/superadmin/empresas/${company.id}`}>
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))

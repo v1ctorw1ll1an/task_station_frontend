@@ -46,7 +46,6 @@ export default async function UsuariosPage({ searchParams }: PageProps) {
         total={total}
         page={page}
         limit={limit}
-        currentUserId={session.user.id}
       />
     </div>
   );

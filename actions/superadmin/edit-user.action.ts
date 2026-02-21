@@ -59,5 +59,6 @@ export async function editUserAction(
   }
 
   revalidatePath('/superadmin/usuarios');
+  revalidatePath(`/superadmin/usuarios/${id}`);
   return { success: true };
 }

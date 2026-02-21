@@ -2,7 +2,8 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCallback } from 'react';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { Search, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,9 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { UserActions } from './user-actions';
-import { EditUserForm } from './edit-user-form';
-
 interface User {
   id: string;
   name: string;
@@ -40,10 +38,9 @@ interface UsersTableProps {
   total: number;
   page: number;
   limit: number;
-  currentUserId: string;
 }
 
-export function UsersTable({ data, total, page, limit, currentUserId }: UsersTableProps) {
+export function UsersTable({ data, total, page, limit }: UsersTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -137,24 +134,12 @@ export function UsersTable({ data, total, page, limit, currentUserId }: UsersTab
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(user.createdAt).toLocaleDateString('pt-BR')}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end items-center gap-1">
-                      {user.id !== currentUserId && (
-                        <EditUserForm
-                          user={{
-                            id: user.id,
-                            name: user.name,
-                            email: user.email,
-                            phone: user.phone,
-                          }}
-                        />
-                      )}
-                      <UserActions
-                        id={user.id}
-                        isActive={user.isActive}
-                        isSelf={user.id === currentUserId}
-                      />
-                    </div>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href={`/superadmin/usuarios/${user.id}`}>
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
