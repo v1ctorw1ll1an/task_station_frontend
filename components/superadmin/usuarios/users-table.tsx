@@ -22,6 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { UserActions } from './user-actions';
+import { EditUserForm } from './edit-user-form';
 
 interface User {
   id: string;
@@ -137,7 +138,17 @@ export function UsersTable({ data, total, page, limit, currentUserId }: UsersTab
                     {new Date(user.createdAt).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end">
+                    <div className="flex justify-end items-center gap-1">
+                      {user.id !== currentUserId && (
+                        <EditUserForm
+                          user={{
+                            id: user.id,
+                            name: user.name,
+                            email: user.email,
+                            phone: user.phone,
+                          }}
+                        />
+                      )}
                       <UserActions
                         id={user.id}
                         isActive={user.isActive}
