@@ -7,5 +7,6 @@ export async function logoutAction(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete('access_token');
   cookieStore.delete('user');
+  cookieStore.delete('last_company_id');
   redirect('/login');
 }

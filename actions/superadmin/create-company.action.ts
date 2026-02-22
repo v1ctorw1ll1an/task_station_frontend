@@ -7,6 +7,8 @@ import { createCompanySchema } from '@/lib/schemas/create-company.schema';
 export interface CreateCompanyActionState {
   error?: string;
   success?: boolean;
+  emailSent?: boolean;
+  magicLink?: string | null;
 }
 
 export async function createCompanyAction(
@@ -43,10 +45,11 @@ export async function createCompanyAction(
       const body = await res.json().catch(() => ({}));
       return { error: body.message ?? 'Erro ao criar empresa' };
     }
+
+    const body = await res.json().catch(() => ({})) as { emailSent?: boolean; magicLink?: string | null };
+    revalidatePath('/superadmin/empresas');
+    return { success: true, emailSent: body.emailSent === true, magicLink: body.magicLink ?? null };
   } catch {
     return { error: 'Erro ao conectar com o servidor' };
   }
-
-  revalidatePath('/superadmin/empresas');
-  return { success: true };
 }

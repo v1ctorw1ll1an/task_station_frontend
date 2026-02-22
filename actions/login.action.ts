@@ -65,9 +65,5 @@ export async function loginAction(
     redirect('/first-access');
   }
 
-  if (data.user.isSuperuser) {
-    redirect('/superadmin/empresas');
-  }
-
   redirect('/dashboard');
 }

@@ -14,6 +14,7 @@ export async function resetPasswordAction(
   formData: FormData,
 ): Promise<ResetPasswordActionState> {
   const raw = {
+    name: formData.get('name') || undefined,
     newPassword: formData.get('newPassword'),
     confirmPassword: formData.get('confirmPassword'),
   };
@@ -40,6 +41,7 @@ export async function resetPasswordAction(
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
+        name: parsed.data.name || undefined,
         newPassword: parsed.data.newPassword,
         confirmPassword: parsed.data.confirmPassword,
       }),

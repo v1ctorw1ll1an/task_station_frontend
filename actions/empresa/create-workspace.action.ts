@@ -22,7 +22,6 @@ export async function createWorkspaceAction(
   const raw = {
     name: formData.get('name'),
     description: formData.get('description') || undefined,
-    adminName: formData.get('adminName'),
     adminEmail: formData.get('adminEmail'),
   };
 
