@@ -67,11 +67,6 @@ export function CreateWorkspaceForm({ companyId }: CreateWorkspaceFormProps) {
             </p>
 
             <div className="space-y-2">
-              <Label htmlFor="adminName">Nome completo</Label>
-              <Input id="adminName" name="adminName" placeholder="Nome do administrador" required />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="adminEmail">Email</Label>
               <Input
                 id="adminEmail"
@@ -80,6 +75,9 @@ export function CreateWorkspaceForm({ companyId }: CreateWorkspaceFormProps) {
                 placeholder="admin@empresa.com"
                 required
               />
+              <p className="text-xs text-muted-foreground">
+                Se o email não estiver cadastrado, o usuário receberá um convite por email.
+              </p>
             </div>
           </div>
 

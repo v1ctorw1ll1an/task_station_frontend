@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation';
+import { getSession } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoginForm } from '@/components/auth/login-form';
 
@@ -6,6 +8,11 @@ interface LoginPageProps {
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const session = await getSession();
+  if (session && !session.user.mustResetPassword) {
+    redirect('/dashboard');
+  }
+
   const { reset } = await searchParams;
 
   return (

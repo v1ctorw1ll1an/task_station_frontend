@@ -9,14 +9,16 @@ import { Separator } from '@/components/ui/separator';
 interface EmpresaSidebarProps {
   companyId: string;
   companyName: string;
+  role: string;
 }
 
-export function EmpresaSidebar({ companyId, companyName }: EmpresaSidebarProps) {
+export function EmpresaSidebar({ companyId, companyName, role }: EmpresaSidebarProps) {
   const pathname = usePathname();
+  const isAdmin = role === 'admin';
 
   const navItems = [
     { href: `/empresa/${companyId}/workspaces`, label: 'Workspaces', icon: LayoutGrid },
-    { href: `/empresa/${companyId}/membros`, label: 'Membros', icon: Users },
+    ...(isAdmin ? [{ href: `/empresa/${companyId}/membros`, label: 'Membros', icon: Users }] : []),
   ];
 
   return (

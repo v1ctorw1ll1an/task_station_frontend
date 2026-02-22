@@ -14,6 +14,13 @@ export default async function SuperadminLayout({ children }: { children: React.R
     redirect('/dashboard');
   }
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const res = await fetch(`${apiUrl}/api/v1/me/empresas`, {
+    headers: { Authorization: `Bearer ${session.token}` },
+    cache: 'no-store',
+  });
+  const companies: unknown[] = res.ok ? await res.json() : [];
+
   return (
     <div className="flex min-h-screen">
       <SuperadminSidebar />
@@ -22,7 +29,7 @@ export default async function SuperadminLayout({ children }: { children: React.R
           <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
             Painel do Superusuário
           </span>
-          <UserMenu email={session.user.email} />
+          <UserMenu email={session.user.email} hasCompanies={companies.length > 0} />
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>

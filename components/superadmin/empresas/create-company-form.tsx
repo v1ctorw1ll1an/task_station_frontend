@@ -4,7 +4,7 @@ import { useEffect, useActionState, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { PlusCircle, Info, Mail, KeyRound, UserCog } from 'lucide-react';
+import { PlusCircle, Info, Mail, Link2, Check, UserCog } from 'lucide-react';
 import { createCompanySchema, CreateCompanyFormData } from '@/lib/schemas/create-company.schema';
 import { createCompanyAction, CreateCompanyActionState } from '@/actions/superadmin/create-company.action';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,8 @@ const initialState: CreateCompanyActionState = {};
 export function CreateCompanyForm() {
   const [open, setOpen] = useState(false);
   const [createdAdminEmail, setCreatedAdminEmail] = useState<string | null>(null);
+  const [magicLink, setMagicLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [state, formAction, isPending] = useActionState(createCompanyAction, initialState);
   const router = useRouter();
 
@@ -41,14 +43,24 @@ export function CreateCompanyForm() {
   useEffect(() => {
     if (state.success) {
       setCreatedAdminEmail(form.getValues('adminEmail'));
+      setMagicLink(state.magicLink ?? null);
       form.reset();
       router.refresh();
     }
-  }, [state.success, form, router]);
+  }, [state.success, state.magicLink, form, router]);
 
   function handleClose() {
     setOpen(false);
     setCreatedAdminEmail(null);
+    setMagicLink(null);
+    setCopied(false);
+  }
+
+  function handleCopy() {
+    if (!magicLink) return;
+    void navigator.clipboard.writeText(magicLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
@@ -69,31 +81,59 @@ export function CreateCompanyForm() {
         {createdAdminEmail ? (
           <div className="space-y-4">
             <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <KeyRound className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                <p className="text-sm text-muted-foreground">
-                  Uma <strong className="text-foreground">senha temporária foi gerada automaticamente</strong> pelo sistema e enviada ao email do administrador. A senha nunca é armazenada em texto simples — apenas seu hash é salvo no banco de dados.
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <Mail className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                <p className="text-sm text-muted-foreground">
-                  O email de boas-vindas com as credenciais está sendo enviado para{' '}
-                  <strong className="text-foreground">{createdAdminEmail}</strong>. A entrega pode levar alguns minutos.
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <UserCog className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                <p className="text-sm text-muted-foreground">
-                  Caso o email não seja recebido, você pode <strong className="text-foreground">alterar a senha manualmente</strong> pelo painel de usuários e repassá-la ao administrador. O usuário será obrigado a redefinir a senha no primeiro acesso.
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <Info className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
-                <p className="text-sm text-blue-600 dark:text-blue-400">
-                  O administrador só conseguirá acessar o sistema após redefinir a senha temporária. Esse comportamento é obrigatório e não pode ser ignorado.
-                </p>
-              </div>
+              {state.emailSent && magicLink ? (
+                <>
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                    <p className="text-sm text-muted-foreground">
+                      Um link de primeiro acesso foi enviado para{' '}
+                      <strong className="text-foreground">{createdAdminEmail}</strong>. A entrega pode levar alguns minutos.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Link2 className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                    <p className="text-sm text-muted-foreground">
+                      Caso o email não chegue, copie o link abaixo e repasse diretamente ao administrador:
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 rounded bg-muted px-2 py-1 text-xs truncate">
+                      {magicLink}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={handleCopy}
+                    >
+                      {copied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+                      {copied ? 'Copiado!' : 'Copiar'}
+                    </Button>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Info className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      O link expira em 7 dias e só pode ser usado uma vez. O administrador precisará definir nome e senha ao acessá-lo.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start gap-3">
+                    <UserCog className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                    <p className="text-sm text-muted-foreground">
+                      O usuário <strong className="text-foreground">{createdAdminEmail}</strong> já existia no sistema e foi vinculado como administrador da nova empresa.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Info className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      Nenhum email foi enviado — o usuário já possui acesso ao sistema com suas credenciais atuais.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex justify-end pt-2">
@@ -137,7 +177,7 @@ export function CreateCompanyForm() {
                     name="adminName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome</FormLabel>
+                        <FormLabel>Nome <span className="text-muted-foreground font-normal text-xs">(ignorado se o email já existe no sistema)</span></FormLabel>
                         <FormControl>
                           <Input placeholder="João Silva" {...field} />
                         </FormControl>

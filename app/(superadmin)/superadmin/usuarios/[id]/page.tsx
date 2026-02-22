@@ -1,10 +1,12 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Building2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { UserDetailForm } from '@/components/superadmin/usuarios/user-detail-form';
+import { UserCredentialActions } from '@/components/superadmin/usuarios/user-credential-actions';
+import { UserCompanyMemberships } from '@/components/superadmin/usuarios/user-company-memberships';
 
 interface Membership {
   id: string;
@@ -117,48 +119,37 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
 
       <Separator />
 
+      {/* Credenciais — apenas para outros usuários */}
+      {!isSelf && (
+        <>
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-sm font-semibold">Credenciais de acesso</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Invalide as credenciais do usuário para forçar um novo acesso via magic link. Use
+                também para obter o link de primeiro acesso de usuários recém-criados.
+              </p>
+            </div>
+            <UserCredentialActions
+              userId={user.id}
+              mustResetPassword={user.mustResetPassword}
+            />
+          </div>
+
+          <Separator />
+        </>
+      )}
+
       {/* Empresas vinculadas */}
       <div className="space-y-4">
         <div>
           <h2 className="text-sm font-semibold">Empresas vinculadas</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Empresas das quais este usuário é membro.
+            Empresas das quais este usuário é membro. Administradores podem ter o papel revogado
+            pelo superadmin.
           </p>
         </div>
-
-        {companyMemberships.length === 0 ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-            <Building2 className="h-4 w-4" />
-            Este usuário não está vinculado a nenhuma empresa.
-          </div>
-        ) : (
-          <div className="rounded-md border divide-y">
-            {companyMemberships.map((m) => (
-              <div key={m.id} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <Link
-                    href={`/superadmin/empresas/${m.company!.id}`}
-                    className="text-sm font-medium hover:underline"
-                  >
-                    {m.company!.legalName}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">
-                    CNPJ: {m.company!.taxId} · Vínculo desde{' '}
-                    {new Date(m.createdAt).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    {m.role === 'admin' ? 'Administrador' : m.role}
-                  </Badge>
-                  <Badge variant={m.company!.isActive ? 'default' : 'secondary'} className="text-xs">
-                    {m.company!.isActive ? 'Empresa ativa' : 'Empresa inativa'}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <UserCompanyMemberships userId={user.id} memberships={companyMemberships} />
       </div>
     </div>
   );

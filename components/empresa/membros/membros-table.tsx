@@ -2,7 +2,14 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCallback, useState, useTransition } from 'react';
-import { Search, ChevronLeft, ChevronRight, UserX, UserCheck, ShieldPlus, ShieldMinus } from 'lucide-react';
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  UserX,
+  UserCheck,
+  Trash2,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,13 +40,21 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { updateMemberAction } from '@/actions/empresa/update-member.action';
-import { promoteAdminAction } from '@/actions/empresa/promote-admin.action';
-import { revokeAdminAction } from '@/actions/empresa/revoke-admin.action';
+import { removeMemberAction } from '@/actions/empresa/remove-member.action';
+import { RolesModal } from './roles-modal';
+
+interface WorkspaceRole {
+  workspaceId: string;
+  workspaceName: string;
+  role: string;
+  membershipId: string;
+}
 
 interface Member {
   membershipId: string;
   role: string;
   memberSince: string;
+  workspaceRoles: WorkspaceRole[];
   user: {
     id: string;
     name: string;
@@ -99,25 +114,14 @@ export function MembrosTable({
     });
   }
 
-  function handlePromote(userId: string) {
+  function handleRemove(userId: string) {
     setActionError(null);
     startTransition(async () => {
-      const result = await promoteAdminAction(companyId, userId);
+      const result = await removeMemberAction(companyId, userId);
       if (result?.error) setActionError(result.error);
       else router.refresh();
     });
   }
-
-  function handleRevoke(userId: string) {
-    setActionError(null);
-    startTransition(async () => {
-      const result = await revokeAdminAction(companyId, userId);
-      if (result?.error) setActionError(result.error);
-      else router.refresh();
-    });
-  }
-
-  const isAdmin = (role: string) => role === 'admin';
 
   return (
     <div className="space-y-4">
@@ -160,7 +164,7 @@ export function MembrosTable({
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Papel</TableHead>
+              <TableHead>Papéis adicionais</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Membro desde</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -176,85 +180,56 @@ export function MembrosTable({
             ) : (
               data.map((member) => {
                 const isSelf = member.user.id === currentUserId;
-                const admin = isAdmin(member.role ?? '');
+                const isCompanyAdmin = member.role === 'admin';
+                const wsAdmins =
+                  member.workspaceRoles?.filter((w) => w.role === 'workspace_admin') ?? [];
+
                 return (
                   <TableRow key={member.membershipId}>
                     <TableCell className="font-medium">{member.user.name}</TableCell>
-                    <TableCell className="text-sm">{member.user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={admin ? 'default' : 'secondary'} className="text-xs">
-                        {admin ? 'Administrador' : 'Membro'}
-                      </Badge>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {member.user.email}
                     </TableCell>
+
+                    {/* Coluna papéis adicionais */}
                     <TableCell>
-                      <Badge variant={member.user.isActive ? 'outline' : 'secondary'} className="text-xs">
+                      {isCompanyAdmin ? (
+                        <Badge className="text-xs">Admin da empresa</Badge>
+                      ) : wsAdmins.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {wsAdmins.map((ws) => (
+                            <Badge key={ws.workspaceId} variant="outline" className="text-xs">
+                              Admin: {ws.workspaceName}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      <Badge
+                        variant={member.user.isActive ? 'outline' : 'secondary'}
+                        className="text-xs"
+                      >
                         {member.user.isActive ? 'Ativo' : 'Inativo'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(member.memberSince).toLocaleDateString('pt-BR')}
                     </TableCell>
+
                     <TableCell className="text-right">
-                      {!isSelf && (
+                      {!isSelf && !isCompanyAdmin && (
                         <div className="flex items-center justify-end gap-1">
-                          {/* Promover / Revogar admin */}
-                          {!admin ? (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={pending}
-                                  title="Promover a administrador"
-                                >
-                                  <ShieldPlus className="h-4 w-4 text-blue-500" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Promover a administrador?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    <strong>{member.user.name}</strong> passará a ter acesso de
-                                    administração nesta empresa.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handlePromote(member.user.id)}>
-                                    Promover
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          ) : (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={pending}
-                                  title="Revogar papel de administrador"
-                                >
-                                  <ShieldMinus className="h-4 w-4 text-orange-500" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Revogar papel de administrador?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    <strong>{member.user.name}</strong> perderá o acesso de
-                                    administração nesta empresa.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleRevoke(member.user.id)}>
-                                    Revogar
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
+                          {/* Gerenciar papéis */}
+                          <RolesModal
+                            companyId={companyId}
+                            userId={member.user.id}
+                            userName={member.user.name}
+                            onChanged={() => router.refresh()}
+                          />
 
                           {/* Ativar / Inativar usuário */}
                           <AlertDialog>
@@ -263,7 +238,9 @@ export function MembrosTable({
                                 variant="ghost"
                                 size="sm"
                                 disabled={pending}
-                                title={member.user.isActive ? 'Inativar usuário' : 'Reativar usuário'}
+                                title={
+                                  member.user.isActive ? 'Inativar usuário' : 'Reativar usuário'
+                                }
                               >
                                 {member.user.isActive ? (
                                   <UserX className="h-4 w-4 text-destructive" />
@@ -275,7 +252,9 @@ export function MembrosTable({
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>
-                                  {member.user.isActive ? 'Inativar usuário?' : 'Reativar usuário?'}
+                                  {member.user.isActive
+                                    ? 'Inativar usuário?'
+                                    : 'Reativar usuário?'}
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
                                   {member.user.isActive
@@ -291,6 +270,38 @@ export function MembrosTable({
                                   }
                                 >
                                   Confirmar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          {/* Remover da empresa */}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={pending}
+                                title="Remover da empresa"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Remover da empresa?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  <strong>{member.user.name}</strong> será removido desta empresa e
+                                  de todos os seus workspaces. A conta do usuário não será excluída.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleRemove(member.user.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Remover
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>

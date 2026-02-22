@@ -3,8 +3,14 @@
 import { useActionState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { resetPasswordSchema, ResetPasswordFormData } from '@/lib/schemas/reset-password.schema';
-import { resetPasswordAction, ResetPasswordActionState } from '@/actions/reset-password.action';
+import {
+  consumeFirstAccessSchema,
+  ConsumeFirstAccessFormData,
+} from '@/lib/schemas/consume-first-access.schema';
+import {
+  consumeFirstAccessAction,
+  ConsumeFirstAccessActionState,
+} from '@/actions/consume-first-access.action';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,38 +22,42 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 
-interface ResetPasswordFormProps {
-  showNameField?: boolean;
+interface MagicLinkFirstAccessProps {
+  token: string;
+  email: string;
 }
 
-const initialState: ResetPasswordActionState = {};
+const initialState: ConsumeFirstAccessActionState = {};
 
-export function ResetPasswordForm({ showNameField = false }: ResetPasswordFormProps) {
-  const [state, formAction, isPending] = useActionState(resetPasswordAction, initialState);
+export function MagicLinkFirstAccess({ token, email }: MagicLinkFirstAccessProps) {
+  const boundAction = consumeFirstAccessAction.bind(null, token);
+  const [state, formAction, isPending] = useActionState(boundAction, initialState);
 
-  const form = useForm<ResetPasswordFormData>({
-    resolver: zodResolver(resetPasswordSchema),
+  const form = useForm<ConsumeFirstAccessFormData>({
+    resolver: zodResolver(consumeFirstAccessSchema),
     defaultValues: { name: '', newPassword: '', confirmPassword: '' },
   });
 
   return (
     <Form {...form}>
       <form action={formAction} className="space-y-4">
-        {showNameField && (
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome completo</FormLabel>
-                <FormControl>
-                  <Input placeholder="Seu nome completo" autoComplete="name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+        <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+          {email}
+        </div>
+
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nome completo</FormLabel>
+              <FormControl>
+                <Input placeholder="Seu nome completo" autoComplete="name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
@@ -87,12 +97,10 @@ export function ResetPasswordForm({ showNameField = false }: ResetPasswordFormPr
           )}
         />
 
-        {state.error && (
-          <p className="text-sm text-destructive">{state.error}</p>
-        )}
+        {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
         <Button type="submit" className="w-full" disabled={isPending}>
-          {isPending ? 'Salvando...' : 'Continuar'}
+          {isPending ? 'Salvando...' : 'Acessar'}
         </Button>
       </form>
     </Form>

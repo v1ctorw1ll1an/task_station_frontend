@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCallback, useState, useTransition } from 'react';
-import { ChevronLeft, ChevronRight, Pencil, PowerOff, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Power, PowerOff, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,6 +41,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useActionState, useEffect } from 'react';
+import { activateWorkspaceAction } from '@/actions/empresa/activate-workspace.action';
 import { deactivateWorkspaceAction } from '@/actions/empresa/deactivate-workspace.action';
 import { deleteWorkspaceAction } from '@/actions/empresa/delete-workspace.action';
 import {
@@ -165,6 +166,15 @@ export function WorkspacesTable({
 
   const totalPages = Math.ceil(total / limit);
 
+  function handleActivate(workspaceId: string) {
+    setActionError(null);
+    startAction(async () => {
+      const result = await activateWorkspaceAction(companyId, workspaceId);
+      if (result?.error) setActionError(result.error);
+      else router.refresh();
+    });
+  }
+
   function handleDeactivate(workspaceId: string) {
     setActionError(null);
     startAction(async () => {
@@ -242,7 +252,7 @@ export function WorkspacesTable({
                     <div className="flex items-center justify-end gap-1">
                       <EditWorkspaceDialog workspace={ws} companyId={companyId} />
 
-                      {ws.isActive && (
+                      {ws.isActive ? (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
@@ -266,6 +276,34 @@ export function WorkspacesTable({
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
                               <AlertDialogAction onClick={() => handleDeactivate(ws.id)}>
                                 Inativar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={actionPending}
+                              title="Reativar workspace"
+                            >
+                              <Power className="h-4 w-4 text-green-600" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Reativar workspace?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                O workspace <strong>{ws.name}</strong> voltará a ficar ativo e seus
+                                membros poderão acessá-lo novamente.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleActivate(ws.id)}>
+                                Reativar
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
