@@ -1,9 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useCallback, useState, useTransition } from 'react';
-import { ArrowRight, ChevronLeft, ChevronRight, Pencil, Power, PowerOff, Trash2 } from 'lucide-react';
+import { useCallback, useState, useTransition, useActionState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Pencil, Power, PowerOff, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,16 +40,15 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useActionState, useEffect } from 'react';
-import { activateWorkspaceAction } from '@/actions/empresa/activate-workspace.action';
-import { deactivateWorkspaceAction } from '@/actions/empresa/deactivate-workspace.action';
-import { deleteWorkspaceAction } from '@/actions/empresa/delete-workspace.action';
+import { activateProjetoAction } from '@/actions/workspace/activate-projeto.action';
+import { deactivateProjetoAction } from '@/actions/workspace/deactivate-projeto.action';
+import { deleteProjetoAction } from '@/actions/workspace/delete-projeto.action';
 import {
-  updateWorkspaceAction,
-  UpdateWorkspaceActionState,
-} from '@/actions/empresa/update-workspace.action';
+  updateProjetoAction,
+  UpdateProjetoActionState,
+} from '@/actions/workspace/update-projeto.action';
 
-interface Workspace {
+interface Projeto {
   id: string;
   name: string;
   description: string | null;
@@ -58,26 +56,27 @@ interface Workspace {
   createdAt: string;
 }
 
-interface WorkspacesTableProps {
-  data: Workspace[];
+interface ProjetosTableProps {
+  data: Projeto[];
   total: number;
   page: number;
   limit: number;
-  companyId: string;
+  workspaceId: string;
+  isAdmin?: boolean;
 }
 
-const initialUpdateState: UpdateWorkspaceActionState = {};
+const initialUpdateState: UpdateProjetoActionState = {};
 
-function EditWorkspaceDialog({
-  workspace,
-  companyId,
+function EditProjetoDialog({
+  projeto,
+  workspaceId,
 }: {
-  workspace: Workspace;
-  companyId: string;
+  projeto: Projeto;
+  workspaceId: string;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const [state, formAction, isPending] = useActionState(updateWorkspaceAction, initialUpdateState);
+  const [state, formAction, isPending] = useActionState(updateProjetoAction, initialUpdateState);
 
   useEffect(() => {
     if (state.success) {
@@ -89,34 +88,34 @@ function EditWorkspaceDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" title="Editar workspace">
+        <Button variant="ghost" size="sm" title="Editar projeto">
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Editar workspace</DialogTitle>
+          <DialogTitle>Editar projeto</DialogTitle>
         </DialogHeader>
         <form action={formAction} className="space-y-4">
-          <input type="hidden" name="companyId" value={companyId} />
-          <input type="hidden" name="workspaceId" value={workspace.id} />
+          <input type="hidden" name="workspaceId" value={workspaceId} />
+          <input type="hidden" name="projectId" value={projeto.id} />
 
           <div className="space-y-2">
-            <Label htmlFor={`name-${workspace.id}`}>Nome</Label>
+            <Label htmlFor={`name-${projeto.id}`}>Nome</Label>
             <Input
-              id={`name-${workspace.id}`}
+              id={`name-${projeto.id}`}
               name="name"
-              defaultValue={workspace.name}
-              placeholder="Nome do workspace"
+              defaultValue={projeto.name}
+              placeholder="Nome do projeto"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`desc-${workspace.id}`}>Descrição</Label>
+            <Label htmlFor={`desc-${projeto.id}`}>Descrição</Label>
             <Input
-              id={`desc-${workspace.id}`}
+              id={`desc-${projeto.id}`}
               name="description"
-              defaultValue={workspace.description ?? ''}
+              defaultValue={projeto.description ?? ''}
               placeholder="Descrição (opcional)"
             />
           </div>
@@ -137,13 +136,14 @@ function EditWorkspaceDialog({
   );
 }
 
-export function WorkspacesTable({
+export function ProjetosTable({
   data,
   total,
   page,
   limit,
-  companyId,
-}: WorkspacesTableProps) {
+  workspaceId,
+  isAdmin = false,
+}: ProjetosTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -167,28 +167,28 @@ export function WorkspacesTable({
 
   const totalPages = Math.ceil(total / limit);
 
-  function handleActivate(workspaceId: string) {
+  function handleActivate(projectId: string) {
     setActionError(null);
     startAction(async () => {
-      const result = await activateWorkspaceAction(companyId, workspaceId);
+      const result = await activateProjetoAction(workspaceId, projectId);
       if (result?.error) setActionError(result.error);
       else router.refresh();
     });
   }
 
-  function handleDeactivate(workspaceId: string) {
+  function handleDeactivate(projectId: string) {
     setActionError(null);
     startAction(async () => {
-      const result = await deactivateWorkspaceAction(companyId, workspaceId);
+      const result = await deactivateProjetoAction(workspaceId, projectId);
       if (result?.error) setActionError(result.error);
       else router.refresh();
     });
   }
 
-  function handleDelete(workspaceId: string) {
+  function handleDelete(projectId: string) {
     setActionError(null);
     startAction(async () => {
-      const result = await deleteWorkspaceAction(companyId, workspaceId);
+      const result = await deleteProjetoAction(workspaceId, projectId);
       if (result?.error) setActionError(result.error);
       else router.refresh();
     });
@@ -196,23 +196,25 @@ export function WorkspacesTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Select
-          defaultValue={searchParams.get('isActive') ?? 'all'}
-          onValueChange={(val) =>
-            updateParams({ isActive: val === 'all' ? undefined : val, page: '1' })
-          }
-        >
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="true">Ativo</SelectItem>
-            <SelectItem value="false">Inativo</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {isAdmin && (
+        <div className="flex items-center gap-3">
+          <Select
+            defaultValue={searchParams.get('isActive') ?? 'all'}
+            onValueChange={(val) =>
+              updateParams({ isActive: val === 'all' ? undefined : val, page: '1' })
+            }
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="true">Ativo</SelectItem>
+              <SelectItem value="false">Inativo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {actionError && <p className="text-sm text-destructive">{actionError}</p>}
 
@@ -224,66 +226,59 @@ export function WorkspacesTable({
               <TableHead>Descrição</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Criado em</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
+              {isAdmin && <TableHead className="text-right">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  Nenhum workspace encontrado.
+                <TableCell colSpan={isAdmin ? 5 : 4} className="text-center text-muted-foreground py-8">
+                  Nenhum projeto encontrado.
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((ws) => (
-                <TableRow key={ws.id}>
-                  <TableCell className="font-medium">{ws.name}</TableCell>
+              data.map((projeto) => (
+                <TableRow key={projeto.id}>
+                  <TableCell className="font-medium">{projeto.name}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {ws.description ?? '—'}
+                    {projeto.description ?? '—'}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={ws.isActive ? 'default' : 'secondary'}>
-                      {ws.isActive ? 'Ativo' : 'Inativo'}
+                    <Badge variant={projeto.isActive ? 'default' : 'secondary'}>
+                      {projeto.isActive ? 'Ativo' : 'Inativo'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {new Date(ws.createdAt).toLocaleDateString('pt-BR')}
+                    {new Date(projeto.createdAt).toLocaleDateString('pt-BR')}
                   </TableCell>
+                  {isAdmin && (
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Link
-                        href={`/workspace/${ws.id}/projetos?wsName=${encodeURIComponent(ws.name)}`}
-                      >
-                        <Button variant="ghost" size="sm" title="Entrar no workspace">
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </Link>
+                      <EditProjetoDialog projeto={projeto} workspaceId={workspaceId} />
 
-                      <EditWorkspaceDialog workspace={ws} companyId={companyId} />
-
-                      {ws.isActive ? (
+                      {projeto.isActive ? (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
                               variant="ghost"
                               size="sm"
                               disabled={actionPending}
-                              title="Inativar workspace"
+                              title="Inativar projeto"
                             >
                               <PowerOff className="h-4 w-4 text-orange-500" />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Inativar workspace?</AlertDialogTitle>
+                              <AlertDialogTitle>Inativar projeto?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                O workspace <strong>{ws.name}</strong> ficará inativo. Membros não
-                                conseguirão acessá-lo. Esta ação pode ser revertida.
+                                O projeto <strong>{projeto.name}</strong> ficará inativo. Esta ação
+                                pode ser revertida.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeactivate(ws.id)}>
+                              <AlertDialogAction onClick={() => handleDeactivate(projeto.id)}>
                                 Inativar
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -296,22 +291,21 @@ export function WorkspacesTable({
                               variant="ghost"
                               size="sm"
                               disabled={actionPending}
-                              title="Reativar workspace"
+                              title="Reativar projeto"
                             >
                               <Power className="h-4 w-4 text-green-600" />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Reativar workspace?</AlertDialogTitle>
+                              <AlertDialogTitle>Reativar projeto?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                O workspace <strong>{ws.name}</strong> voltará a ficar ativo e seus
-                                membros poderão acessá-lo novamente.
+                                O projeto <strong>{projeto.name}</strong> voltará a ficar ativo.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleActivate(ws.id)}>
+                              <AlertDialogAction onClick={() => handleActivate(projeto.id)}>
                                 Reativar
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -325,23 +319,24 @@ export function WorkspacesTable({
                             variant="ghost"
                             size="sm"
                             disabled={actionPending}
-                            title="Excluir workspace"
+                            title="Excluir projeto"
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Excluir workspace permanentemente?</AlertDialogTitle>
+                            <AlertDialogTitle>Excluir projeto permanentemente?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Todos os projetos e tasks do workspace <strong>{ws.name}</strong>{' '}
-                              serão inacessíveis. Esta ação não pode ser desfeita.
+                              Todas as colunas e tasks do projeto{' '}
+                              <strong>{projeto.name}</strong> serão removidas. Esta ação não pode
+                              ser desfeita.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => handleDelete(ws.id)}
+                              onClick={() => handleDelete(projeto.id)}
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
                               Excluir
@@ -351,6 +346,7 @@ export function WorkspacesTable({
                       </AlertDialog>
                     </div>
                   </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
@@ -361,7 +357,7 @@ export function WorkspacesTable({
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            {total} workspace{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
+            {total} projeto{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
           </span>
           <div className="flex items-center gap-2">
             <Button
