@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCallback, useState, useTransition, useActionState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Pencil, Power, PowerOff, Trash2 } from 'lucide-react';
@@ -239,7 +240,14 @@ export function ProjetosTable({
             ) : (
               data.map((projeto) => (
                 <TableRow key={projeto.id}>
-                  <TableCell className="font-medium">{projeto.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/workspace/${workspaceId}/projetos/${projeto.id}`}
+                      className="hover:underline"
+                    >
+                      {projeto.name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {projeto.description ?? '—'}
                   </TableCell>
