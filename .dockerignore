@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+build/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dev tools
+.vscode/
+.idea/
+.husky/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Git
+.git/
+.gitignore
+
+# CI
+.github/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript build info
+*.tsbuildinfo
+next-env.d.ts

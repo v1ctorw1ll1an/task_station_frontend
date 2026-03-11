@@ -1,0 +1,3 @@
+# Full check before push — typecheck + build
+pnpm typecheck
+pnpm build

@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+    open-pull-requests-limit: 10
+    groups:
+      nextjs:
+        patterns: ["next", "eslint-config-next"]
+      react:
+        patterns: ["react", "react-dom", "@types/react*"]
+      radix:
+        patterns: ["radix-ui", "@radix-ui/*"]
+      types:
+        patterns: ["@types/*"]

@@ -1,0 +1,2 @@
+# Fast check — lint only on staged files
+pnpm lint-staged
