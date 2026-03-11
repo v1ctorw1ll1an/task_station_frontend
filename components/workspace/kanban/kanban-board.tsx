@@ -61,11 +61,12 @@ interface KanbanBoardProps {
   isAdmin: boolean;
   membros: WorkspaceMember[];
   labels: ProjectLabel[];
+  currentUserId: string;
 }
 
 const initialCreateColunaState: CreateColunaActionState = {};
 
-export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, labels }: KanbanBoardProps) {
+export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, labels, currentUserId }: KanbanBoardProps) {
   const [columns, setColumns] = useOptimistic<KanbanColumn[]>(data.columns);
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
@@ -296,6 +297,7 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
         isAdmin={isAdmin}
         membros={membros}
         labels={labels}
+        currentUserId={currentUserId}
         onClose={() => setSelectedTaskId(null)}
       />
     </>

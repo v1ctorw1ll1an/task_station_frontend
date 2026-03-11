@@ -55,6 +55,7 @@ export default async function KanbanPage({ params }: PageProps) {
         isAdmin={isAdmin}
         membros={membros}
         labels={labels}
+        currentUserId={session.user.id}
       />
     </div>
   );

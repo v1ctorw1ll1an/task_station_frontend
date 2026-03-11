@@ -2,7 +2,16 @@
 
 import { useEffect, useActionState, useTransition, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Trash2, X } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  MessageSquare,
+  Pencil,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -36,6 +45,13 @@ import {
   getTaskHistoryAction,
   type TaskHistoryEntry,
 } from '@/actions/projeto/get-task-history.action';
+import {
+  getTaskCommentsAction,
+  type TaskComment,
+} from '@/actions/projeto/get-task-comments.action';
+import { createTaskCommentAction, type CreateCommentActionState } from '@/actions/projeto/create-task-comment.action';
+import { updateTaskCommentAction } from '@/actions/projeto/update-task-comment.action';
+import { deleteTaskCommentAction } from '@/actions/projeto/delete-task-comment.action';
 import type { KanbanTask } from './kanban-card';
 import type { WorkspaceMember, ProjectLabel } from './kanban-board';
 
@@ -85,6 +101,7 @@ interface TaskDetailDialogProps {
   isAdmin: boolean;
   membros: WorkspaceMember[];
   labels: ProjectLabel[];
+  currentUserId: string;
   onClose: () => void;
 }
 
@@ -99,6 +116,78 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
+/** Renders comment text with clickable URLs and highlighted @mentions */
+function renderCommentContent(content: string, membros: WorkspaceMember[]) {
+  const memberNames = [...membros.map((m) => m.name)].sort((a, b) => b.length - a.length);
+  const result: React.ReactNode[] = [];
+  let i = 0;
+  let textBuffer = '';
+  let keyIdx = 0;
+
+  while (i < content.length) {
+    // Detect URLs
+    if (content.startsWith('http://', i) || content.startsWith('https://', i)) {
+      if (textBuffer) {
+        result.push(<span key={keyIdx++}>{textBuffer}</span>);
+        textBuffer = '';
+      }
+      const rest = content.slice(i);
+      const spaceIdx = rest.search(/[\s]/);
+      const url = spaceIdx === -1 ? rest : rest.slice(0, spaceIdx);
+      result.push(
+        <a
+          key={keyIdx++}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 underline hover:text-blue-600 break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {url}
+        </a>,
+      );
+      i += url.length;
+      continue;
+    }
+
+    // Detect @mentions
+    if (content[i] === '@') {
+      let matched = false;
+      for (const name of memberNames) {
+        if (content.startsWith(name, i + 1)) {
+          const after = content[i + 1 + name.length];
+          if (after === undefined || /[\s,.!?;:\n]/.test(after)) {
+            if (textBuffer) {
+              result.push(<span key={keyIdx++}>{textBuffer}</span>);
+              textBuffer = '';
+            }
+            result.push(
+              <span
+                key={keyIdx++}
+                className="text-primary font-semibold bg-primary/10 rounded px-0.5"
+              >
+                @{name}
+              </span>,
+            );
+            i += 1 + name.length;
+            matched = true;
+            break;
+          }
+        }
+      }
+      if (!matched) {
+        textBuffer += content[i++];
+      }
+      continue;
+    }
+
+    textBuffer += content[i++];
+  }
+
+  if (textBuffer) result.push(<span key={keyIdx++}>{textBuffer}</span>);
+  return result;
+}
+
 function TaskHistorySection({
   projectId,
   taskId,
@@ -108,6 +197,7 @@ function TaskHistorySection({
 }) {
   const [history, setHistory] = useState<TaskHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -117,43 +207,365 @@ function TaskHistorySection({
     });
   }, [projectId, taskId]);
 
+  const sorted = [...history].sort(
+    (a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime(),
+  );
+
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium">Histórico de alterações</h3>
-      {loading ? (
-        <p className="text-xs text-muted-foreground">Carregando...</p>
-      ) : history.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nenhuma alteração registrada.</p>
-      ) : (
-        <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
-          {history.map((entry) => (
-            <div key={entry.id} className="flex items-start gap-2 text-xs">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[9px] font-medium mt-0.5">
-                {getInitials(entry.user.name)}
-              </span>
-              <div className="min-w-0 flex-1">
-                <span className="font-medium">{entry.user.name}</span>
-                {' alterou '}
-                <span className="font-medium">
-                  {FIELD_LABELS[entry.field] ?? entry.field}
-                </span>
-                {': '}
-                {entry.oldValue !== null ? (
-                  <>
-                    <span className="line-through text-muted-foreground">
-                      {formatHistoryValue(entry.field, entry.oldValue)}
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex w-full items-center justify-between text-sm font-medium hover:text-foreground/80 transition-colors"
+      >
+        <span className="flex items-center gap-1.5">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          Histórico de alterações
+          {!loading && history.length > 0 && (
+            <span className="text-xs text-muted-foreground font-normal">({history.length})</span>
+          )}
+        </span>
+        {isOpen ? (
+          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        )}
+      </button>
+
+      {isOpen && (
+        <>
+          {loading ? (
+            <p className="text-xs text-muted-foreground">Carregando...</p>
+          ) : sorted.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhuma alteração registrada.</p>
+          ) : (
+            <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+              {sorted.map((entry) => (
+                <div key={entry.id} className="flex items-start gap-2 text-xs">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[9px] font-medium mt-0.5">
+                    {getInitials(entry.user.name)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="font-medium">{entry.user.name}</span>
+                    {' alterou '}
+                    <span className="font-medium">
+                      {FIELD_LABELS[entry.field] ?? entry.field}
                     </span>
-                    {' → '}
-                    <span>{formatHistoryValue(entry.field, entry.newValue)}</span>
-                  </>
-                ) : (
-                  <span>{formatHistoryValue(entry.field, entry.newValue)}</span>
-                )}
-                <div className="text-muted-foreground mt-0.5">{formatHistoryDate(entry.changedAt)}</div>
-              </div>
+                    {': '}
+                    {entry.oldValue !== null ? (
+                      <>
+                        <span className="line-through text-muted-foreground">
+                          {formatHistoryValue(entry.field, entry.oldValue)}
+                        </span>
+                        {' → '}
+                        <span>{formatHistoryValue(entry.field, entry.newValue)}</span>
+                      </>
+                    ) : (
+                      <span>{formatHistoryValue(entry.field, entry.newValue)}</span>
+                    )}
+                    <div className="text-muted-foreground mt-0.5">{formatHistoryDate(entry.changedAt)}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+const initialCommentState: CreateCommentActionState = {};
+
+function TaskCommentsSection({
+  projectId,
+  taskId,
+  currentUserId,
+  isAdmin,
+  membros,
+}: {
+  projectId: string;
+  taskId: string;
+  currentUserId: string;
+  isAdmin: boolean;
+  membros: WorkspaceMember[];
+}) {
+  const [comments, setComments] = useState<TaskComment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // @mention autocomplete state
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStart, setMentionStart] = useState<number>(-1);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [commentState, commentAction, isCommentPending] = useActionState(
+    createTaskCommentAction,
+    initialCommentState,
+  );
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const loadComments = () => {
+    setLoading(true);
+    getTaskCommentsAction(projectId, taskId).then((data) => {
+      setComments(data);
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    loadComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, taskId]);
+
+  useEffect(() => {
+    if (commentState.success) {
+      formRef.current?.reset();
+      setMentionQuery(null);
+      loadComments();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commentState.success]);
+
+  async function handleEditSave(commentId: string) {
+    if (!editContent.trim()) return;
+    setEditError(null);
+    const result = await updateTaskCommentAction(projectId, taskId, commentId, editContent);
+    if (result.error) {
+      setEditError(result.error);
+    } else {
+      setEditingId(null);
+      loadComments();
+    }
+  }
+
+  async function handleDelete(commentId: string) {
+    setDeleteError(null);
+    const result = await deleteTaskCommentAction(projectId, taskId, commentId);
+    if (result.error) {
+      setDeleteError(result.error);
+    } else {
+      loadComments();
+    }
+  }
+
+  function handleTextareaInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const value = e.target.value;
+    const cursor = e.target.selectionStart ?? value.length;
+
+    // Find the last @ before cursor without a space after it
+    const textBeforeCursor = value.slice(0, cursor);
+    const atIdx = textBeforeCursor.lastIndexOf('@');
+
+    if (atIdx !== -1) {
+      const fragment = textBeforeCursor.slice(atIdx + 1);
+      // Only trigger if no space in fragment (still typing the mention)
+      if (!fragment.includes(' ') || fragment.length === 0) {
+        setMentionStart(atIdx);
+        setMentionQuery(fragment);
+        return;
+      }
+    }
+
+    setMentionQuery(null);
+    setMentionStart(-1);
+  }
+
+  function insertMention(name: string) {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const value = textarea.value;
+    const before = value.slice(0, mentionStart);
+    const after = value.slice(textarea.selectionStart ?? mentionStart);
+    const newValue = `${before}@${name} ${after}`;
+
+    // Use native setter to trigger React's onChange
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      'value',
+    )?.set;
+    nativeInputValueSetter?.call(textarea, newValue);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const newCursor = mentionStart + name.length + 2; // @name + space
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursor, newCursor);
+    }, 0);
+
+    setMentionQuery(null);
+    setMentionStart(-1);
+  }
+
+  const filteredMentionMembers =
+    mentionQuery !== null
+      ? membros.filter((m) => m.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+      : [];
+
+  const sorted = [...comments].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  return (
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex w-full items-center justify-between text-sm font-medium hover:text-foreground/80 transition-colors"
+      >
+        <span className="flex items-center gap-1.5">
+          <MessageSquare className="h-4 w-4" />
+          Comentários
+          {!loading && comments.length > 0 && (
+            <span className="text-xs text-muted-foreground font-normal">({comments.length})</span>
+          )}
+        </span>
+        {isOpen ? (
+          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        )}
+      </button>
+
+      {isOpen && (
+        <>
+          {loading ? (
+            <p className="text-xs text-muted-foreground">Carregando...</p>
+          ) : sorted.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum comentário ainda.</p>
+          ) : (
+            <div className="space-y-3 pr-1">
+              {sorted.map((c) => (
+                <div key={c.id} className="flex items-start gap-2 text-sm">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium mt-0.5">
+                    {getInitials(c.user.name)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <span className="font-medium text-xs">{c.user.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatHistoryDate(c.createdAt)}
+                        {c.updatedAt !== c.createdAt && ' (editado)'}
+                      </span>
+                    </div>
+
+                    {editingId === c.id ? (
+                      <div className="mt-1 space-y-1.5">
+                        <textarea
+                          autoFocus
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          rows={2}
+                          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                        />
+                        {editError && <p className="text-xs text-destructive">{editError}</p>}
+                        <div className="flex gap-1.5">
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-6 text-xs px-2"
+                            onClick={() => handleEditSave(c.id)}
+                          >
+                            Salvar
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-xs px-2"
+                            onClick={() => setEditingId(null)}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm mt-0.5 whitespace-pre-wrap break-words">
+                        {renderCommentContent(c.content, membros)}
+                      </p>
+                    )}
+                  </div>
+
+                  {editingId !== c.id && (c.user.id === currentUserId || isAdmin) && (
+                    <div className="flex shrink-0 gap-0.5 mt-0.5">
+                      {c.user.id === currentUserId && (
+                        <button
+                          type="button"
+                          title="Editar"
+                          onClick={() => {
+                            setEditingId(c.id);
+                            setEditContent(c.content);
+                            setEditError(null);
+                          }}
+                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        title="Excluir"
+                        onClick={() => handleDelete(c.id)}
+                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {deleteError && <p className="text-xs text-destructive">{deleteError}</p>}
+
+          <form ref={formRef} action={commentAction} className="space-y-2">
+            <input type="hidden" name="projectId" value={projectId} />
+            <input type="hidden" name="taskId" value={taskId} />
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                name="content"
+                placeholder="Escreva um comentário... Use @ para mencionar membros"
+                rows={2}
+                onChange={handleTextareaInput}
+                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+              />
+              {mentionQuery !== null && filteredMentionMembers.length > 0 && (
+                <div className="absolute bottom-full mb-1 left-0 w-full rounded-md border bg-popover shadow-md z-50 max-h-40 overflow-y-auto">
+                  {filteredMentionMembers.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        insertMention(m.name);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent"
+                    >
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium flex-shrink-0">
+                        {getInitials(m.name)}
+                      </span>
+                      <span className="flex flex-col items-start min-w-0">
+                        <span className="truncate font-medium">{m.name}</span>
+                        <span className="truncate text-xs text-muted-foreground">{m.email}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {commentState.error && <p className="text-xs text-destructive">{commentState.error}</p>}
+            <Button type="submit" size="sm" disabled={isCommentPending} className="h-7 text-xs">
+              {isCommentPending ? 'Enviando...' : 'Comentar'}
+            </Button>
+          </form>
+        </>
       )}
     </div>
   );
@@ -166,6 +578,7 @@ export function TaskDetailDialog({
   isAdmin,
   membros,
   labels,
+  currentUserId,
   onClose,
 }: TaskDetailDialogProps) {
   const router = useRouter();
@@ -457,7 +870,6 @@ export function TaskDetailDialog({
                         backgroundColor: label.color + '22',
                         color: label.color,
                         border: `1px solid ${label.color}55`,
-                        ringColor: label.color,
                       }}
                     >
                       {label.name}
@@ -473,10 +885,6 @@ export function TaskDetailDialog({
           </p>
 
           {state.error && <p className="text-sm text-destructive">{state.error}</p>}
-
-          <div className="border-t pt-4">
-            <TaskHistorySection projectId={projectId} taskId={task.id} />
-          </div>
 
           <div className="flex items-center justify-between pt-2 border-t">
             {isAdmin && (
@@ -523,6 +931,21 @@ export function TaskDetailDialog({
             </div>
           </div>
         </form>
+
+        {/* Comments above history, both outside the form */}
+        <div className="border-t pt-4">
+          <TaskCommentsSection
+            projectId={projectId}
+            taskId={task.id}
+            currentUserId={currentUserId}
+            isAdmin={isAdmin}
+            membros={membros}
+          />
+        </div>
+
+        <div className="border-t pt-4">
+          <TaskHistorySection projectId={projectId} taskId={task.id} />
+        </div>
       </DialogContent>
     </Dialog>
   );
