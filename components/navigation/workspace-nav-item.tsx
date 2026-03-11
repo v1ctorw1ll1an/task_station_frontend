@@ -7,7 +7,6 @@ import {
   ChevronRight,
   ChevronDown,
   LayoutDashboard,
-  Pencil,
   Plus,
   Users,
   Loader2,
@@ -61,8 +60,9 @@ function CreateProjetoSidebarDialog({
 
   useEffect(() => {
     if (state.success && state.projectId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false);
-      onCreated({ id: state.projectId, name: '', isActive: true });
+      onCreated({ id: state.projectId, name: '', isActive: true, description: null });
       router.push(
         `/workspace/${workspaceId}/projetos/${state.projectId}`,
       );
@@ -119,13 +119,14 @@ export function WorkspaceNavItem({
 
   useEffect(() => {
     if (!isExpanded) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     getWorkspaceProjectsForSidebar(workspace.workspaceId)
       .then((data) => setProjects(data))
       .finally(() => setLoading(false));
   }, [isExpanded, workspace.workspaceId]);
 
-  const handleProjectCreated = useCallback((project: SidebarProject) => {
+  const handleProjectCreated = useCallback((_project: SidebarProject) => {
     // Refresh project list after creation
     getWorkspaceProjectsForSidebar(workspace.workspaceId).then(setProjects);
   }, [workspace.workspaceId]);
