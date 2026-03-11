@@ -38,9 +38,8 @@ export async function createTaskAction(
   const priority = formData.get('priority');
   if (priority && typeof priority === 'string') body.priority = priority;
 
-  const assigneeId = formData.get('assigneeId');
-  if (assigneeId && typeof assigneeId === 'string' && assigneeId.trim())
-    body.assigneeId = assigneeId.trim();
+  const assigneeIds = formData.getAll('assigneeIds[]');
+  if (assigneeIds.length) body.assigneeIds = assigneeIds.filter((id): id is string => typeof id === 'string');
 
   const startDate = formData.get('startDate');
   if (startDate && typeof startDate === 'string') body.startDate = startDate;

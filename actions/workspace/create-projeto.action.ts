@@ -7,6 +7,7 @@ import { createProjetoSchema } from '@/lib/schemas/create-projeto.schema';
 export interface CreateProjetoActionState {
   error?: string;
   success?: boolean;
+  projectId?: string;
 }
 
 export async function createProjetoAction(
@@ -44,10 +45,11 @@ export async function createProjetoAction(
       const body = await res.json().catch(() => ({}));
       return { error: body.message ?? 'Erro ao criar projeto' };
     }
+
+    const body = await res.json().catch(() => ({}));
+    revalidatePath(`/workspace/${workspaceId}/projetos`);
+    return { success: true, projectId: body.project?.id };
   } catch {
     return { error: 'Erro ao conectar com o servidor' };
   }
-
-  revalidatePath(`/workspace/${workspaceId}/projetos`);
-  return { success: true };
 }

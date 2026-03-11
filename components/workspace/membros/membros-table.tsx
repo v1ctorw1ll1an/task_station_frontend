@@ -180,7 +180,6 @@ export function WorkspaceMembrosTable({
               data.map((member) => {
                 const isSelf = member.user.id === currentUserId;
                 const isAdmin = member.role === 'workspace_admin';
-
                 return (
                   <TableRow key={member.membershipId}>
                     <TableCell className="font-medium">{member.user.name}</TableCell>
@@ -188,8 +187,10 @@ export function WorkspaceMembrosTable({
                       {member.user.email}
                     </TableCell>
                     <TableCell>
-                      {isAdmin ? (
-                        <Badge className="text-xs">Admin</Badge>
+                      {member.role === 'workspace_admin' ? (
+                        <Badge className="text-xs">Gerente de workspace</Badge>
+                      ) : member.role === 'project_admin' ? (
+                        <Badge variant="outline" className="text-xs">Gerente de projeto</Badge>
                       ) : (
                         <span className="text-sm text-muted-foreground">Membro</span>
                       )}

@@ -56,13 +56,18 @@ export function WorkspacesMemberView({ data }: WorkspacesMemberViewProps) {
               <TableCell className="font-medium">{ws.workspaceName}</TableCell>
               <TableCell>
                 <Badge variant={ws.role === 'workspace_admin' ? 'default' : 'outline'} className="text-xs">
-                  {ws.role === 'workspace_admin' ? 'Admin' : 'Membro'}
+                  {ws.role === 'workspace_admin'
+                    ? 'Gerente de workspace'
+                    : ws.role === 'project_admin'
+                      ? 'Gerente de projeto'
+                      : 'Membro'}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
                 <Link href={`/workspace/${ws.workspaceId}/projetos`}>
-                  <Button variant="ghost" size="sm" title="Entrar no workspace">
-                    <ArrowRight className="h-4 w-4" />
+                  <Button variant="outline" size="sm">
+                    Acessar
+                    <ArrowRight className="h-4 w-4 ml-1" />
                   </Button>
                 </Link>
               </TableCell>

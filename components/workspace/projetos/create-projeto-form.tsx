@@ -30,11 +30,14 @@ export function CreateProjetoForm({ workspaceId }: CreateProjetoFormProps) {
   const router = useRouter();
 
   useEffect(() => {
-    if (state.success) {
+    if (state.success && state.projectId) {
+      setOpen(false);
+      router.push(`/workspace/${workspaceId}/projetos/${state.projectId}`);
+    } else if (state.success) {
       setOpen(false);
       router.refresh();
     }
-  }, [state.success, router]);
+  }, [state.success, state.projectId, workspaceId, router]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

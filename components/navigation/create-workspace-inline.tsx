@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useActionState, useState, useRef, startTransition } from 'react';
+import { useState, useEffect, useActionState, useRef, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusCircle, X, ChevronDown, Check } from 'lucide-react';
+import { Plus, X, ChevronDown, Check } from 'lucide-react';
 import {
   createWorkspaceAction,
   CreateWorkspaceActionState,
 } from '@/actions/empresa/create-workspace.action';
+import {
+  CompanyMember,
+  getCompanyMembersAction,
+} from '@/actions/empresa/get-company-members.action';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,49 +22,46 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
-interface Member {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface CreateWorkspaceFormProps {
+interface CreateWorkspaceInlineTriggerProps {
   companyId: string;
-  companyMembers: Member[];
+  variant?: 'icon' | 'button';
 }
 
 const initialState: CreateWorkspaceActionState = {};
 
-export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspaceFormProps) {
+export function CreateWorkspaceInlineTrigger({
+  companyId,
+  variant = 'icon',
+}: CreateWorkspaceInlineTriggerProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createWorkspaceAction, initialState);
   const router = useRouter();
 
+  const [companyMembers, setCompanyMembers] = useState<CompanyMember[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (state.success) {
+    if (state.success && state.workspaceId) {
       startTransition(() => {
         setOpen(false);
-        if (state.workspaceId) {
-          router.push(`/workspace/${state.workspaceId}/projetos`);
-        } else {
-          router.refresh();
-        }
+        router.push(`/workspace/${state.workspaceId}/projetos`);
+        router.refresh();
       });
     }
   }, [state.success, state.workspaceId, router]);
 
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      getCompanyMembersAction(companyId).then(setCompanyMembers);
+    } else {
       setSelectedIds([]);
       setSearch('');
       setDropdownOpen(false);
     }
-  }, [open]);
+  }, [open, companyId]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -77,23 +78,29 @@ export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspa
     return m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q);
   });
 
-  const toggle = (id: string) => {
+  const toggle = (id: string) =>
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  };
-
-  const selectAll = () => setSelectedIds(companyMembers.map((m) => m.id));
-  const clearAll = () => setSelectedIds([]);
 
   const selectedMembers = companyMembers.filter((m) => selectedIds.includes(m.id));
 
+  const trigger =
+    variant === 'button' ? (
+      <Button size="sm" variant="outline" className="w-full text-xs h-8">
+        <Plus className="h-3.5 w-3.5 mr-1.5" />
+        Novo workspace
+      </Button>
+    ) : (
+      <button
+        title="Novo workspace"
+        className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+    );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Novo workspace
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Criar workspace</DialogTitle>
@@ -105,13 +112,13 @@ export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspa
           ))}
 
           <div className="space-y-2">
-            <Label htmlFor="name">Nome do workspace</Label>
-            <Input id="name" name="name" placeholder="Ex: Desenvolvimento" required />
+            <Label htmlFor="ws-name">Nome do workspace</Label>
+            <Input id="ws-name" name="name" placeholder="Ex: Desenvolvimento" required autoFocus />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição (opcional)</Label>
-            <Input id="description" name="description" placeholder="Descrição do workspace" />
+            <Label htmlFor="ws-description">Descrição (opcional)</Label>
+            <Input id="ws-description" name="description" placeholder="Descrição do workspace" />
           </div>
 
           <div className="border-t pt-4 space-y-3">
@@ -123,7 +130,7 @@ export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspa
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={selectAll}
+                    onClick={() => setSelectedIds(companyMembers.map((m) => m.id))}
                     className="text-xs text-primary hover:underline"
                   >
                     Adicionar todos
@@ -133,7 +140,7 @@ export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspa
                       <span className="text-xs text-muted-foreground">·</span>
                       <button
                         type="button"
-                        onClick={clearAll}
+                        onClick={() => setSelectedIds([])}
                         className="text-xs text-muted-foreground hover:underline"
                       >
                         Limpar

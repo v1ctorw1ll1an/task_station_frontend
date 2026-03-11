@@ -76,6 +76,14 @@ export default async function WorkspacesPage({ params, searchParams }: PageProps
 
   const { data, total } = res.ok ? await res.json() : { data: [], total: 0 };
 
+  const membrosRes = await fetch(
+    `${apiUrl}/api/v1/empresa/${companyId}/membros?limit=200&page=1`,
+    { headers, cache: 'no-store' },
+  );
+  const membrosData: { data: Array<{ user: { id: string; name: string; email: string } }> } =
+    membrosRes.ok ? await membrosRes.json() : { data: [] };
+  const companyMembers = (membrosData.data ?? []).map((m) => m.user);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -85,7 +93,7 @@ export default async function WorkspacesPage({ params, searchParams }: PageProps
             Gerencie os workspaces da sua empresa.
           </p>
         </div>
-        <CreateWorkspaceForm companyId={companyId} />
+        <CreateWorkspaceForm companyId={companyId} companyMembers={companyMembers} />
       </div>
 
       <WorkspacesTable

@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
-import { EmpresaSidebar } from '@/components/empresa/sidebar';
+import { AppSidebar } from '@/components/navigation/app-sidebar';
 import { EmpresaUserMenu } from '@/components/empresa/user-menu';
+import { SidebarWorkspace } from '@/components/navigation/workspace-nav-item';
 
 interface EmpresaLayoutProps {
   children: React.ReactNode;
@@ -15,26 +16,70 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
   if (!session) redirect('/login');
   if (session.user.mustResetPassword) redirect('/first-access');
 
-  // Verificar se o usuário tem acesso a esta empresa (qualquer role)
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const res = await fetch(`${apiUrl}/api/v1/me/empresas`, {
-    headers: { Authorization: `Bearer ${session.token}` },
+  const headers = { Authorization: `Bearer ${session.token}` };
+
+  // Verify company access + get role
+  const companiesRes = await fetch(`${apiUrl}/api/v1/me/empresas`, {
+    headers,
     cache: 'no-store',
   });
-
-  if (!res.ok) redirect('/dashboard');
+  if (!companiesRes.ok) redirect('/dashboard');
 
   const companies: Array<{ companyId: string; legalName: string; role: string }> =
-    await res.json();
+    await companiesRes.json();
 
   const company = companies.find((c) => c.companyId === companyId);
   if (!company) redirect('/dashboard');
 
+  const isCompanyAdmin = company.role === 'admin';
+
+  // Fetch workspace list for sidebar tree
+  let workspaces: SidebarWorkspace[] = [];
+  if (isCompanyAdmin) {
+    const wsRes = await fetch(
+      `${apiUrl}/api/v1/empresa/${companyId}/workspaces?limit=100&page=1`,
+      { headers, cache: 'no-store' },
+    );
+    if (wsRes.ok) {
+      const data = await wsRes.json();
+      workspaces = (data.data ?? []).map(
+        (ws: { id: string; name: string; isActive: boolean }) => ({
+          workspaceId: ws.id,
+          workspaceName: ws.name,
+          role: 'admin',
+        }),
+      );
+    }
+  } else {
+    const myWsRes = await fetch(`${apiUrl}/api/v1/me/workspaces`, {
+      headers,
+      cache: 'no-store',
+    });
+    if (myWsRes.ok) {
+      const data: Array<{ workspaceId: string; workspaceName: string; companyId: string; role: string }> =
+        await myWsRes.json();
+      workspaces = data
+        .filter((ws) => ws.companyId === companyId)
+        .map((ws) => ({
+          workspaceId: ws.workspaceId,
+          workspaceName: ws.workspaceName,
+          role: ws.role,
+        }));
+    }
+  }
+
   return (
     <div className="flex min-h-screen">
-      <EmpresaSidebar companyId={companyId} companyName={company.legalName} role={company.role} />
-      <div className="flex-1 flex flex-col">
-        <header className="h-14 border-b flex items-center justify-between px-6">
+      <AppSidebar
+        companyId={companyId}
+        companyName={company.legalName}
+        isCompanyAdmin={isCompanyAdmin}
+        isSuperuser={session.user.isSuperuser}
+        workspaces={workspaces}
+      />
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-14 border-b flex items-center justify-between px-6 shrink-0">
           <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
             Painel da Empresa
           </span>

@@ -31,6 +31,10 @@ import { TaskDetailDialog } from './task-detail-dialog';
 import { moveTaskAction } from '@/actions/projeto/move-task.action';
 import { reorderColunasAction } from '@/actions/projeto/reorder-colunas.action';
 import { createColunaAction, CreateColunaActionState } from '@/actions/projeto/create-coluna.action';
+import type { ProjectLabel } from '@/actions/projeto/get-labels.action';
+import { LabelsManager } from './labels-manager';
+
+export type { ProjectLabel };
 
 export interface KanbanColumn {
   id: string;
@@ -56,15 +60,21 @@ interface KanbanBoardProps {
   workspaceId: string;
   isAdmin: boolean;
   membros: WorkspaceMember[];
+  labels: ProjectLabel[];
 }
 
 const initialCreateColunaState: CreateColunaActionState = {};
 
-export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros }: KanbanBoardProps) {
+export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, labels }: KanbanBoardProps) {
   const [columns, setColumns] = useOptimistic<KanbanColumn[]>(data.columns);
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  // Always derive from fresh server data so updates are reflected immediately
+  const selectedTask = selectedTaskId
+    ? data.columns.flatMap((c) => c.tasks).find((t) => t.id === selectedTaskId) ?? null
+    : null;
   const [createColOpen, setCreateColOpen] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -191,6 +201,12 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros }: 
 
   return (
     <>
+      {isAdmin && (
+        <div className="flex justify-end mb-2">
+          <LabelsManager projectId={projectId} workspaceId={workspaceId} labels={labels} />
+        </div>
+      )}
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -211,7 +227,7 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros }: 
                 projectId={projectId}
                 workspaceId={workspaceId}
                 isAdmin={isAdmin}
-                onTaskClick={setSelectedTask}
+                onTaskClick={setSelectedTaskId}
               />
             ))}
           </SortableContext>
@@ -273,12 +289,14 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros }: 
       </DndContext>
 
       <TaskDetailDialog
+        key={selectedTask?.id ?? ''}
         task={selectedTask}
         projectId={projectId}
         workspaceId={workspaceId}
         isAdmin={isAdmin}
         membros={membros}
-        onClose={() => setSelectedTask(null)}
+        labels={labels}
+        onClose={() => setSelectedTaskId(null)}
       />
     </>
   );

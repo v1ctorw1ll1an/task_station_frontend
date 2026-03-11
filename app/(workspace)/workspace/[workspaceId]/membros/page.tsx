@@ -26,15 +26,56 @@ export default async function MembrosPage({ params, searchParams }: PageProps) {
   query.set('limit', String(limit));
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const res = await fetch(
-    `${apiUrl}/api/v1/workspace/${workspaceId}/membros?${query.toString()}`,
-    {
-      headers: { Authorization: `Bearer ${session.token}` },
-      cache: 'no-store',
-    },
-  );
+  const headers = { Authorization: `Bearer ${session.token}` };
 
-  const { data, total } = res.ok ? await res.json() : { data: [], total: 0 };
+  const [membrosRes, wsInfoRes] = await Promise.all([
+    fetch(`${apiUrl}/api/v1/workspace/${workspaceId}/membros?${query.toString()}`, {
+      headers,
+      cache: 'no-store',
+    }),
+    fetch(`${apiUrl}/api/v1/workspace/${workspaceId}`, { headers, cache: 'no-store' }),
+  ]);
+
+  const { data, total } = membrosRes.ok ? await membrosRes.json() : { data: [], total: 0 };
+  const wsInfo: { companyId: string } | null = wsInfoRes.ok ? await wsInfoRes.json() : null;
+
+  // Only company admins (or superusers) can add members — fetch accordingly
+  type CompanyMember = { id: string; name: string; email: string };
+  let availableMembers: CompanyMember[] = [];
+  let canAddMembers = session.user.isSuperuser;
+
+  if (wsInfo) {
+    const myCompaniesRes = await fetch(`${apiUrl}/api/v1/me/empresas`, {
+      headers,
+      cache: 'no-store',
+    });
+    if (myCompaniesRes.ok) {
+      const companies: Array<{ companyId: string; role: string }> = await myCompaniesRes.json();
+      if (companies.find((c) => c.companyId === wsInfo.companyId && c.role === 'admin')) {
+        canAddMembers = true;
+      }
+    }
+
+    if (canAddMembers) {
+      const cmRes = await fetch(
+        `${apiUrl}/api/v1/empresa/${wsInfo.companyId}/membros?limit=200&page=1`,
+        { headers, cache: 'no-store' },
+      );
+      if (cmRes.ok) {
+        const cmData = await cmRes.json();
+        const existingIds = new Set<string>(
+          (data as Array<{ user: { id: string } }>).map((m) => m.user.id),
+        );
+        availableMembers = (cmData.data ?? [])
+          .map((m: { user: { id: string; name: string; email: string } }) => ({
+            id: m.user.id,
+            name: m.user.name,
+            email: m.user.email,
+          }))
+          .filter((m: CompanyMember) => !existingIds.has(m.id));
+      }
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -45,7 +86,9 @@ export default async function MembrosPage({ params, searchParams }: PageProps) {
             Gerencie os membros e administradores deste workspace.
           </p>
         </div>
-        <AddMembroForm workspaceId={workspaceId} />
+        {canAddMembers && (
+          <AddMembroForm workspaceId={workspaceId} availableMembers={availableMembers} />
+        )}
       </div>
 
       <WorkspaceMembrosTable

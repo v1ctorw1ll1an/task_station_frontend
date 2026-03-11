@@ -199,12 +199,12 @@ export function MembrosTable({
                         <div className="flex flex-wrap gap-1">
                           {wsAdmins.map((ws) => (
                             <Badge key={ws.workspaceId} variant="outline" className="text-xs">
-                              Admin: {ws.workspaceName}
+                              Gerente: {ws.workspaceName}
                             </Badge>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
+                        <span className="text-sm text-muted-foreground">Membro</span>
                       )}
                     </TableCell>
 

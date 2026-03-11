@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCallback, useState, useTransition } from 'react';
 import { ArrowRight, ChevronLeft, ChevronRight, Pencil, Power, PowerOff, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -251,11 +251,10 @@ export function WorkspacesTable({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Link
-                        href={`/workspace/${ws.id}/projetos?wsName=${encodeURIComponent(ws.name)}`}
-                      >
-                        <Button variant="ghost" size="sm" title="Entrar no workspace">
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      <Link href={`/workspace/${ws.id}/projetos`}>
+                        <Button variant="outline" size="sm" title="Acessar workspace">
+                          Acessar
+                          <ArrowRight className="h-4 w-4 ml-1" />
                         </Button>
                       </Link>
 

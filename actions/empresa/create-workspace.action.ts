@@ -7,6 +7,7 @@ import { createWorkspaceSchema } from '@/lib/schemas/create-workspace.schema';
 export interface CreateWorkspaceActionState {
   error?: string;
   success?: boolean;
+  workspaceId?: string;
 }
 
 export async function createWorkspaceAction(
@@ -22,7 +23,7 @@ export async function createWorkspaceAction(
   const raw = {
     name: formData.get('name'),
     description: formData.get('description') || undefined,
-    adminEmail: formData.get('adminEmail'),
+    memberIds: formData.getAll('memberIds[]'),
   };
 
   const parsed = createWorkspaceSchema.safeParse(raw);
@@ -45,10 +46,11 @@ export async function createWorkspaceAction(
       const body = await res.json().catch(() => ({}));
       return { error: body.message ?? 'Erro ao criar workspace' };
     }
+
+    const body = await res.json().catch(() => ({}));
+    revalidatePath(`/empresa/${companyId}/workspaces`);
+    return { success: true, workspaceId: body.workspace?.id };
   } catch {
     return { error: 'Erro ao conectar com o servidor' };
   }
-
-  revalidatePath(`/empresa/${companyId}/workspaces`);
-  return { success: true };
 }

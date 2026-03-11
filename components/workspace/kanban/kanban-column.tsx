@@ -17,7 +17,7 @@ interface KanbanColumnProps {
   projectId: string;
   workspaceId: string;
   isAdmin: boolean;
-  onTaskClick: (task: KanbanTask) => void;
+  onTaskClick: (taskId: string) => void;
 }
 
 export function KanbanColumnComponent({
@@ -109,7 +109,7 @@ export function KanbanColumnComponent({
           strategy={verticalListSortingStrategy}
         >
           {column.tasks.map((task) => (
-            <KanbanCard key={task.id} task={task} onClick={onTaskClick} />
+            <KanbanCard key={task.id} task={task} onClick={(t) => onTaskClick(t.id)} />
           ))}
         </SortableContext>
       </div>

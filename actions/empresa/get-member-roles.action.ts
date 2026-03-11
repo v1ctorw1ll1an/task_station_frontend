@@ -2,12 +2,21 @@
 
 import { getSession } from '@/lib/auth';
 
+export interface ProjectInfo {
+  projectId: string;
+  projectName: string;
+  isActive: boolean;
+  isRestricted: boolean;
+  isProjectAdmin: boolean;
+}
+
 export interface WorkspaceRole {
   workspaceId: string;
   workspaceName: string;
   isActive: boolean;
   membershipId: string | null;
   role: string | null;
+  projects: ProjectInfo[];
 }
 
 export interface MemberRolesResult {

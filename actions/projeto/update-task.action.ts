@@ -34,9 +34,8 @@ export async function updateTaskAction(
   const priority = formData.get('priority');
   if (priority && typeof priority === 'string') body.priority = priority;
 
-  const assigneeId = formData.get('assigneeId');
-  if (assigneeId !== null && typeof assigneeId === 'string')
-    body.assigneeId = assigneeId.trim() || null;
+  const assigneeIds = formData.getAll('assigneeIds[]');
+  body.assigneeIds = assigneeIds.filter((id): id is string => typeof id === 'string');
 
   const startDate = formData.get('startDate');
   if (startDate !== null && typeof startDate === 'string')
@@ -45,6 +44,9 @@ export async function updateTaskAction(
   const dueDate = formData.get('dueDate');
   if (dueDate !== null && typeof dueDate === 'string')
     body.dueDate = dueDate || null;
+
+  const labelIds = formData.getAll('labelIds[]');
+  body.labelIds = labelIds.filter((id): id is string => typeof id === 'string');
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   try {

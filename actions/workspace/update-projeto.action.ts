@@ -51,5 +51,6 @@ export async function updateProjetoAction(
   }
 
   revalidatePath(`/workspace/${workspaceId}/projetos`);
+  revalidatePath(`/workspace/${workspaceId}/projetos/${projectId}`);
   return { success: true };
 }

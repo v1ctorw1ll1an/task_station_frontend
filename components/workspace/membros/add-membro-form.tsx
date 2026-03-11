@@ -2,14 +2,13 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserPlus } from 'lucide-react';
+import { Check, UserPlus } from 'lucide-react';
 import {
   addMembroAction,
   AddMembroActionState,
 } from '@/actions/workspace/add-membro.action';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -18,23 +17,60 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
+interface AvailableMember {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface AddMembroFormProps {
   workspaceId: string;
+  availableMembers: AvailableMember[];
 }
 
 const initialState: AddMembroActionState = {};
 
-export function AddMembroForm({ workspaceId }: AddMembroFormProps) {
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
+}
+
+export function AddMembroForm({ workspaceId, availableMembers }: AddMembroFormProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(addMembroAction, initialState);
   const router = useRouter();
 
+  const [search, setSearch] = useState('');
+  const [selectedMember, setSelectedMember] = useState<AvailableMember | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   useEffect(() => {
     if (state.success) {
       setOpen(false);
+      setSelectedMember(null);
+      setSearch('');
       router.refresh();
     }
   }, [state.success, router]);
+
+  // Reset state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setSelectedMember(null);
+      setSearch('');
+      setDropdownOpen(false);
+    }
+  }, [open]);
+
+  const filtered = availableMembers.filter(
+    (m) =>
+      m.name.toLowerCase().includes(search.toLowerCase()) ||
+      m.email.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -46,22 +82,91 @@ export function AddMembroForm({ workspaceId }: AddMembroFormProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Adicionar membro</DialogTitle>
+          <DialogTitle>Adicionar membro ao workspace</DialogTitle>
         </DialogHeader>
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="workspaceId" value={workspaceId} />
+          {selectedMember && (
+            <input type="hidden" name="userId" value={selectedMember.id} />
+          )}
 
           <div className="space-y-2">
-            <Label htmlFor="userId">ID do usuário (UUID)</Label>
-            <Input
-              id="userId"
-              name="userId"
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              Informe o UUID do usuário a ser adicionado ao workspace.
-            </p>
+            <label className="text-sm font-medium">Colaborador</label>
+
+            {availableMembers.length === 0 ? (
+              <p className="text-sm text-muted-foreground border rounded-md px-3 py-2">
+                Todos os colaboradores da empresa já fazem parte deste workspace.
+              </p>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen((v) => !v)}
+                  className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {selectedMember ? (
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
+                        {getInitials(selectedMember.name)}
+                      </span>
+                      <span className="truncate">
+                        {selectedMember.name}{' '}
+                        <span className="text-muted-foreground">({selectedMember.email})</span>
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Selecionar colaborador...</span>
+                  )}
+                  <span className="text-muted-foreground text-xs shrink-0 ml-1">▾</span>
+                </button>
+
+                {dropdownOpen && (
+                  <div className="absolute z-50 top-full mt-1 w-full rounded-md border bg-popover shadow-md">
+                    <div className="p-2 border-b">
+                      <Input
+                        autoFocus
+                        placeholder="Buscar por nome ou email..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <div className="max-h-52 overflow-y-auto py-1">
+                      {filtered.length === 0 && (
+                        <p className="px-3 py-2 text-xs text-muted-foreground">
+                          Nenhum colaborador encontrado
+                        </p>
+                      )}
+                      {filtered.map((member) => (
+                        <button
+                          key={member.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedMember(member);
+                            setDropdownOpen(false);
+                            setSearch('');
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
+                        >
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
+                            {getInitials(member.name)}
+                          </span>
+                          <span className="flex flex-col items-start min-w-0">
+                            <span className="font-medium truncate">{member.name}</span>
+                            <span className="text-xs text-muted-foreground truncate">
+                              {member.email}
+                            </span>
+                          </span>
+                          {selectedMember?.id === member.id && (
+                            <Check className="h-3.5 w-3.5 ml-auto shrink-0 text-primary" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {state.error && <p className="text-sm text-destructive">{state.error}</p>}
@@ -70,7 +175,7 @@ export function AddMembroForm({ workspaceId }: AddMembroFormProps) {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || !selectedMember}>
               {isPending ? 'Adicionando...' : 'Adicionar'}
             </Button>
           </div>

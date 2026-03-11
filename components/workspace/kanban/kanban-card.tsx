@@ -2,8 +2,11 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CalendarDays, User } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { CalendarDays, Tag, User } from 'lucide-react';
+
+export interface KanbanTaskLabel {
+  label: { id: string; name: string; color: string };
+}
 
 export interface KanbanTask {
   id: string;
@@ -15,8 +18,9 @@ export interface KanbanTask {
   startDate: string | null;
   columnId: string;
   projectId: string;
-  assignee: { id: string; name: string } | null;
+  taskAssignees: { user: { id: string; name: string } }[];
   reporter: { id: string; name: string };
+  taskLabels: KanbanTaskLabel[];
 }
 
 const PRIORITY_LABELS: Record<KanbanTask['priority'], string> = {
@@ -26,14 +30,12 @@ const PRIORITY_LABELS: Record<KanbanTask['priority'], string> = {
   urgent: 'Urgente',
 };
 
-const PRIORITY_VARIANTS: Record<
-  KanbanTask['priority'],
-  'outline' | 'secondary' | 'default' | 'destructive'
-> = {
-  low: 'outline',
-  medium: 'secondary',
-  high: 'default',
-  urgent: 'destructive',
+// Gestalt: gray → blue → orange → red (none → info → warning → critical)
+const PRIORITY_CLASSES: Record<KanbanTask['priority'], string> = {
+  low: 'text-slate-500 bg-slate-100 border border-slate-200 dark:text-slate-400 dark:bg-slate-800 dark:border-slate-700',
+  medium: 'text-blue-600 bg-blue-50 border border-blue-200 dark:text-blue-400 dark:bg-blue-950 dark:border-blue-800',
+  high: 'text-amber-600 bg-amber-50 border border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800',
+  urgent: 'text-red-600 bg-red-50 border border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800',
 };
 
 function getInitials(name: string) {
@@ -68,6 +70,7 @@ export function KanbanCard({ task, onClick, isDragOverlay = false }: KanbanCardP
   };
 
   const overdue = isOverdue(task.dueDate);
+  const assignees = task.taskAssignees.map((ta) => ta.user);
 
   return (
     <div
@@ -86,10 +89,25 @@ export function KanbanCard({ task, onClick, isDragOverlay = false }: KanbanCardP
     >
       <p className="text-sm font-medium leading-snug">{task.title}</p>
 
+      {task.taskLabels.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {task.taskLabels.map(({ label }) => (
+            <span
+              key={label.id}
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+              style={{ backgroundColor: label.color + '22', color: label.color, border: `1px solid ${label.color}55` }}
+            >
+              <Tag className="h-2.5 w-2.5 shrink-0" />
+              {label.name}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-2">
-        <Badge variant={PRIORITY_VARIANTS[task.priority]} className="text-xs px-1.5 py-0">
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_CLASSES[task.priority]}`}>
           {PRIORITY_LABELS[task.priority]}
-        </Badge>
+        </span>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           {task.dueDate && (
@@ -101,15 +119,24 @@ export function KanbanCard({ task, onClick, isDragOverlay = false }: KanbanCardP
               })}
             </span>
           )}
-          {task.assignee && (
-            <span
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium"
-              title={task.assignee.name}
-            >
-              {getInitials(task.assignee.name)}
-            </span>
-          )}
-          {!task.assignee && (
+          {assignees.length > 0 ? (
+            <div className="flex -space-x-1">
+              {assignees.slice(0, 3).map((user) => (
+                <span
+                  key={user.id}
+                  className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium ring-1 ring-background"
+                  title={user.name}
+                >
+                  {getInitials(user.name)}
+                </span>
+              ))}
+              {assignees.length > 3 && (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium ring-1 ring-background text-muted-foreground">
+                  +{assignees.length - 3}
+                </span>
+              )}
+            </div>
+          ) : (
             <User className="h-3.5 w-3.5 text-muted-foreground/50" />
           )}
         </div>
