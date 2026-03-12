@@ -6,6 +6,8 @@ import { getSession } from '@/lib/auth';
 export interface UpdateTaskActionState {
   error?: string;
   success?: boolean;
+  conflict?: boolean;
+  updatedAt?: string;
 }
 
 export async function updateTaskAction(
@@ -48,6 +50,11 @@ export async function updateTaskAction(
   const labelIds = formData.getAll('labelIds[]');
   body.labelIds = labelIds.filter((id): id is string => typeof id === 'string');
 
+  const lastKnownUpdatedAt = formData.get('lastKnownUpdatedAt');
+  if (lastKnownUpdatedAt && typeof lastKnownUpdatedAt === 'string') {
+    body.lastKnownUpdatedAt = lastKnownUpdatedAt;
+  }
+
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   try {
     const res = await fetch(`${apiUrl}/api/v1/projetos/${projectId}/tasks/${taskId}`, {
@@ -61,12 +68,16 @@ export async function updateTaskAction(
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        return { conflict: true, error: data.message ?? 'Conflito de edição detectado' };
+      }
       return { error: data.message ?? 'Erro ao atualizar task' };
     }
+
+    const responseData = await res.json().catch(() => ({}));
+    revalidatePath(`/workspace/${workspaceId}/projetos/${projectId}`);
+    return { success: true, updatedAt: responseData.updatedAt };
   } catch {
     return { error: 'Erro ao conectar com o servidor' };
   }
-
-  revalidatePath(`/workspace/${workspaceId}/projetos/${projectId}`);
-  return { success: true };
 }

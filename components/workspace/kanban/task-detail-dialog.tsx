@@ -563,7 +563,7 @@ function TaskCommentsSection({
   );
 }
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict';
 
 export function TaskDetailDialog({
   task,
@@ -582,6 +582,12 @@ export function TaskDetailDialog({
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Rastreia o updatedAt do servidor para optimistic locking
+  const lastKnownUpdatedAtRef = useRef<string>(task?.updatedAt ?? '');
+
+  // Sequência de saves — ignora respostas de saves desatualizados
+  const saveSeqRef = useRef(0);
+
   // Controlled field state
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
@@ -599,7 +605,6 @@ export function TaskDetailDialog({
   const memberDropdownRef = useRef<HTMLDivElement>(null);
 
   // Reset fields when task changes
-   
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     setTitle(task?.title ?? '');
@@ -614,6 +619,8 @@ export function TaskDetailDialog({
     setSaveStatus('idle');
     setSaveError(null);
     /* eslint-enable react-hooks/set-state-in-effect */
+    lastKnownUpdatedAtRef.current = task?.updatedAt ?? '';
+    saveSeqRef.current = 0;
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close member dropdown on outside click
@@ -643,6 +650,9 @@ export function TaskDetailDialog({
       setSaveStatus('saving');
       setSaveError(null);
 
+      // Incrementa sequência — respostas com seq menor são descartadas
+      const seq = ++saveSeqRef.current;
+
       const formData = new FormData();
       formData.set('projectId', projectId);
       formData.set('workspaceId', workspaceId);
@@ -654,18 +664,26 @@ export function TaskDetailDialog({
       formData.set('dueDate', fields.dueDate);
       fields.assigneeIds.forEach((id) => formData.append('assigneeIds[]', id));
       fields.labelIds.forEach((id) => formData.append('labelIds[]', id));
+      if (lastKnownUpdatedAtRef.current) {
+        formData.set('lastKnownUpdatedAt', lastKnownUpdatedAtRef.current);
+      }
 
       startSave(async () => {
         const result = await updateTaskAction({}, formData);
+
+        // Descarta resposta se um save mais recente já foi iniciado
+        if (seq !== saveSeqRef.current) return;
+
         if (result.success) {
-          router.refresh();
-           
+          // Atualiza o timestamp conhecido para o próximo save
+          if (result.updatedAt) lastKnownUpdatedAtRef.current = result.updatedAt;
           setSaveStatus('saved');
           setTimeout(() => setSaveStatus('idle'), 2000);
+        } else if (result.conflict) {
+          setSaveStatus('conflict');
+          setSaveError(result.error ?? 'Conflito de edição');
         } else {
-           
           setSaveStatus('error');
-           
           setSaveError(result.error ?? 'Erro ao salvar');
         }
       });
@@ -736,7 +754,18 @@ export function TaskDetailDialog({
         <DialogHeader className="px-6 pt-5 pb-3 border-b flex-row items-center justify-between">
           <DialogTitle className="text-base font-semibold">Detalhes da task</DialogTitle>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {saveStatus === 'saving' || savePending ? (
+            {saveStatus === 'conflict' ? (
+              <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium">
+                <span>⚠ Task editada por outro usuário.</span>
+                <button
+                  type="button"
+                  onClick={() => router.refresh()}
+                  className="underline hover:no-underline"
+                >
+                  Recarregar
+                </button>
+              </span>
+            ) : saveStatus === 'saving' || savePending ? (
               <span className="flex items-center gap-1">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Salvando...
