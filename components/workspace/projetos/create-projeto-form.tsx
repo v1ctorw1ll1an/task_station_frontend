@@ -31,9 +31,11 @@ export function CreateProjetoForm({ workspaceId }: CreateProjetoFormProps) {
 
   useEffect(() => {
     if (state.success && state.projectId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false);
       router.push(`/workspace/${workspaceId}/projetos/${state.projectId}`);
     } else if (state.success) {
+       
       setOpen(false);
       router.refresh();
     }

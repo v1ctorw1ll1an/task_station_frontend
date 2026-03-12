@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useActionState, useTransition, useState, useRef } from 'react';
+import { useEffect, useTransition, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Check,
   ChevronDown,
   ChevronUp,
   Clock,
+  Loader2,
   MessageSquare,
   Pencil,
   Trash2,
@@ -31,7 +32,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -39,7 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { updateTaskAction, UpdateTaskActionState } from '@/actions/projeto/update-task.action';
+import { updateTaskAction } from '@/actions/projeto/update-task.action';
 import { deleteTaskAction } from '@/actions/projeto/delete-task.action';
 import {
   getTaskHistoryAction,
@@ -54,6 +54,7 @@ import { updateTaskCommentAction } from '@/actions/projeto/update-task-comment.a
 import { deleteTaskCommentAction } from '@/actions/projeto/delete-task-comment.action';
 import type { KanbanTask } from './kanban-card';
 import type { WorkspaceMember, ProjectLabel } from './kanban-board';
+import { useActionState } from 'react';
 
 const FIELD_LABELS: Record<string, string> = {
   title: 'Título',
@@ -105,8 +106,6 @@ interface TaskDetailDialogProps {
   onClose: () => void;
 }
 
-const initialState: UpdateTaskActionState = {};
-
 function getInitials(name: string) {
   return name
     .split(' ')
@@ -125,7 +124,6 @@ function renderCommentContent(content: string, membros: WorkspaceMember[]) {
   let keyIdx = 0;
 
   while (i < content.length) {
-    // Detect URLs
     if (content.startsWith('http://', i) || content.startsWith('https://', i)) {
       if (textBuffer) {
         result.push(<span key={keyIdx++}>{textBuffer}</span>);
@@ -150,7 +148,6 @@ function renderCommentContent(content: string, membros: WorkspaceMember[]) {
       continue;
     }
 
-    // Detect @mentions
     if (content[i] === '@') {
       let matched = false;
       for (const name of memberNames) {
@@ -276,7 +273,6 @@ function TaskHistorySection({
   );
 }
 
-
 const initialCommentState: CreateCommentActionState = {};
 
 function TaskCommentsSection({
@@ -300,7 +296,6 @@ function TaskCommentsSection({
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // @mention autocomplete state
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionStart, setMentionStart] = useState<number>(-1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -358,14 +353,11 @@ function TaskCommentsSection({
   function handleTextareaInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const value = e.target.value;
     const cursor = e.target.selectionStart ?? value.length;
-
-    // Find the last @ before cursor without a space after it
     const textBeforeCursor = value.slice(0, cursor);
     const atIdx = textBeforeCursor.lastIndexOf('@');
 
     if (atIdx !== -1) {
       const fragment = textBeforeCursor.slice(atIdx + 1);
-      // Only trigger if no space in fragment (still typing the mention)
       if (!fragment.includes(' ') || fragment.length === 0) {
         setMentionStart(atIdx);
         setMentionQuery(fragment);
@@ -385,7 +377,6 @@ function TaskCommentsSection({
     const after = value.slice(textarea.selectionStart ?? mentionStart);
     const newValue = `${before}@${name} ${after}`;
 
-    // Use native setter to trigger React's onChange
     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
       window.HTMLTextAreaElement.prototype,
       'value',
@@ -393,7 +384,7 @@ function TaskCommentsSection({
     nativeInputValueSetter?.call(textarea, newValue);
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
 
-    const newCursor = mentionStart + name.length + 2; // @name + space
+    const newCursor = mentionStart + name.length + 2;
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(newCursor, newCursor);
@@ -572,6 +563,8 @@ function TaskCommentsSection({
   );
 }
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
 export function TaskDetailDialog({
   task,
   projectId,
@@ -583,43 +576,47 @@ export function TaskDetailDialog({
   onClose,
 }: TaskDetailDialogProps) {
   const router = useRouter();
-  const [state, formAction, isPending] = useActionState(updateTaskAction, initialState);
+  const [savePending, startSave] = useTransition();
   const [deletePending, startDelete] = useTransition();
-  const onCloseRef = useRef(onClose);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Controlled field state
+  const [title, setTitle] = useState(task?.title ?? '');
+  const [description, setDescription] = useState(task?.description ?? '');
+  const [priority, setPriority] = useState(task?.priority ?? 'medium');
+  const [startDate, setStartDate] = useState(task?.startDate ? task.startDate.split('T')[0] : '');
+  const [dueDate, setDueDate] = useState(task?.dueDate ? task.dueDate.split('T')[0] : '');
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>(
     task?.taskAssignees.map((ta) => ta.user.id) ?? [],
+  );
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>(
+    task?.taskLabels.map((tl) => tl.label.id) ?? [],
   );
   const [memberSearch, setMemberSearch] = useState('');
   const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
   const memberDropdownRef = useRef<HTMLDivElement>(null);
 
-  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>(
-    task?.taskLabels.map((tl) => tl.label.id) ?? [],
-  );
-
+  // Reset fields when task changes
+   
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setTitle(task?.title ?? '');
+    setDescription(task?.description ?? '');
+    setPriority(task?.priority ?? 'medium');
+    setStartDate(task?.startDate ? task.startDate.split('T')[0] : '');
+    setDueDate(task?.dueDate ? task.dueDate.split('T')[0] : '');
     setSelectedAssigneeIds(task?.taskAssignees.map((ta) => ta.user.id) ?? []);
+    setSelectedLabelIds(task?.taskLabels.map((tl) => tl.label.id) ?? []);
     setMemberSearch('');
     setMemberDropdownOpen(false);
-    setSelectedLabelIds(task?.taskLabels.map((tl) => tl.label.id) ?? []);
-  }, [task?.id]);
+    setSaveStatus('idle');
+    setSaveError(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  });
-
-  useEffect(() => {
-    if (state.success) {
-      router.refresh();
-      setSaveSuccess(true);
-      const t = setTimeout(() => setSaveSuccess(false), 2500);
-      return () => clearTimeout(t);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.success]);
-
+  // Close member dropdown on outside click
   useEffect(() => {
     if (!memberDropdownOpen) return;
     function handleClickOutside(e: MouseEvent) {
@@ -631,6 +628,69 @@ export function TaskDetailDialog({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [memberDropdownOpen]);
+
+  const doSave = useCallback(
+    (fields: {
+      title: string;
+      description: string;
+      priority: string;
+      startDate: string;
+      dueDate: string;
+      assigneeIds: string[];
+      labelIds: string[];
+    }) => {
+      if (!task) return;
+      setSaveStatus('saving');
+      setSaveError(null);
+
+      const formData = new FormData();
+      formData.set('projectId', projectId);
+      formData.set('workspaceId', workspaceId);
+      formData.set('taskId', task.id);
+      formData.set('title', fields.title);
+      formData.set('description', fields.description);
+      formData.set('priority', fields.priority);
+      formData.set('startDate', fields.startDate);
+      formData.set('dueDate', fields.dueDate);
+      fields.assigneeIds.forEach((id) => formData.append('assigneeIds[]', id));
+      fields.labelIds.forEach((id) => formData.append('labelIds[]', id));
+
+      startSave(async () => {
+        const result = await updateTaskAction({}, formData);
+        if (result.success) {
+          router.refresh();
+           
+          setSaveStatus('saved');
+          setTimeout(() => setSaveStatus('idle'), 2000);
+        } else {
+           
+          setSaveStatus('error');
+           
+          setSaveError(result.error ?? 'Erro ao salvar');
+        }
+      });
+    },
+    [task, projectId, workspaceId, startSave, router],
+  );
+
+  const scheduleAutoSave = useCallback(
+    (overrides?: Partial<Parameters<typeof doSave>[0]>) => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        doSave({
+          title,
+          description,
+          priority,
+          startDate,
+          dueDate,
+          assigneeIds: selectedAssigneeIds,
+          labelIds: selectedLabelIds,
+          ...overrides,
+        });
+      }, 800);
+    },
+    [title, description, priority, startDate, dueDate, selectedAssigneeIds, selectedLabelIds, doSave],
+  );
 
   function handleDelete() {
     if (!task) return;
@@ -644,9 +704,19 @@ export function TaskDetailDialog({
   }
 
   function toggleAssignee(id: string) {
-    setSelectedAssigneeIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+    const next = selectedAssigneeIds.includes(id)
+      ? selectedAssigneeIds.filter((x) => x !== id)
+      : [...selectedAssigneeIds, id];
+    setSelectedAssigneeIds(next);
+    scheduleAutoSave({ assigneeIds: next });
+  }
+
+  function toggleLabel(id: string) {
+    const next = selectedLabelIds.includes(id)
+      ? selectedLabelIds.filter((x) => x !== id)
+      : [...selectedLabelIds, id];
+    setSelectedLabelIds(next);
+    scheduleAutoSave({ labelIds: next });
   }
 
   if (!task) return null;
@@ -661,46 +731,92 @@ export function TaskDetailDialog({
 
   return (
     <Dialog open={!!task} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Detalhes da task</DialogTitle>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
+        {/* Header */}
+        <DialogHeader className="px-6 pt-5 pb-3 border-b flex-row items-center justify-between">
+          <DialogTitle className="text-base font-semibold">Detalhes da task</DialogTitle>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {saveStatus === 'saving' || savePending ? (
+              <span className="flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Salvando...
+              </span>
+            ) : saveStatus === 'saved' ? (
+              <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                <Check className="h-3 w-3" />
+                Salvo
+              </span>
+            ) : saveStatus === 'error' ? (
+              <span className="text-destructive">{saveError}</span>
+            ) : null}
+          </div>
         </DialogHeader>
 
-        <form action={formAction} className="space-y-4">
-          <input type="hidden" name="projectId" value={projectId} />
-          <input type="hidden" name="workspaceId" value={workspaceId} />
-          <input type="hidden" name="taskId" value={task.id} />
-          {selectedAssigneeIds.map((id) => (
-            <input key={id} type="hidden" name="assigneeIds[]" value={id} />
-          ))}
-
-          <div className="space-y-2">
-            <Label htmlFor="task-title">Título</Label>
-            <Input
-              id="task-title"
-              name="title"
-              defaultValue={task.title}
+        {/* Body — two columns */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left: title + description + comments + history */}
+          <div className="flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-4 min-w-0">
+            {/* Title */}
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                scheduleAutoSave({ title: e.target.value });
+              }}
               placeholder="Título da task"
+              className="w-full text-lg font-semibold bg-transparent border-0 border-b border-transparent focus:border-input focus:outline-none focus:ring-0 pb-1 placeholder:text-muted-foreground/50 transition-colors"
             />
+
+            {/* Description */}
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Descrição</p>
+              <textarea
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  scheduleAutoSave({ description: e.target.value });
+                }}
+                placeholder="Adicione uma descrição..."
+                rows={4}
+                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Reporter: <span className="font-medium text-foreground">{task.reporter.name}</span>
+            </p>
+
+            {/* Comments */}
+            <div className="border-t pt-4">
+              <TaskCommentsSection
+                projectId={projectId}
+                taskId={task.id}
+                currentUserId={currentUserId}
+                isAdmin={isAdmin}
+                membros={membros}
+              />
+            </div>
+
+            {/* History */}
+            <div className="border-t pt-4">
+              <TaskHistorySection projectId={projectId} taskId={task.id} />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="task-description">Descrição</Label>
-            <textarea
-              id="task-description"
-              name="description"
-              defaultValue={task.description ?? ''}
-              placeholder="Descrição (opcional)"
-              rows={3}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="task-priority">Prioridade</Label>
-              <Select name="priority" defaultValue={task.priority}>
-                <SelectTrigger id="task-priority">
+          {/* Right: metadata sidebar */}
+          <div className="w-56 shrink-0 border-l overflow-y-auto px-4 py-4 space-y-5">
+            {/* Priority */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Prioridade</p>
+              <Select
+                value={priority}
+                onValueChange={(val) => {
+                  setPriority(val);
+                  scheduleAutoSave({ priority: val });
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -732,14 +848,14 @@ export function TaskDetailDialog({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Responsáveis</Label>
-
+            {/* Assignees */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Responsáveis</p>
               <div className="relative" ref={memberDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setMemberDropdownOpen((v) => !v)}
-                  className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   {selectedMembers.length > 0 ? (
                     <span className="flex items-center gap-1 min-w-0">
@@ -756,11 +872,11 @@ export function TaskDetailDialog({
                       <span className="truncate text-xs ml-1">
                         {selectedMembers.length === 1
                           ? selectedMembers[0].name
-                          : `${selectedMembers.length} responsáveis`}
+                          : `${selectedMembers.length} selecionados`}
                       </span>
                     </span>
                   ) : (
-                    <span className="text-muted-foreground">Sem responsável</span>
+                    <span className="text-muted-foreground text-xs">Sem responsável</span>
                   )}
                   <span className="text-muted-foreground text-xs shrink-0 ml-1">▾</span>
                 </button>
@@ -770,20 +886,21 @@ export function TaskDetailDialog({
                     <div className="p-2 border-b">
                       <Input
                         autoFocus
-                        placeholder="Buscar membro..."
+                        placeholder="Buscar..."
                         value={memberSearch}
                         onChange={(e) => setMemberSearch(e.target.value)}
                         className="h-7 text-xs"
                       />
                     </div>
-
                     <div className="max-h-48 overflow-y-auto py-1">
                       {selectedAssigneeIds.length > 0 && (
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedAssigneeIds([]);
+                            const next: string[] = [];
+                            setSelectedAssigneeIds(next);
                             setMemberSearch('');
+                            scheduleAutoSave({ assigneeIds: next });
                           }}
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent text-muted-foreground"
                         >
@@ -791,13 +908,9 @@ export function TaskDetailDialog({
                           Remover todos
                         </button>
                       )}
-
                       {filteredMembros.length === 0 && (
-                        <p className="px-3 py-2 text-xs text-muted-foreground">
-                          Nenhum membro encontrado
-                        </p>
+                        <p className="px-3 py-2 text-xs text-muted-foreground">Nenhum membro encontrado</p>
                       )}
-
                       {filteredMembros.map((member) => {
                         const isSelected = selectedAssigneeIds.includes(member.id);
                         return (
@@ -811,10 +924,8 @@ export function TaskDetailDialog({
                               {getInitials(member.name)}
                             </span>
                             <span className="flex flex-col items-start min-w-0">
-                              <span className="truncate font-medium">{member.name}</span>
-                              <span className="truncate text-xs text-muted-foreground">
-                                {member.email}
-                              </span>
+                              <span className="truncate font-medium text-xs">{member.name}</span>
+                              <span className="truncate text-[10px] text-muted-foreground">{member.email}</span>
                             </span>
                             {isSelected && (
                               <Check className="h-3.5 w-3.5 ml-auto flex-shrink-0 text-primary" />
@@ -823,134 +934,102 @@ export function TaskDetailDialog({
                         );
                       })}
                     </div>
-
                   </div>
                 )}
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="task-start">Data início</Label>
-              <Input
-                id="task-start"
-                name="startDate"
-                type="date"
-                defaultValue={task.startDate ? task.startDate.split('T')[0] : ''}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="task-due">Prazo</Label>
-              <Input
-                id="task-due"
-                name="dueDate"
-                type="date"
-                defaultValue={task.dueDate ? task.dueDate.split('T')[0] : ''}
-              />
-            </div>
-          </div>
-
-          {selectedLabelIds.map((id) => (
-            <input key={id} type="hidden" name="labelIds[]" value={id} />
-          ))}
-
-          {labels.length > 0 && (
-            <div className="space-y-2">
-              <Label>Labels</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {labels.map((label) => {
-                  const isSelected = selectedLabelIds.includes(label.id);
-                  return (
-                    <button
-                      key={label.id}
-                      type="button"
-                      onClick={() =>
-                        setSelectedLabelIds((prev) =>
-                          isSelected ? prev.filter((id) => id !== label.id) : [...prev, label.id],
-                        )
-                      }
-                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-opacity ${isSelected ? 'opacity-100 ring-2' : 'opacity-50'}`}
-                      style={{
-                        backgroundColor: label.color + '22',
-                        color: label.color,
-                        border: `1px solid ${label.color}55`,
-                      }}
-                    >
-                      {label.name}
-                    </button>
-                  );
-                })}
+            {/* Labels */}
+            {labels.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Labels</p>
+                <div className="flex flex-wrap gap-1">
+                  {labels.map((label) => {
+                    const isSelected = selectedLabelIds.includes(label.id);
+                    return (
+                      <button
+                        key={label.id}
+                        type="button"
+                        onClick={() => toggleLabel(label.id)}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium transition-opacity ${isSelected ? 'opacity-100 ring-2' : 'opacity-40'}`}
+                        style={{
+                          backgroundColor: label.color + '22',
+                          color: label.color,
+                          border: `1px solid ${label.color}55`,
+                        }}
+                      >
+                        {label.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
-
-          <p className="text-xs text-muted-foreground">
-            Reporter: {task.reporter.name}
-          </p>
-
-          {state.error && <p className="text-sm text-destructive">{state.error}</p>}
-
-          <div className="flex items-center justify-between pt-2 border-t">
-            {isAdmin && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={deletePending}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Excluir
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir task?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      A task <strong>{task.title}</strong> será removida permanentemente.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDelete}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Excluir
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             )}
 
-            <div className="ml-auto flex gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isPending} variant={saveSuccess ? 'outline' : 'default'}>
-                {isPending ? 'Salvando...' : saveSuccess ? 'Salvo!' : 'Salvar'}
-              </Button>
+            {/* Dates */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Data início</p>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  scheduleAutoSave({ startDate: e.target.value });
+                }}
+                className="h-8 text-sm"
+              />
             </div>
+
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Prazo</p>
+              <Input
+                type="date"
+                value={dueDate}
+                onChange={(e) => {
+                  setDueDate(e.target.value);
+                  scheduleAutoSave({ dueDate: e.target.value });
+                }}
+                className="h-8 text-sm"
+              />
+            </div>
+
+            {/* Delete */}
+            {isAdmin && (
+              <div className="pt-2 border-t">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={deletePending}
+                      className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                      Excluir task
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir task?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        A task <strong>{task.title}</strong> será removida permanentemente.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
           </div>
-        </form>
-
-        {/* Comments above history, both outside the form */}
-        <div className="border-t pt-4">
-          <TaskCommentsSection
-            projectId={projectId}
-            taskId={task.id}
-            currentUserId={currentUserId}
-            isAdmin={isAdmin}
-            membros={membros}
-          />
-        </div>
-
-        <div className="border-t pt-4">
-          <TaskHistorySection projectId={projectId} taskId={task.id} />
         </div>
       </DialogContent>
     </Dialog>
