@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useTransition, useState, useRef, useCallback } from 'react';
+import { TaskAttachmentsSection } from './task-attachments-section';
 import { useRouter } from 'next/navigation';
 import {
   Check,
@@ -65,7 +66,11 @@ const FIELD_LABELS: Record<string, string> = {
   assignees: 'Responsáveis',
   labels: 'Labels',
   column: 'Coluna',
+  attachment_added: 'anexo',
+  attachment_removed: 'anexo',
 };
+
+const ATTACHMENT_FIELDS = new Set(['attachment_added', 'attachment_removed']);
 
 const PRIORITY_LABELS: Record<string, string> = {
   low: 'Baixa',
@@ -245,21 +250,32 @@ function TaskHistorySection({
                   </span>
                   <div className="min-w-0 flex-1">
                     <span className="font-medium">{entry.user.name}</span>
-                    {' alterou '}
-                    <span className="font-medium">
-                      {FIELD_LABELS[entry.field] ?? entry.field}
-                    </span>
-                    {': '}
-                    {entry.oldValue !== null ? (
+                    {ATTACHMENT_FIELDS.has(entry.field) ? (
                       <>
-                        <span className="line-through text-muted-foreground">
-                          {formatHistoryValue(entry.field, entry.oldValue)}
+                        {entry.field === 'attachment_added' ? ' adicionou ' : ' removeu '}
+                        <span className="font-medium">
+                          {formatHistoryValue(entry.field, entry.field === 'attachment_added' ? entry.newValue : entry.oldValue)}
                         </span>
-                        {' → '}
-                        <span>{formatHistoryValue(entry.field, entry.newValue)}</span>
                       </>
                     ) : (
-                      <span>{formatHistoryValue(entry.field, entry.newValue)}</span>
+                      <>
+                        {' alterou '}
+                        <span className="font-medium">
+                          {FIELD_LABELS[entry.field] ?? entry.field}
+                        </span>
+                        {': '}
+                        {entry.oldValue !== null ? (
+                          <>
+                            <span className="line-through text-muted-foreground">
+                              {formatHistoryValue(entry.field, entry.oldValue)}
+                            </span>
+                            {' → '}
+                            <span>{formatHistoryValue(entry.field, entry.newValue)}</span>
+                          </>
+                        ) : (
+                          <span>{formatHistoryValue(entry.field, entry.newValue)}</span>
+                        )}
+                      </>
                     )}
                     <div className="text-muted-foreground mt-0.5">{formatHistoryDate(entry.changedAt)}</div>
                   </div>
@@ -290,7 +306,7 @@ function TaskCommentsSection({
 }) {
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
@@ -688,7 +704,7 @@ export function TaskDetailDialog({
         }
       });
     },
-    [task, projectId, workspaceId, startSave, router],
+    [task, projectId, workspaceId, startSave],  
   );
 
   const scheduleAutoSave = useCallback(
@@ -815,6 +831,15 @@ export function TaskDetailDialog({
             <p className="text-xs text-muted-foreground">
               Reporter: <span className="font-medium text-foreground">{task.reporter.name}</span>
             </p>
+
+            {/* Attachments */}
+            <div className="border-t pt-4">
+              <TaskAttachmentsSection
+                projectId={projectId}
+                taskId={task.id}
+                isAdmin={isAdmin}
+              />
+            </div>
 
             {/* Comments */}
             <div className="border-t pt-4">

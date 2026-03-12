@@ -2,7 +2,18 @@
 
 import { useState, useTransition, useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarDays,
+  Check,
+  Filter,
+  MoreVertical,
+  Pencil,
+  ShieldAlert,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,6 +35,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -38,12 +51,22 @@ import { Label } from '@/components/ui/label';
 import { updateColunaAction, UpdateColunaActionState } from '@/actions/projeto/update-coluna.action';
 import { deleteColunaAction } from '@/actions/projeto/delete-coluna.action';
 import type { KanbanColumn } from './kanban-board';
+import type { ProjectLabel } from '@/actions/projeto/get-labels.action';
+import type { SortOption } from './kanban-column';
 
 interface ColumnOptionsMenuProps {
   column: KanbanColumn;
   allColumns: KanbanColumn[];
   projectId: string;
   workspaceId: string;
+  isAdmin: boolean;
+  labels: ProjectLabel[];
+  sortOption: SortOption;
+  filterLabelIds: string[];
+  hasActiveFilters: boolean;
+  onSortChange: (sort: SortOption) => void;
+  onFilterLabelToggle: (labelId: string) => void;
+  onClearFilters: () => void;
 }
 
 const initialRenameState: UpdateColunaActionState = {};
@@ -53,6 +76,14 @@ export function ColumnOptionsMenu({
   allColumns,
   projectId,
   workspaceId,
+  isAdmin,
+  labels,
+  sortOption,
+  filterLabelIds,
+  hasActiveFilters,
+  onSortChange,
+  onFilterLabelToggle,
+  onClearFilters,
 }: ColumnOptionsMenuProps) {
   const router = useRouter();
   const [renameOpen, setRenameOpen] = useState(false);
@@ -68,6 +99,7 @@ export function ColumnOptionsMenu({
 
   useEffect(() => {
     if (renameState.success) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRenameOpen(false);
       router.refresh();
     }
@@ -102,22 +134,113 @@ export function ColumnOptionsMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={['h-6 w-6 p-0', hasActiveFilters ? 'text-primary' : ''].filter(Boolean).join(' ')}
+          >
             <MoreVertical className="h-3.5 w-3.5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setRenameOpen(true)}>
-            <Pencil className="mr-2 h-3.5 w-3.5" />
-            Renomear
+        <DropdownMenuContent align="end" className="w-52">
+
+          {/* Ordenação */}
+          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+            <CalendarDays className="h-3 w-3" />
+            Ordenar por data
+          </DropdownMenuLabel>
+          <DropdownMenuItem
+            onClick={() => onSortChange(sortOption === 'dueDate_asc' ? 'default' : 'dueDate_asc')}
+          >
+            <ArrowUp className="mr-2 h-3.5 w-3.5" />
+            Mais próxima primeiro
+            {sortOption === 'dueDate_asc' && <Check className="ml-auto h-3.5 w-3.5" />}
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => setDeleteOpen(true)}
-            className="text-destructive focus:text-destructive"
+            onClick={() => onSortChange(sortOption === 'dueDate_desc' ? 'default' : 'dueDate_desc')}
           >
-            <Trash2 className="mr-2 h-3.5 w-3.5" />
-            Excluir coluna
+            <ArrowDown className="mr-2 h-3.5 w-3.5" />
+            Mais distante primeiro
+            {sortOption === 'dueDate_desc' && <Check className="ml-auto h-3.5 w-3.5" />}
           </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          {/* Urgência */}
+          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+            <ShieldAlert className="h-3 w-3" />
+            Ordenar por urgência
+          </DropdownMenuLabel>
+          <DropdownMenuItem
+            onClick={() => onSortChange(sortOption === 'priority_desc' ? 'default' : 'priority_desc')}
+          >
+            <ArrowUp className="mr-2 h-3.5 w-3.5" />
+            Mais urgente primeiro
+            {sortOption === 'priority_desc' && <Check className="ml-auto h-3.5 w-3.5" />}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => onSortChange(sortOption === 'priority_asc' ? 'default' : 'priority_asc')}
+          >
+            <ArrowDown className="mr-2 h-3.5 w-3.5" />
+            Menos urgente primeiro
+            {sortOption === 'priority_asc' && <Check className="ml-auto h-3.5 w-3.5" />}
+          </DropdownMenuItem>
+
+          {/* Filtro por label */}
+          {labels.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <Filter className="h-3 w-3" />
+                Filtrar por label
+              </DropdownMenuLabel>
+              {labels.map((label) => {
+                const active = filterLabelIds.includes(label.id);
+                return (
+                  <DropdownMenuItem
+                    key={label.id}
+                    onClick={() => onFilterLabelToggle(label.id)}
+                  >
+                    <span
+                      className="mr-2 h-2.5 w-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: label.color }}
+                    />
+                    <span className="truncate">{label.name}</span>
+                    {active && <Check className="ml-auto h-3.5 w-3.5" />}
+                  </DropdownMenuItem>
+                );
+              })}
+            </>
+          )}
+
+          {/* Limpar filtros */}
+          {hasActiveFilters && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onClearFilters} className="text-muted-foreground">
+                <X className="mr-2 h-3.5 w-3.5" />
+                Limpar filtros
+              </DropdownMenuItem>
+            </>
+          )}
+
+          {/* Admin actions */}
+          {isAdmin && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+                <Pencil className="mr-2 h-3.5 w-3.5" />
+                Renomear
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setDeleteOpen(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                Excluir coluna
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

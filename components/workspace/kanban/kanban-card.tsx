@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { CalendarDays, Tag, User } from 'lucide-react';
+import { gravatarUrl } from '@/lib/gravatar';
 
 export interface KanbanTaskLabel {
   label: { id: string; name: string; color: string };
@@ -19,8 +21,8 @@ export interface KanbanTask {
   updatedAt: string;
   columnId: string;
   projectId: string;
-  taskAssignees: { user: { id: string; name: string } }[];
-  reporter: { id: string; name: string };
+  taskAssignees: { user: { id: string; name: string; email: string; photoUrl: string | null } }[];
+  reporter: { id: string; name: string; email: string; photoUrl: string | null };
   taskLabels: KanbanTaskLabel[];
 }
 
@@ -51,6 +53,36 @@ function getInitials(name: string) {
 function isOverdue(dueDate: string | null) {
   if (!dueDate) return false;
   return new Date(dueDate) < new Date(new Date().toDateString());
+}
+
+function AssigneeAvatar({ user }: { user: { name: string; email: string; photoUrl: string | null } }) {
+  const [gravatarSrc, setGravatarSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (user.photoUrl) return;
+    let cancelled = false;
+    gravatarUrl(user.email, 40).then((url) => {
+      if (!cancelled) setGravatarSrc(url);
+    });
+    return () => { cancelled = true; };
+  }, [user.email, user.photoUrl]);
+
+  const src = user.photoUrl ?? gravatarSrc;
+
+  if (failed || !src) {
+    return <>{getInitials(user.name)}</>;
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={user.name}
+      className="w-full h-full object-cover rounded-full"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 interface KanbanCardProps {
@@ -125,10 +157,10 @@ export function KanbanCard({ task, onClick, isDragOverlay = false }: KanbanCardP
               {assignees.slice(0, 3).map((user) => (
                 <span
                   key={user.id}
-                  className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium ring-1 ring-background"
+                  className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium ring-1 ring-background overflow-hidden"
                   title={user.name}
                 >
-                  {getInitials(user.name)}
+                  <AssigneeAvatar user={user} />
                 </span>
               ))}
               {assignees.length > 3 && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Plus } from 'lucide-react';
@@ -10,6 +10,16 @@ import { KanbanCard, type KanbanTask } from './kanban-card';
 import { ColumnOptionsMenu } from './column-options-menu';
 import { createTaskAction } from '@/actions/projeto/create-task.action';
 import type { KanbanColumn } from './kanban-board';
+import type { ProjectLabel } from '@/actions/projeto/get-labels.action';
+
+export type SortOption = 'default' | 'dueDate_asc' | 'dueDate_desc' | 'priority_desc' | 'priority_asc';
+
+const PRIORITY_ORDER: Record<KanbanTask['priority'], number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
 
 interface KanbanColumnProps {
   column: KanbanColumn;
@@ -17,6 +27,7 @@ interface KanbanColumnProps {
   projectId: string;
   workspaceId: string;
   isAdmin: boolean;
+  labels: ProjectLabel[];
   onTaskClick: (taskId: string) => void;
 }
 
@@ -26,12 +37,15 @@ export function KanbanColumnComponent({
   projectId,
   workspaceId,
   isAdmin,
+  labels,
   onTaskClick,
 }: KanbanColumnProps) {
   const [addingTask, setAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [addPending, startAdd] = useTransition();
   const [addError, setAddError] = useState<string | null>(null);
+  const [sortOption, setSortOption] = useState<SortOption>('default');
+  const [filterLabelIds, setFilterLabelIds] = useState<string[]>([]);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column.id,
@@ -43,6 +57,38 @@ export function KanbanColumnComponent({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+
+  const displayedTasks = useMemo(() => {
+    let tasks = [...column.tasks];
+
+    if (filterLabelIds.length > 0) {
+      tasks = tasks.filter((task) =>
+        task.taskLabels.some((tl) => filterLabelIds.includes(tl.label.id)),
+      );
+    }
+
+    if (sortOption === 'dueDate_asc') {
+      tasks.sort((a, b) => {
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      });
+    } else if (sortOption === 'dueDate_desc') {
+      tasks.sort((a, b) => {
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+      });
+    } else if (sortOption === 'priority_desc') {
+      tasks.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+    } else if (sortOption === 'priority_asc') {
+      tasks.sort((a, b) => PRIORITY_ORDER[b.priority] - PRIORITY_ORDER[a.priority]);
+    }
+
+    return tasks;
+  }, [column.tasks, sortOption, filterLabelIds]);
+
+  const hasActiveFilters = sortOption !== 'default' || filterLabelIds.length > 0;
 
   function handleAddTask(e: React.FormEvent) {
     e.preventDefault();
@@ -64,6 +110,17 @@ export function KanbanColumnComponent({
         setAddingTask(false);
       }
     });
+  }
+
+  function toggleFilterLabel(id: string) {
+    setFilterLabelIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  function clearFilters() {
+    setSortOption('default');
+    setFilterLabelIds([]);
   }
 
   return (
@@ -90,25 +147,33 @@ export function KanbanColumnComponent({
             />
           )}
           <span className="text-sm font-semibold">{column.name}</span>
-          <span className="text-xs text-muted-foreground">({column.tasks.length})</span>
+          <span className="text-xs text-muted-foreground">
+            ({filterLabelIds.length > 0 ? `${displayedTasks.length}/` : ''}{column.tasks.length})
+          </span>
         </div>
-        {isAdmin && (
-          <ColumnOptionsMenu
-            column={column}
-            allColumns={allColumns}
-            projectId={projectId}
-            workspaceId={workspaceId}
-          />
-        )}
+        <ColumnOptionsMenu
+          column={column}
+          allColumns={allColumns}
+          projectId={projectId}
+          workspaceId={workspaceId}
+          isAdmin={isAdmin}
+          labels={labels}
+          sortOption={sortOption}
+          filterLabelIds={filterLabelIds}
+          hasActiveFilters={hasActiveFilters}
+          onSortChange={setSortOption}
+          onFilterLabelToggle={toggleFilterLabel}
+          onClearFilters={clearFilters}
+        />
       </div>
 
       {/* Tasks */}
       <div className="flex flex-col gap-2 px-3 py-1 flex-1 min-h-[40px]">
         <SortableContext
-          items={column.tasks.map((t) => t.id)}
+          items={displayedTasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
         >
-          {column.tasks.map((task) => (
+          {displayedTasks.map((task) => (
             <KanbanCard key={task.id} task={task} onClick={(t) => onTaskClick(t.id)} />
           ))}
         </SortableContext>

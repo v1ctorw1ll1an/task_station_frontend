@@ -35,6 +35,7 @@ import { reorderColunasAction } from '@/actions/projeto/reorder-colunas.action';
 import { createColunaAction, CreateColunaActionState } from '@/actions/projeto/create-coluna.action';
 import type { ProjectLabel } from '@/actions/projeto/get-labels.action';
 import { LabelsManager } from './labels-manager';
+import { TrashDialog } from './trash-dialog';
 
 export type { ProjectLabel };
 
@@ -276,7 +277,8 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
   return (
     <>
       {isAdmin && (
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-end mb-2 gap-2">
+          <TrashDialog projectId={projectId} workspaceId={workspaceId} />
           <LabelsManager projectId={projectId} workspaceId={workspaceId} labels={labels} />
         </div>
       )}
@@ -301,6 +303,7 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
                 projectId={projectId}
                 workspaceId={workspaceId}
                 isAdmin={isAdmin}
+                labels={labels}
                 onTaskClick={setSelectedTaskId}
               />
             ))}
@@ -371,7 +374,10 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
         membros={membros}
         labels={labels}
         currentUserId={currentUserId}
-        onClose={() => setSelectedTaskId(null)}
+        onClose={() => {
+          setSelectedTaskId(null);
+          router.refresh();
+        }}
       />
     </>
   );
