@@ -8,6 +8,7 @@ export interface CreateWorkspaceActionState {
   error?: string;
   success?: boolean;
   workspaceId?: string;
+  workspaceName?: string;
 }
 
 export async function createWorkspaceAction(
@@ -49,7 +50,11 @@ export async function createWorkspaceAction(
 
     const body = await res.json().catch(() => ({}));
     revalidatePath(`/empresa/${companyId}/workspaces`);
-    return { success: true, workspaceId: body.workspace?.id };
+    return {
+      success: true,
+      workspaceId: body.workspace?.id,
+      workspaceName: parsed.data.name,
+    };
   } catch {
     return { error: 'Erro ao conectar com o servidor' };
   }

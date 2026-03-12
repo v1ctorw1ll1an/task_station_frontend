@@ -2,7 +2,7 @@
 
 import { useEffect, useActionState, useState, useRef, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusCircle, X, ChevronDown, Check } from 'lucide-react';
+import { PlusCircle, X, ChevronDown, Check, CheckCircle } from 'lucide-react';
 import {
   createWorkspaceAction,
   CreateWorkspaceActionState,
@@ -34,6 +34,7 @@ const initialState: CreateWorkspaceActionState = {};
 export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspaceFormProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createWorkspaceAction, initialState);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -45,19 +46,25 @@ export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspa
     if (state.success) {
       startTransition(() => {
         setOpen(false);
-        if (state.workspaceId) {
-          router.push(`/workspace/${state.workspaceId}/projetos`);
-        } else {
-          router.refresh();
-        }
+        setSuccessMessage(state.workspaceName ?? 'Workspace criado com sucesso!');
+        router.refresh();
       });
     }
-  }, [state.success, state.workspaceId, router]);
+  }, [state.success, state.workspaceName, router]);
+
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedIds([]);
+       
       setSearch('');
+       
       setDropdownOpen(false);
     }
   }, [open]);
@@ -87,13 +94,22 @@ export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspa
   const selectedMembers = companyMembers.filter((m) => selectedIds.includes(m.id));
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Novo workspace
-        </Button>
-      </DialogTrigger>
+    <>
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-md dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+          <CheckCircle className="h-4 w-4 shrink-0" />
+          <span>
+            Workspace <strong>{successMessage}</strong> criado com sucesso!
+          </span>
+        </div>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm">
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Novo workspace
+          </Button>
+        </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Criar workspace</DialogTitle>
@@ -238,5 +254,6 @@ export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspa
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

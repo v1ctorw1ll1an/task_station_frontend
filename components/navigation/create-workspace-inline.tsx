@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useActionState, useRef, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, X, ChevronDown, Check } from 'lucide-react';
+import { Plus, X, ChevronDown, Check, CheckCircle } from 'lucide-react';
 import {
   createWorkspaceAction,
   CreateWorkspaceActionState,
@@ -35,6 +35,7 @@ export function CreateWorkspaceInlineTrigger({
 }: CreateWorkspaceInlineTriggerProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createWorkspaceAction, initialState);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
 
   const [companyMembers, setCompanyMembers] = useState<CompanyMember[]>([]);
@@ -44,21 +45,30 @@ export function CreateWorkspaceInlineTrigger({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (state.success && state.workspaceId) {
+    if (state.success) {
       startTransition(() => {
         setOpen(false);
-        router.push(`/workspace/${state.workspaceId}/projetos`);
+        setSuccessMessage(state.workspaceName ?? 'Workspace criado!');
         router.refresh();
       });
     }
-  }, [state.success, state.workspaceId, router]);
+  }, [state.success, state.workspaceName, router]);
+
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   useEffect(() => {
     if (open) {
       getCompanyMembersAction(companyId).then(setCompanyMembers);
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedIds([]);
+       
       setSearch('');
+       
       setDropdownOpen(false);
     }
   }, [open, companyId]);
@@ -99,8 +109,17 @@ export function CreateWorkspaceInlineTrigger({
     );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    <>
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-md dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+          <CheckCircle className="h-4 w-4 shrink-0" />
+          <span>
+            Workspace <strong>{successMessage}</strong> criado com sucesso!
+          </span>
+        </div>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Criar workspace</DialogTitle>
@@ -245,5 +264,6 @@ export function CreateWorkspaceInlineTrigger({
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

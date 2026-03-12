@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -42,7 +43,9 @@ export function CreateCompanyForm() {
 
   useEffect(() => {
     if (state.success) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCreatedAdminEmail(form.getValues('adminEmail'));
+       
       setMagicLink(state.magicLink ?? null);
       form.reset();
       router.refresh();
@@ -71,7 +74,7 @@ export function CreateCompanyForm() {
           Nova Empresa
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             {createdAdminEmail ? 'Empresa criada com sucesso' : 'Criar Empresa'}
@@ -79,133 +82,136 @@ export function CreateCompanyForm() {
         </DialogHeader>
 
         {createdAdminEmail ? (
-          <div className="space-y-4">
-            <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
-              {state.emailSent && magicLink ? (
-                <>
-                  <div className="flex items-start gap-3">
-                    <Mail className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                    <p className="text-sm text-muted-foreground">
-                      Um link de primeiro acesso foi enviado para{' '}
-                      <strong className="text-foreground">{createdAdminEmail}</strong>. A entrega pode levar alguns minutos.
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Link2 className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                    <p className="text-sm text-muted-foreground">
-                      Caso o email não chegue, copie o link abaixo e repasse diretamente ao administrador:
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 rounded bg-muted px-2 py-1 text-xs truncate">
-                      {magicLink}
-                    </code>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="shrink-0"
-                      onClick={handleCopy}
-                    >
-                      {copied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
-                      {copied ? 'Copiado!' : 'Copiar'}
-                    </Button>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Info className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
-                    <p className="text-sm text-blue-600 dark:text-blue-400">
-                      O link expira em 7 dias e só pode ser usado uma vez. O administrador precisará definir nome e senha ao acessá-lo.
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-start gap-3">
-                    <UserCog className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                    <p className="text-sm text-muted-foreground">
-                      O usuário <strong className="text-foreground">{createdAdminEmail}</strong> já existia no sistema e foi vinculado como administrador da nova empresa.
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Info className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
-                    <p className="text-sm text-blue-600 dark:text-blue-400">
-                      Nenhum email foi enviado — o usuário já possui acesso ao sistema com suas credenciais atuais.
-                    </p>
-                  </div>
-                </>
-              )}
+          <>
+            <div className="overflow-y-auto">
+              <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+                {state.emailSent && magicLink ? (
+                  <>
+                    <div className="flex items-start gap-3">
+                      <Mail className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                      <p className="text-sm text-muted-foreground">
+                        Um link de primeiro acesso foi enviado para{' '}
+                        <strong className="text-foreground">{createdAdminEmail}</strong>. A entrega pode levar alguns minutos.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Link2 className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                      <p className="text-sm text-muted-foreground">
+                        Caso o email não chegue, copie o link abaixo e repasse diretamente ao administrador:
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 rounded bg-muted px-2 py-1 text-xs truncate">
+                        {magicLink}
+                      </code>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={handleCopy}
+                      >
+                        {copied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+                        {copied ? 'Copiado!' : 'Copiar'}
+                      </Button>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Info className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
+                      <p className="text-sm text-blue-600 dark:text-blue-400">
+                        O link expira em 7 dias e só pode ser usado uma vez. O administrador precisará definir nome e senha ao acessá-lo.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-start gap-3">
+                      <UserCog className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                      <p className="text-sm text-muted-foreground">
+                        O usuário <strong className="text-foreground">{createdAdminEmail}</strong> já existia no sistema e foi vinculado como administrador da nova empresa.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Info className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
+                      <p className="text-sm text-blue-600 dark:text-blue-400">
+                        Nenhum email foi enviado — o usuário já possui acesso ao sistema com suas credenciais atuais.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-
-            <div className="flex justify-end pt-2">
+            <DialogFooter>
               <Button onClick={handleClose}>Entendi</Button>
-            </div>
-          </div>
+            </DialogFooter>
+          </>
         ) : (
           <Form {...form}>
-            <form action={formAction} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="legalName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Razão Social</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Empresa LTDA" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="taxId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>CNPJ</FormLabel>
-                    <FormControl>
-                      <Input placeholder="00000000000100" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="border-t pt-4">
-                <p className="text-sm font-medium text-muted-foreground mb-3">Admin da Empresa</p>
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="adminName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome <span className="text-muted-foreground font-normal text-xs">(ignorado se o email já existe no sistema)</span></FormLabel>
-                        <FormControl>
-                          <Input placeholder="João Silva" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="adminEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="admin@empresa.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+            <form action={formAction} className="flex flex-col gap-4 overflow-y-auto">
+              <div className="space-y-4 overflow-y-auto">
+                <FormField
+                  control={form.control}
+                  name="legalName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Razão Social</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Empresa LTDA" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="taxId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CNPJ</FormLabel>
+                      <FormControl>
+                        <Input placeholder="00000000000100" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="border-t pt-4">
+                  <p className="text-sm font-medium text-muted-foreground mb-3">Admin da Empresa</p>
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="adminName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome <span className="text-muted-foreground font-normal text-xs">(ignorado se o email já existe no sistema)</span></FormLabel>
+                          <FormControl>
+                            <Input placeholder="João Silva" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="adminEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="admin@empresa.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
+
+                {state.error && (
+                  <p className="text-sm text-destructive">{state.error}</p>
+                )}
               </div>
 
-              {state.error && (
-                <p className="text-sm text-destructive">{state.error}</p>
-              )}
-
-              <div className="flex justify-end gap-2 pt-2">
+              <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"
@@ -217,7 +223,7 @@ export function CreateCompanyForm() {
                 <Button type="submit" disabled={isPending}>
                   {isPending ? 'Criando...' : 'Criar Empresa'}
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
           </Form>
         )}

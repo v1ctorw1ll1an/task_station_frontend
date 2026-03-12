@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useOptimistic, useTransition, useCallback } from 'react';
+import { useState, useEffect, useTransition, useCallback } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -8,13 +8,15 @@ import {
   DragOverlay,
   DragStartEvent,
   PointerSensor,
-  closestCorners,
+  closestCenter,
   useSensor,
   useSensors,
+  type CollisionDetection,
 } from '@dnd-kit/core';
-import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { Plus } from 'lucide-react';
-import { useActionState, useEffect } from 'react';
+import { useActionState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -67,7 +69,14 @@ interface KanbanBoardProps {
 const initialCreateColunaState: CreateColunaActionState = {};
 
 export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, labels, currentUserId }: KanbanBoardProps) {
-  const [columns, setColumns] = useOptimistic<KanbanColumn[]>(data.columns);
+  const router = useRouter();
+  const [columns, setColumns] = useState<KanbanColumn[]>(data.columns);
+
+  // Sincroniza com os dados do servidor após router.refresh()
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setColumns(data.columns);
+  }, [data.columns]);
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -86,14 +95,33 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
 
   useEffect(() => {
     if (createColunaState.success) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCreateColOpen(false);
+      router.refresh();
     }
-  }, [createColunaState.success]);
+  }, [createColunaState.success, router]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
     }),
+  );
+
+  // When dragging a column, only consider other columns as drop targets.
+  // When dragging a task, use closestCenter across all droppables.
+  const collisionDetection = useCallback<CollisionDetection>(
+    (args) => {
+      if (activeColumnId) {
+        return closestCenter({
+          ...args,
+          droppableContainers: args.droppableContainers.filter(
+            (c) => c.data.current?.type === 'column',
+          ),
+        });
+      }
+      return closestCenter(args);
+    },
+    [activeColumnId],
   );
 
   function handleDragStart(event: DragStartEvent) {
@@ -153,19 +181,16 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
         const overId = over.id as string;
         if (activeId === overId) return;
 
-        const newOrder = columns
-          .map((c) => c.id)
-          .filter((id) => id !== activeId);
-        const overIndex = newOrder.indexOf(overId);
-        newOrder.splice(overIndex, 0, activeId);
+        const colIds = columns.map((c) => c.id);
+        const newOrder = arrayMove(colIds, colIds.indexOf(activeId), colIds.indexOf(overId));
 
         setColumns((cols) => {
           const colMap = new Map(cols.map((c) => [c.id, c]));
           return newOrder.map((id) => colMap.get(id)!).filter(Boolean);
         });
-
         startTransition(async () => {
           await reorderColunasAction(projectId, workspaceId, newOrder);
+          router.refresh();
         });
         return;
       }
@@ -179,21 +204,69 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
         let afterTaskId: string | null = null;
 
         if (over.data.current?.type === 'column') {
+          // Dropped on column area — place at end
           targetColumnId = overId;
+          const targetTasks = columns
+            .find((c) => c.id === targetColumnId)
+            ?.tasks.filter((t) => t.id !== draggedTask.id) ?? [];
+          afterTaskId = targetTasks.length > 0 ? targetTasks[targetTasks.length - 1].id : null;
         } else if (over.data.current?.type === 'task') {
           const overTask = over.data.current.task as KanbanTask;
           targetColumnId = overTask.columnId;
-          afterTaskId = overTask.id;
+
+          // Use arrayMove to compute the correct final position.
+          // For same-column: columns state still has the original order (SortableContext handles visuals).
+          // For cross-column: handleDragOver already appended the task at the end of the target column.
+          const targetCol = columns.find((c) => c.id === targetColumnId)!;
+          const colTaskIds = targetCol.tasks.map((t) => t.id);
+          const fromIdx = colTaskIds.indexOf(draggedTask.id);
+          const toIdx = colTaskIds.indexOf(overId);
+
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const reordered = arrayMove(colTaskIds, fromIdx, toIdx);
+            const newPos = reordered.indexOf(draggedTask.id);
+            afterTaskId = newPos === 0 ? null : reordered[newPos - 1];
+          } else {
+            // Fallback: dragged task not found in target column yet (edge case)
+            afterTaskId = overTask.id;
+          }
         } else {
           return;
         }
 
+        // Capture values for closure before startTransition
+        const capturedTargetColumnId = targetColumnId;
+        const capturedAfterTaskId = afterTaskId;
+        const capturedDraggedTask = draggedTask;
+
+        // Aplica o update visual imediatamente (sem transição)
+        setColumns((cols) =>
+          cols.map((col) => {
+            if (col.id === capturedTargetColumnId) {
+              const withoutDragged = col.tasks.filter((t) => t.id !== capturedDraggedTask.id);
+              const updatedTask = { ...capturedDraggedTask, columnId: capturedTargetColumnId };
+              if (capturedAfterTaskId === null) {
+                return { ...col, tasks: [updatedTask, ...withoutDragged] };
+              }
+              const insertAfterIdx = withoutDragged.findIndex((t) => t.id === capturedAfterTaskId);
+              const newTasks = [...withoutDragged];
+              newTasks.splice(insertAfterIdx + 1, 0, updatedTask);
+              return { ...col, tasks: newTasks };
+            }
+            if (col.id === capturedDraggedTask.columnId && col.id !== capturedTargetColumnId) {
+              return { ...col, tasks: col.tasks.filter((t) => t.id !== capturedDraggedTask.id) };
+            }
+            return col;
+          }),
+        );
+
         startTransition(async () => {
-          await moveTaskAction(projectId, draggedTask.id, workspaceId, targetColumnId, afterTaskId);
+          await moveTaskAction(projectId, capturedDraggedTask.id, workspaceId, capturedTargetColumnId, capturedAfterTaskId);
+          router.refresh();
         });
       }
     },
-    [columns, projectId, workspaceId, setColumns, startTransition],
+    [columns, projectId, workspaceId, setColumns, startTransition, router],
   );
 
   const activeTaskData = activeTask
@@ -210,7 +283,7 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}

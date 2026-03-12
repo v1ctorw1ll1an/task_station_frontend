@@ -200,6 +200,7 @@ function TaskHistorySection({
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     getTaskHistoryAction(projectId, taskId).then((data) => {
       setHistory(data);
@@ -585,12 +586,14 @@ export function TaskDetailDialog({
   const [state, formAction, isPending] = useActionState(updateTaskAction, initialState);
   const [deletePending, startDelete] = useTransition();
   const onCloseRef = useRef(onClose);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>(
     task?.taskAssignees.map((ta) => ta.user.id) ?? [],
   );
   const [memberSearch, setMemberSearch] = useState('');
   const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
+  const memberDropdownRef = useRef<HTMLDivElement>(null);
 
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>(
     task?.taskLabels.map((tl) => tl.label.id) ?? [],
@@ -609,11 +612,25 @@ export function TaskDetailDialog({
 
   useEffect(() => {
     if (state.success) {
-      onCloseRef.current();
       router.refresh();
+      setSaveSuccess(true);
+      const t = setTimeout(() => setSaveSuccess(false), 2500);
+      return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.success]);
+
+  useEffect(() => {
+    if (!memberDropdownOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (memberDropdownRef.current && !memberDropdownRef.current.contains(e.target as Node)) {
+        setMemberDropdownOpen(false);
+        setMemberSearch('');
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [memberDropdownOpen]);
 
   function handleDelete() {
     if (!task) return;
@@ -718,7 +735,7 @@ export function TaskDetailDialog({
             <div className="space-y-2">
               <Label>Responsáveis</Label>
 
-              <div className="relative">
+              <div className="relative" ref={memberDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setMemberDropdownOpen((v) => !v)}
@@ -807,17 +824,6 @@ export function TaskDetailDialog({
                       })}
                     </div>
 
-                    <div className="p-2 border-t">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="w-full h-7 text-xs"
-                        onClick={() => setMemberDropdownOpen(false)}
-                      >
-                        Fechar
-                      </Button>
-                    </div>
                   </div>
                 )}
               </div>
@@ -925,8 +931,8 @@ export function TaskDetailDialog({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? 'Salvando...' : 'Salvar'}
+              <Button type="submit" disabled={isPending} variant={saveSuccess ? 'outline' : 'default'}>
+                {isPending ? 'Salvando...' : saveSuccess ? 'Salvo!' : 'Salvar'}
               </Button>
             </div>
           </div>
