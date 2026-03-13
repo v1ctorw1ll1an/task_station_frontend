@@ -50,9 +50,17 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
+function todayLocalStr(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function isOverdue(dueDate: string | null) {
   if (!dueDate) return false;
-  return new Date(dueDate) < new Date(new Date().toDateString());
+  return dueDate.split('T')[0] < todayLocalStr();
 }
 
 function AssigneeAvatar({ user }: { user: { name: string; email: string; photoUrl: string | null } }) {
@@ -151,10 +159,10 @@ export function KanbanCard({ task, onClick, isDragOverlay = false }: KanbanCardP
           {task.dueDate && (
             <span className={`flex items-center gap-0.5 ${overdue ? 'text-destructive' : ''}`}>
               <CalendarDays className="h-3 w-3" />
-              {new Date(task.dueDate).toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-              })}
+              {(() => {
+                const [, m, d] = task.dueDate.split('T')[0].split('-');
+                return `${d}/${m}`;
+              })()}
             </span>
           )}
           {assignees.length > 0 ? (
