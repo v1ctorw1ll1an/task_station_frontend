@@ -56,7 +56,7 @@ export function ContratarMembroModal({ companyId }: ContratarMembroModalProps) {
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Contratar novo colaborador</DialogTitle>
+                    <DialogTitle>Adicionar novo colaborador</DialogTitle>
                 </DialogHeader>
                 <form action={formAction} className="space-y-4">
                     <input type="hidden" name="companyId" value={companyId} />
@@ -146,7 +146,7 @@ export function ContratarMembroModal({ companyId }: ContratarMembroModalProps) {
                             Cancelar
                         </Button>
                         <Button type="submit" disabled={isPending}>
-                            {isPending ? "Contratando..." : "Contratar"}
+                            {isPending ? "Adicionando..." : "Adicionar"}
                         </Button>
                     </div>
                 </form>

@@ -50,7 +50,7 @@ export async function contratarMembroAction(
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      return { error: data.message ?? 'Erro ao contratar membro' };
+      return { error: data.message ?? 'Erro ao adicionar membro' };
     }
 
     const data = await res.json().catch(() => ({}));
