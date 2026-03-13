@@ -68,7 +68,12 @@ function AssigneeAvatar({ user }: { user: { name: string; email: string; photoUr
     return () => { cancelled = true; };
   }, [user.email, user.photoUrl]);
 
-  const src = user.photoUrl ?? gravatarSrc;
+  const rawPhoto = user.photoUrl
+    ? user.photoUrl.startsWith('http')
+      ? user.photoUrl
+      : `${process.env.NEXT_PUBLIC_API_URL}${user.photoUrl}`
+    : null;
+  const src = rawPhoto ?? gravatarSrc;
 
   if (failed || !src) {
     return <>{getInitials(user.name)}</>;

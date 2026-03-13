@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, startTransition } from 'react';
 import { activateWorkspaceAction } from '@/actions/empresa/activate-workspace.action';
 import { deactivateWorkspaceAction } from '@/actions/empresa/deactivate-workspace.action';
 import { deleteWorkspaceAction } from '@/actions/empresa/delete-workspace.action';
@@ -81,8 +81,10 @@ function EditWorkspaceDialog({
 
   useEffect(() => {
     if (state.success) {
-      setOpen(false);
-      router.refresh();
+      startTransition(() => {
+        setOpen(false);
+        router.refresh();
+      });
     }
   }, [state.success, router]);
 

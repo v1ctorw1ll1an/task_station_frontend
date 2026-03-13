@@ -304,7 +304,7 @@ export function TaskAttachmentsSection({ projectId, taskId, isAdmin }: TaskAttac
           <Paperclip className="h-3.5 w-3.5" />
           Anexos
           <span className="font-normal normal-case tracking-normal">
-            {imageCount}/{IMAGE_MAX_COUNT} foto{IMAGE_MAX_COUNT !== 1 ? 's' : ''} · {videoCount}/{VIDEO_MAX_COUNT} vídeo
+            {imageCount}/{IMAGE_MAX_COUNT} foto{(IMAGE_MAX_COUNT as number) !== 1 ? 's' : ''} · {videoCount}/{VIDEO_MAX_COUNT} vídeo
           </span>
         </h4>
         {isAdmin && (

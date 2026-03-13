@@ -1,19 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
-import { Home, Users, Plus } from 'lucide-react';
+import { Home, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WorkspaceNavItem, SidebarWorkspace } from './workspace-nav-item';
 import { CreateWorkspaceInlineTrigger } from './create-workspace-inline';
+import { gravatarUrl } from '@/lib/gravatar';
 
 interface AppSidebarProps {
   companyId: string;
   companyName: string;
   isCompanyAdmin: boolean;
-  isSuperuser: boolean;
   workspaces: SidebarWorkspace[];
+  userEmail: string;
 }
 
 export function AppSidebar({
@@ -21,22 +22,32 @@ export function AppSidebar({
   companyName,
   isCompanyAdmin,
   workspaces,
+  userEmail,
 }: AppSidebarProps) {
   const pathname = usePathname();
   const params = useParams();
   const currentWorkspaceId = params?.workspaceId as string | undefined;
+
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
 
   const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(() => {
     const initial = currentWorkspaceId ?? workspaces[0]?.workspaceId;
     return new Set(initial ? [initial] : []);
   });
 
+  useEffect(() => {
+    gravatarUrl(userEmail, 40).then(setAvatarSrc);
+  }, [userEmail]);
+
   // Auto-expand the current workspace when navigation changes
   useEffect(() => {
     if (currentWorkspaceId) {
-      setExpandedWorkspaces((prev) => {
-        if (prev.has(currentWorkspaceId)) return prev;
-        return new Set([...prev, currentWorkspaceId]);
+      startTransition(() => {
+        setExpandedWorkspaces((prev) => {
+          if (prev.has(currentWorkspaceId)) return prev;
+          return new Set([...prev, currentWorkspaceId]);
+        });
       });
     }
   }, [currentWorkspaceId]);
@@ -130,6 +141,35 @@ export function AppSidebar({
           </div>
         )}
       </nav>
+
+      {/* Profile footer */}
+      <div className="border-t">
+        <Link
+          href="/perfil"
+          className="w-full flex items-center gap-2.5 px-3 py-3 text-sm
+                     text-muted-foreground hover:bg-accent hover:text-foreground
+                     transition-colors"
+        >
+          <span className="relative shrink-0 h-7 w-7 rounded-full overflow-hidden
+                           bg-muted flex items-center justify-center text-xs font-medium">
+            {!avatarError && avatarSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarSrc}
+                alt="Avatar"
+                className="h-full w-full object-cover"
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <span className="uppercase leading-none">
+                {userEmail.charAt(0)}
+              </span>
+            )}
+          </span>
+          <span className="truncate text-xs font-medium flex-1">{userEmail}</span>
+          <span className="text-xs text-muted-foreground shrink-0">Perfil</span>
+        </Link>
+      </div>
     </aside>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, UserPlus } from 'lucide-react';
 import {
@@ -50,19 +50,23 @@ export function AddMembroForm({ workspaceId, availableMembers }: AddMembroFormPr
 
   useEffect(() => {
     if (state.success) {
-      setOpen(false);
-      setSelectedMember(null);
-      setSearch('');
-      router.refresh();
+      startTransition(() => {
+        setOpen(false);
+        setSelectedMember(null);
+        setSearch('');
+        router.refresh();
+      });
     }
   }, [state.success, router]);
 
   // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
-      setSelectedMember(null);
-      setSearch('');
-      setDropdownOpen(false);
+      startTransition(() => {
+        setSelectedMember(null);
+        setSearch('');
+        setDropdownOpen(false);
+      });
     }
   }, [open]);
 

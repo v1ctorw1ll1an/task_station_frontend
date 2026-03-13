@@ -91,8 +91,8 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
         companyId={companyId}
         companyName={companyName || 'Empresa'}
         isCompanyAdmin={isCompanyAdmin}
-        isSuperuser={session.user.isSuperuser}
         workspaces={workspaces}
+        userEmail={session.user.email}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b flex items-center justify-between px-6 shrink-0">

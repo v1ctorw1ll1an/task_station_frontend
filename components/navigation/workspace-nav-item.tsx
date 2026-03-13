@@ -126,6 +126,7 @@ export function WorkspaceNavItem({
       .finally(() => setLoading(false));
   }, [isExpanded, workspace.workspaceId]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleProjectCreated = useCallback((_project: SidebarProject) => {
     // Refresh project list after creation
     getWorkspaceProjectsForSidebar(workspace.workspaceId).then(setProjects);

@@ -5,7 +5,6 @@ import { getSession } from '@/lib/auth';
 interface UpdateProfileInput {
   name?: string;
   phone?: string;
-  photoUrl?: string;
 }
 
 export async function updateProfileAction(

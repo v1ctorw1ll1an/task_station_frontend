@@ -75,8 +75,8 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
         companyId={companyId}
         companyName={company.legalName}
         isCompanyAdmin={isCompanyAdmin}
-        isSuperuser={session.user.isSuperuser}
         workspaces={workspaces}
+        userEmail={session.user.email}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b flex items-center justify-between px-6 shrink-0">

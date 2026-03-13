@@ -866,7 +866,7 @@ export function TaskDetailDialog({
               <Select
                 value={priority}
                 onValueChange={(val) => {
-                  setPriority(val);
+                  setPriority(val as 'low' | 'medium' | 'high' | 'urgent');
                   scheduleAutoSave({ priority: val });
                 }}
               >

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useActionState, useState } from 'react';
+import { useEffect, useActionState, useState, startTransition } from 'react';
 import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { updateProfileAction, UpdateProfileActionState } from '@/actions/superadmin/update-profile.action';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   useEffect(() => {
     if (state.success) {
-      setShowSuccess(true);
+      startTransition(() => setShowSuccess(true));
       const t = setTimeout(() => setShowSuccess(false), 4000);
       return () => clearTimeout(t);
     }

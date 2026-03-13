@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useActionState, useState, useTransition } from 'react';
+import { useEffect, useActionState, useState, useTransition, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, UserMinus, PowerOff, Trash2 } from 'lucide-react';
 import { updateCompanyAction, UpdateCompanyActionState } from '@/actions/superadmin/update-company.action';
@@ -61,8 +61,10 @@ export function CompanyDetail({ company, admins }: CompanyDetailProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   useEffect(() => {
     if (state.success) {
-      setShowSuccess(true);
-      router.refresh();
+      startTransition(() => {
+        setShowSuccess(true);
+        router.refresh();
+      });
       const t = setTimeout(() => setShowSuccess(false), 4000);
       return () => clearTimeout(t);
     }

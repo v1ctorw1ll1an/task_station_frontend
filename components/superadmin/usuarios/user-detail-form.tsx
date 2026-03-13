@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useActionState, useState, useTransition } from 'react';
+import { useEffect, useActionState, useState, useTransition, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, CheckCircle2, UserX, UserCheck } from 'lucide-react';
 import { editUserAction, EditUserActionState } from '@/actions/superadmin/edit-user.action';
@@ -43,8 +43,10 @@ export function UserDetailForm({ user }: UserDetailFormProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   useEffect(() => {
     if (state.success) {
-      setShowSuccess(true);
-      router.refresh();
+      startTransition(() => {
+        setShowSuccess(true);
+        router.refresh();
+      });
       const t = setTimeout(() => setShowSuccess(false), 4000);
       return () => clearTimeout(t);
     }
