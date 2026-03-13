@@ -97,7 +97,8 @@ export function MarkdownEditor({
   disabled,
   autoFocus,
 }: MarkdownEditorProps) {
-  const [tab, setTab] = useState<'edit' | 'preview'>('edit');
+  // Start in edit mode only when autoFocus is requested (e.g. comment edit)
+  const [tab, setTab] = useState<'edit' | 'preview'>(autoFocus ? 'edit' : 'preview');
   const [uploading, setUploading] = useState(false);
   const internalRef = useRef<HTMLTextAreaElement>(null);
   const ref = (externalRef ?? internalRef) as React.RefObject<HTMLTextAreaElement | null>;
@@ -230,30 +231,56 @@ export function MarkdownEditor({
   // Render
   // -------------------------------------------------------------------------
 
+  if (tab === 'preview') {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => {
+          setTab('edit');
+          setTimeout(() => ref.current?.focus(), 0);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setTab('edit');
+            setTimeout(() => ref.current?.focus(), 0);
+          }
+        }}
+        className="cursor-text min-h-[5rem] rounded-md px-3 py-2 hover:bg-muted/30 transition-colors"
+      >
+        {value ? (
+          <MarkdownDisplay content={value} />
+        ) : (
+          <p className="text-sm italic text-muted-foreground">{placeholder}</p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-md border border-input bg-transparent overflow-hidden">
-      {/* Toolbar + tab toggle */}
-      <div className="flex items-center justify-between border-b bg-muted/30 px-1.5 py-1 gap-2">
-        <div className="flex items-center gap-0.5 flex-wrap min-w-0">
-          {tab === 'edit' &&
-            toolbar.map((item, i) =>
-              'separator' in item ? (
-                <span key={i} className="w-px h-4 bg-border mx-0.5 shrink-0" />
-              ) : (
-                <button
-                  key={i}
-                  type="button"
-                  title={item.title}
-                  onMouseDown={(e) => {
-                    e.preventDefault(); // Keep textarea focused
-                    item.action();
-                  }}
-                  className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                >
-                  {item.icon}
-                </button>
-              ),
-            )}
+      {/* Toolbar */}
+      <div className="flex items-center border-b bg-muted/30 px-1.5 py-1 gap-2 flex-wrap">
+        <div className="flex items-center gap-0.5 flex-wrap min-w-0 flex-1">
+          {toolbar.map((item, i) =>
+            'separator' in item ? (
+              <span key={i} className="w-px h-4 bg-border mx-0.5 shrink-0" />
+            ) : (
+              <button
+                key={i}
+                type="button"
+                title={item.title}
+                onMouseDown={(e) => {
+                  e.preventDefault(); // Keep textarea focused
+                  item.action();
+                }}
+                className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              >
+                {item.icon}
+              </button>
+            ),
+          )}
           {uploading && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground ml-1">
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -261,59 +288,24 @@ export function MarkdownEditor({
             </span>
           )}
         </div>
-
-        {/* Edit / Preview tabs */}
-        <div className="flex items-center shrink-0 bg-muted rounded p-0.5 gap-0.5">
-          <button
-            type="button"
-            onClick={() => setTab('edit')}
-            className={`px-2 py-0.5 text-xs rounded transition-colors ${
-              tab === 'edit'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('preview')}
-            className={`px-2 py-0.5 text-xs rounded transition-colors ${
-              tab === 'preview'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Prévia
-          </button>
-        </div>
       </div>
 
-      {/* Content area */}
-      {tab === 'edit' ? (
-        <textarea
-          ref={ref}
-          value={value}
-          onChange={(e) => {
-            onChange(e.target.value);
-            onChangeEvent?.(e);
-          }}
-          onPaste={handlePaste}
-          placeholder={placeholder}
-          rows={minRows}
-          disabled={disabled}
-          autoFocus={autoFocus}
-          className="flex w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
-        />
-      ) : (
-        <div className="px-3 py-2 min-h-[5rem]">
-          {value ? (
-            <MarkdownDisplay content={value} />
-          ) : (
-            <p className="text-sm italic text-muted-foreground">{placeholder}</p>
-          )}
-        </div>
-      )}
+      {/* Textarea */}
+      <textarea
+        ref={ref}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          onChangeEvent?.(e);
+        }}
+        onPaste={handlePaste}
+        onBlur={() => setTab('preview')}
+        placeholder={placeholder}
+        rows={minRows}
+        disabled={disabled}
+        autoFocus={autoFocus}
+        className="flex w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
+      />
     </div>
   );
 }
