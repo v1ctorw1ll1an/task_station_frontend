@@ -22,7 +22,8 @@ interface AvatarUploadProps {
 
 export function AvatarUpload({ currentSrc, fallbackInitial, onUploadSuccess }: AvatarUploadProps) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const [rawFile, setRawFile] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -32,6 +33,8 @@ export function AvatarUpload({ currentSrc, fallbackInitial, onUploadSuccess }: A
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imgFailed, setImgFailed] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   useEffect(() => {
     setImgFailed(false);
@@ -50,6 +53,44 @@ export function AvatarUpload({ currentSrc, fallbackInitial, onUploadSuccess }: A
     setZoom(1);
     setCropOpen(true);
     e.target.value = '';
+  }
+
+  async function handleOpenCamera() {
+    setCameraError(null);
+    setCameraOpen(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch {
+      setCameraError('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+    }
+  }
+
+  function handleStopCamera() {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setCameraOpen(false);
+    setCameraError(null);
+  }
+
+  function handleCaptureFrame() {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d')!.drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      handleStopCamera();
+      setRawFile(URL.createObjectURL(blob));
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCropOpen(true);
+    }, 'image/jpeg');
   }
 
   async function handleConfirmCrop() {
@@ -75,9 +116,8 @@ export function AvatarUpload({ currentSrc, fallbackInitial, onUploadSuccess }: A
 
   return (
     <div className="flex flex-col items-center gap-3 pb-2">
-      {/* Hidden file inputs */}
+      {/* Hidden file input */}
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-      <input ref={cameraRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileChange} />
 
       {/* Clickable avatar with camera overlay */}
       <DropdownMenu>
@@ -112,13 +152,41 @@ export function AvatarUpload({ currentSrc, fallbackInitial, onUploadSuccess }: A
           <DropdownMenuItem onClick={() => fileRef.current?.click()}>
             <Upload className="h-4 w-4 mr-2" /> Carregar do dispositivo
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => cameraRef.current?.click()}>
+          <DropdownMenuItem onClick={handleOpenCamera}>
             <Camera className="h-4 w-4 mr-2" /> Tirar foto
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {/* Camera Dialog */}
+      <Dialog open={cameraOpen} onOpenChange={(open) => { if (!open) handleStopCamera(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tirar foto</DialogTitle>
+          </DialogHeader>
+          {cameraError ? (
+            <p className="text-sm text-destructive text-center py-6">{cameraError}</p>
+          ) : (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full rounded-md bg-muted"
+            />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={handleStopCamera}>Cancelar</Button>
+            {!cameraError && (
+              <Button onClick={handleCaptureFrame}>
+                <Camera className="h-4 w-4 mr-2" /> Capturar
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Crop Dialog */}
       <Dialog open={cropOpen} onOpenChange={setCropOpen}>
