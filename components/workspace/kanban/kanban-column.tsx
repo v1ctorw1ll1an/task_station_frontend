@@ -128,7 +128,7 @@ export function KanbanColumnComponent({
       ref={setNodeRef}
       style={style}
       className={[
-        'flex w-72 flex-shrink-0 flex-col rounded-lg border bg-muted/40',
+        'flex w-72 flex-shrink-0 flex-col rounded-lg border bg-muted/40 max-h-[calc(100vh-180px)]',
         isDragging ? 'opacity-40' : '',
       ]
         .filter(Boolean)
@@ -168,7 +168,7 @@ export function KanbanColumnComponent({
       </div>
 
       {/* Tasks */}
-      <div className="flex flex-col gap-2 px-3 py-1 flex-1 min-h-[40px]">
+      <div className="flex flex-col gap-2 px-3 py-1 flex-1 min-h-0 overflow-y-auto">
         <SortableContext
           items={displayedTasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
