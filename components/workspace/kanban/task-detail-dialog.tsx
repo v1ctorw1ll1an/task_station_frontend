@@ -56,6 +56,7 @@ import { deleteTaskCommentAction } from '@/actions/projeto/delete-task-comment.a
 import type { KanbanTask } from './kanban-card';
 import type { WorkspaceMember, ProjectLabel } from './kanban-board';
 import { useActionState } from 'react';
+import { MarkdownEditor, MarkdownDisplay } from './markdown-editor';
 
 const FIELD_LABELS: Record<string, string> = {
   title: 'Título',
@@ -120,75 +121,6 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-/** Renders comment text with clickable URLs and highlighted @mentions */
-function renderCommentContent(content: string, membros: WorkspaceMember[]) {
-  const memberNames = [...membros.map((m) => m.name)].sort((a, b) => b.length - a.length);
-  const result: React.ReactNode[] = [];
-  let i = 0;
-  let textBuffer = '';
-  let keyIdx = 0;
-
-  while (i < content.length) {
-    if (content.startsWith('http://', i) || content.startsWith('https://', i)) {
-      if (textBuffer) {
-        result.push(<span key={keyIdx++}>{textBuffer}</span>);
-        textBuffer = '';
-      }
-      const rest = content.slice(i);
-      const spaceIdx = rest.search(/[\s]/);
-      const url = spaceIdx === -1 ? rest : rest.slice(0, spaceIdx);
-      result.push(
-        <a
-          key={keyIdx++}
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500 underline hover:text-blue-600 break-all"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {url}
-        </a>,
-      );
-      i += url.length;
-      continue;
-    }
-
-    if (content[i] === '@') {
-      let matched = false;
-      for (const name of memberNames) {
-        if (content.startsWith(name, i + 1)) {
-          const after = content[i + 1 + name.length];
-          if (after === undefined || /[\s,.!?;:\n]/.test(after)) {
-            if (textBuffer) {
-              result.push(<span key={keyIdx++}>{textBuffer}</span>);
-              textBuffer = '';
-            }
-            result.push(
-              <span
-                key={keyIdx++}
-                className="text-primary font-semibold bg-primary/10 rounded px-0.5"
-              >
-                @{name}
-              </span>,
-            );
-            i += 1 + name.length;
-            matched = true;
-            break;
-          }
-        }
-      }
-      if (!matched) {
-        textBuffer += content[i++];
-      }
-      continue;
-    }
-
-    textBuffer += content[i++];
-  }
-
-  if (textBuffer) result.push(<span key={keyIdx++}>{textBuffer}</span>);
-  return result;
-}
 
 function TaskHistorySection({
   projectId,
@@ -311,6 +243,7 @@ function TaskCommentsSection({
   const [editContent, setEditContent] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [newCommentValue, setNewCommentValue] = useState('');
 
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionStart, setMentionStart] = useState<number>(-1);
@@ -338,6 +271,7 @@ function TaskCommentsSection({
   useEffect(() => {
     if (commentState.success) {
       formRef.current?.reset();
+      setNewCommentValue('');
       setMentionQuery(null);
       loadComments();
     }
@@ -387,23 +321,16 @@ function TaskCommentsSection({
 
   function insertMention(name: string) {
     const textarea = textareaRef.current;
-    if (!textarea) return;
-    const value = textarea.value;
-    const before = value.slice(0, mentionStart);
-    const after = value.slice(textarea.selectionStart ?? mentionStart);
-    const newValue = `${before}@${name} ${after}`;
-
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype,
-      'value',
-    )?.set;
-    nativeInputValueSetter?.call(textarea, newValue);
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    const cursor = textarea?.selectionStart ?? mentionStart;
+    const before = newCommentValue.slice(0, mentionStart);
+    const after = newCommentValue.slice(cursor);
+    const next = `${before}@${name} ${after}`;
+    setNewCommentValue(next);
 
     const newCursor = mentionStart + name.length + 2;
     setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(newCursor, newCursor);
+      textarea?.focus();
+      textarea?.setSelectionRange(newCursor, newCursor);
     }, 0);
 
     setMentionQuery(null);
@@ -464,12 +391,11 @@ function TaskCommentsSection({
 
                     {editingId === c.id ? (
                       <div className="mt-1 space-y-1.5">
-                        <textarea
-                          autoFocus
+                        <MarkdownEditor
                           value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          rows={2}
-                          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                          onChange={setEditContent}
+                          minRows={2}
+                          autoFocus
                         />
                         {editError && <p className="text-xs text-destructive">{editError}</p>}
                         <div className="flex gap-1.5">
@@ -493,9 +419,9 @@ function TaskCommentsSection({
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm mt-0.5 whitespace-pre-wrap break-words">
-                        {renderCommentContent(c.content, membros)}
-                      </p>
+                      <div className="mt-0.5 break-words">
+                        <MarkdownDisplay content={c.content} />
+                      </div>
                     )}
                   </div>
 
@@ -535,14 +461,15 @@ function TaskCommentsSection({
           <form ref={formRef} action={commentAction} className="space-y-2">
             <input type="hidden" name="projectId" value={projectId} />
             <input type="hidden" name="taskId" value={taskId} />
+            <input type="hidden" name="content" value={newCommentValue} />
             <div className="relative">
-              <textarea
-                ref={textareaRef}
-                name="content"
+              <MarkdownEditor
+                value={newCommentValue}
+                onChange={setNewCommentValue}
+                onChangeEvent={handleTextareaInput}
+                textareaRef={textareaRef}
                 placeholder="Escreva um comentário... Use @ para mencionar membros"
-                rows={2}
-                onChange={handleTextareaInput}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                minRows={2}
               />
               {mentionQuery !== null && filteredMentionMembers.length > 0 && (
                 <div className="absolute bottom-full mb-1 left-0 w-full rounded-md border bg-popover shadow-md z-50 max-h-40 overflow-y-auto">
@@ -816,15 +743,15 @@ export function TaskDetailDialog({
             {/* Description */}
             <div className="space-y-1">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Descrição</p>
-              <textarea
+              <MarkdownEditor
                 value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                  scheduleAutoSave({ description: e.target.value });
+                onChange={(val) => {
+                  setDescription(val);
+                  scheduleAutoSave({ description: val });
                 }}
                 placeholder="Adicione uma descrição..."
-                rows={4}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                projectId={projectId}
+                taskId={task.id}
               />
             </div>
 
