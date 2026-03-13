@@ -95,7 +95,7 @@ export function CreateWorkspaceInlineTrigger({
 
   const trigger =
     variant === 'button' ? (
-      <Button size="sm" variant="outline" className="w-full text-xs h-8">
+      <Button size="sm" variant="outline" className="w-full text-xs h-8" suppressHydrationWarning>
         <Plus className="h-3.5 w-3.5 mr-1.5" />
         Novo workspace
       </Button>
@@ -103,6 +103,7 @@ export function CreateWorkspaceInlineTrigger({
       <button
         title="Novo workspace"
         className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+        suppressHydrationWarning
       >
         <Plus className="h-3.5 w-3.5" />
       </button>

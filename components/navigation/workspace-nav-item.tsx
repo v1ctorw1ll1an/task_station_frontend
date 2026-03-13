@@ -76,6 +76,7 @@ function CreateProjetoSidebarDialog({
           title="Novo projeto"
           className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
           onClick={(e) => e.stopPropagation()}
+          suppressHydrationWarning
         >
           <Plus className="h-3.5 w-3.5" />
         </button>
