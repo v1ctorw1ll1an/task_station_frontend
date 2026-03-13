@@ -28,6 +28,9 @@ ENV HOSTNAME=0.0.0.0
 
 # Copy standalone output
 COPY --from=builder /app/.next/standalone ./
+# Explicitly copy the full server directory — standalone omits some server action
+# manifest files, causing "Failed to find Server Action" errors at runtime.
+COPY --from=builder /app/.next/server ./.next/server
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
