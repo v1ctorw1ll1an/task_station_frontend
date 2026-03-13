@@ -6,6 +6,8 @@ import { getSession } from '@/lib/auth';
 export interface ContratarMembroActionState {
   error?: string;
   success?: boolean;
+  emailFailed?: boolean;
+  magicLink?: string;
 }
 
 export async function contratarMembroAction(
@@ -50,10 +52,14 @@ export async function contratarMembroAction(
       const data = await res.json().catch(() => ({}));
       return { error: data.message ?? 'Erro ao contratar membro' };
     }
+
+    const data = await res.json().catch(() => ({}));
+    revalidatePath(`/empresa/${companyId}/membros`);
+    if (data.emailSent === false && data.magicLink) {
+      return { success: true, emailFailed: true, magicLink: data.magicLink as string };
+    }
+    return { success: true };
   } catch {
     return { error: 'Erro ao conectar com o servidor' };
   }
-
-  revalidatePath(`/empresa/${companyId}/membros`);
-  return { success: true };
 }

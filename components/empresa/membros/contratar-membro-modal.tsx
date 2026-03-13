@@ -33,13 +33,18 @@ export function ContratarMembroModal({ companyId }: ContratarMembroModalProps) {
     const router = useRouter();
 
     useEffect(() => {
-        if (state.success) {
+        if (state.success && !state.emailFailed) {
             startTransition(() => {
                 setOpen(false);
                 router.refresh();
             });
         }
-    }, [state.success, router]);
+        if (state.success && state.emailFailed) {
+            startTransition(() => {
+                router.refresh();
+            });
+        }
+    }, [state.success, state.emailFailed, router]);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -95,6 +100,36 @@ export function ContratarMembroModal({ companyId }: ContratarMembroModalProps) {
                             placeholder="+55 11 99999-9999"
                         />
                     </div>
+
+                    {state.emailFailed && state.magicLink && (
+                        <div className="rounded-md border border-yellow-400 bg-yellow-50 p-3 space-y-2">
+                            <p className="text-sm font-medium text-yellow-800">
+                                Colaborador criado, mas o email falhou ao ser enviado.
+                            </p>
+                            <p className="text-xs text-yellow-700">
+                                Compartilhe o link abaixo com o colaborador para o primeiro acesso:
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    readOnly
+                                    value={state.magicLink}
+                                    className="text-xs"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        navigator.clipboard.writeText(
+                                            state.magicLink!,
+                                        )
+                                    }
+                                >
+                                    Copiar
+                                </Button>
+                            </div>
+                        </div>
+                    )}
 
                     {state.error && (
                         <p className="text-sm text-destructive">
