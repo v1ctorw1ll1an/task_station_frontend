@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { AppSidebar } from '@/components/navigation/app-sidebar';
 import { EmpresaUserMenu } from '@/components/empresa/user-menu';
 import { SidebarWorkspace } from '@/components/navigation/workspace-nav-item';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -99,7 +100,10 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
           <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
             Painel do Workspace
           </span>
-          <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />
+          <div className="flex items-center gap-2">
+            <NotificationBell token={session.token} />
+            <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />
+          </div>
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>
