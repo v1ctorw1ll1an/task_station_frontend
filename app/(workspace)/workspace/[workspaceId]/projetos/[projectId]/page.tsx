@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { KanbanBoard } from '@/components/workspace/kanban/kanban-board-client';
+import { MemberAvatarStack } from '@/components/workspace/kanban/member-avatar-stack';
 
 interface PageProps {
   params: Promise<{ workspaceId: string; projectId: string }>;
@@ -45,6 +46,11 @@ export default async function KanbanPage({ params }: PageProps) {
         <h1 className="text-2xl font-bold">{projeto?.name ?? 'Kanban'}</h1>
         {projeto?.description && (
           <p className="text-sm text-muted-foreground mt-1">{projeto.description}</p>
+        )}
+        {membros.length > 0 && (
+          <div className="mt-2">
+            <MemberAvatarStack members={membros} />
+          </div>
         )}
       </div>
 
