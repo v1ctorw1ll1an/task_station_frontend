@@ -14,9 +14,8 @@ import {
   type CollisionDetection,
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-import { Plus } from 'lucide-react';
+import { Plus, Wifi, WifiOff } from 'lucide-react';
 import { useActionState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -36,6 +35,8 @@ import { createColunaAction, CreateColunaActionState } from '@/actions/projeto/c
 import type { ProjectLabel } from '@/actions/projeto/get-labels.action';
 import { LabelsManager } from './labels-manager';
 import { TrashDialog } from './trash-dialog';
+import { useKanbanStore } from '@/lib/stores/kanban-store';
+import { useKanbanSocket } from '@/hooks/use-kanban-socket';
 
 export type { ProjectLabel };
 
@@ -65,27 +66,32 @@ interface KanbanBoardProps {
   membros: WorkspaceMember[];
   labels: ProjectLabel[];
   currentUserId: string;
+  token: string;
 }
 
 const initialCreateColunaState: CreateColunaActionState = {};
 
-export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, labels, currentUserId }: KanbanBoardProps) {
-  const router = useRouter();
-  const [columns, setColumns] = useState<KanbanColumn[]>(data.columns);
+export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, labels, currentUserId, token }: KanbanBoardProps) {
+  const store = useKanbanStore();
+  const columns = useKanbanStore((s) => s.columns);
 
-  // Sincroniza com os dados do servidor após router.refresh()
+  // Hidrata o store com os dados do servidor no mount e ao trocar de projeto
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setColumns(data.columns);
-  }, [data.columns]);
+    store.hydrate({ projectId, currentUserId, columns: data.columns, labels, membros });
+  }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
-  // Always derive from fresh server data so updates are reflected immediately
+  // WebSocket substituindo o polling
+  const { socketStatus } = useKanbanSocket(projectId, token);
+
+  // Deriva selectedTask do store (reflete updates do socket automaticamente)
   const selectedTask = selectedTaskId
-    ? data.columns.flatMap((c) => c.tasks).find((t) => t.id === selectedTaskId) ?? null
+    ? columns.flatMap((c) => c.tasks).find((t) => t.id === selectedTaskId) ?? null
     : null;
+
   const [createColOpen, setCreateColOpen] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -98,9 +104,9 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
     if (createColunaState.success) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCreateColOpen(false);
-      router.refresh();
+      // Sem router.refresh() — o evento column:created via socket atualiza o store
     }
-  }, [createColunaState.success, router]);
+  }, [createColunaState.success]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -108,8 +114,6 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
     }),
   );
 
-  // When dragging a column, only consider other columns as drop targets.
-  // When dragging a task, use closestCenter across all droppables.
   const collisionDetection = useCallback<CollisionDetection>(
     (args) => {
       if (activeColumnId) {
@@ -142,7 +146,6 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
     const activeTaskData = active.data.current.task as KanbanTask;
     const overId = over.id as string;
 
-    // Encontrar coluna de destino
     let targetColumnId: string | null = null;
     if (over.data.current?.type === 'column') {
       targetColumnId = overId;
@@ -153,9 +156,9 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
 
     if (!targetColumnId || targetColumnId === activeTaskData.columnId) return;
 
-    // Mover task otimisticamente entre colunas
-    setColumns((cols) =>
-      cols.map((col) => {
+    // Update visual otimista durante o drag (via store)
+    store.setColumns(
+      columns.map((col) => {
         if (col.id === activeTaskData.columnId) {
           return { ...col, tasks: col.tasks.filter((t) => t.id !== activeTaskData.id) };
         }
@@ -185,13 +188,11 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
         const colIds = columns.map((c) => c.id);
         const newOrder = arrayMove(colIds, colIds.indexOf(activeId), colIds.indexOf(overId));
 
-        setColumns((cols) => {
-          const colMap = new Map(cols.map((c) => [c.id, c]));
-          return newOrder.map((id) => colMap.get(id)!).filter(Boolean);
-        });
+        store.optimisticReorderColumns(newOrder);
         startTransition(async () => {
           await reorderColunasAction(projectId, workspaceId, newOrder);
-          router.refresh();
+          // Sem router.refresh() — o evento column:reordered via socket atualiza outros clientes
+          // Este cliente já aplicou otimisticamente e o socket vai ignorar (actorId skip não se aplica a colunas)
         });
         return;
       }
@@ -205,7 +206,6 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
         let afterTaskId: string | null = null;
 
         if (over.data.current?.type === 'column') {
-          // Dropped on column area — place at end
           targetColumnId = overId;
           const targetTasks = columns
             .find((c) => c.id === targetColumnId)
@@ -215,9 +215,6 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
           const overTask = over.data.current.task as KanbanTask;
           targetColumnId = overTask.columnId;
 
-          // Use arrayMove to compute the correct final position.
-          // For same-column: columns state still has the original order (SortableContext handles visuals).
-          // For cross-column: handleDragOver already appended the task at the end of the target column.
           const targetCol = columns.find((c) => c.id === targetColumnId)!;
           const colTaskIds = targetCol.tasks.map((t) => t.id);
           const fromIdx = colTaskIds.indexOf(draggedTask.id);
@@ -228,46 +225,32 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
             const newPos = reordered.indexOf(draggedTask.id);
             afterTaskId = newPos === 0 ? null : reordered[newPos - 1];
           } else {
-            // Fallback: dragged task not found in target column yet (edge case)
             afterTaskId = overTask.id;
           }
         } else {
           return;
         }
 
-        // Capture values for closure before startTransition
         const capturedTargetColumnId = targetColumnId;
         const capturedAfterTaskId = afterTaskId;
         const capturedDraggedTask = draggedTask;
 
-        // Aplica o update visual imediatamente (sem transição)
-        setColumns((cols) =>
-          cols.map((col) => {
-            if (col.id === capturedTargetColumnId) {
-              const withoutDragged = col.tasks.filter((t) => t.id !== capturedDraggedTask.id);
-              const updatedTask = { ...capturedDraggedTask, columnId: capturedTargetColumnId };
-              if (capturedAfterTaskId === null) {
-                return { ...col, tasks: [updatedTask, ...withoutDragged] };
-              }
-              const insertAfterIdx = withoutDragged.findIndex((t) => t.id === capturedAfterTaskId);
-              const newTasks = [...withoutDragged];
-              newTasks.splice(insertAfterIdx + 1, 0, updatedTask);
-              return { ...col, tasks: newTasks };
-            }
-            if (col.id === capturedDraggedTask.columnId && col.id !== capturedTargetColumnId) {
-              return { ...col, tasks: col.tasks.filter((t) => t.id !== capturedDraggedTask.id) };
-            }
-            return col;
-          }),
+        // Aplica o update visual otimisticamente via store
+        store.optimisticMoveTask(
+          capturedDraggedTask.id,
+          capturedDraggedTask.columnId,
+          capturedTargetColumnId,
+          capturedAfterTaskId,
         );
 
         startTransition(async () => {
           await moveTaskAction(projectId, capturedDraggedTask.id, workspaceId, capturedTargetColumnId, capturedAfterTaskId);
-          router.refresh();
+          // Sem router.refresh() — o evento task:moved via socket atualiza outros clientes
+          // Este cliente usou actorId skip e já tem o estado correto
         });
       }
     },
-    [columns, projectId, workspaceId, setColumns, startTransition, router],
+    [columns, projectId, workspaceId, store, startTransition],
   );
 
   const activeTaskData = activeTask
@@ -276,12 +259,15 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
 
   return (
     <>
-      {isAdmin && (
-        <div className="flex justify-end mb-2 gap-2">
-          <TrashDialog projectId={projectId} workspaceId={workspaceId} />
-          <LabelsManager projectId={projectId} workspaceId={workspaceId} labels={labels} />
-        </div>
-      )}
+      <div className="flex justify-between items-center mb-2">
+        <ConnectionIndicator status={socketStatus} />
+        {isAdmin && (
+          <div className="flex gap-2">
+            <TrashDialog projectId={projectId} workspaceId={workspaceId} />
+            <LabelsManager projectId={projectId} workspaceId={workspaceId} labels={labels} />
+          </div>
+        )}
+      </div>
 
       <DndContext
         sensors={sensors}
@@ -309,7 +295,6 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
             ))}
           </SortableContext>
 
-          {/* Botão de nova coluna */}
           {isAdmin && (
             <Dialog open={createColOpen} onOpenChange={setCreateColOpen}>
               <DialogTrigger asChild>
@@ -374,11 +359,37 @@ export function KanbanBoard({ data, projectId, workspaceId, isAdmin, membros, la
         membros={membros}
         labels={labels}
         currentUserId={currentUserId}
-        onClose={() => {
-          setSelectedTaskId(null);
-          router.refresh();
-        }}
+        onClose={() => setSelectedTaskId(null)}
       />
     </>
+  );
+}
+
+// ── ConnectionIndicator ────────────────────────────────────────────────────────
+
+import type { SocketStatus } from '@/hooks/use-kanban-socket';
+
+function ConnectionIndicator({ status }: { status: SocketStatus }) {
+  if (status === 'connected') {
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground select-none">
+        <Wifi className="h-3.5 w-3.5 text-green-500" />
+        Tempo real
+      </span>
+    );
+  }
+  if (status === 'connecting') {
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground select-none">
+        <Wifi className="h-3.5 w-3.5 animate-pulse" />
+        Conectando...
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-muted-foreground select-none">
+      <WifiOff className="h-3.5 w-3.5 text-amber-500" />
+      Reconectando...
+    </span>
   );
 }

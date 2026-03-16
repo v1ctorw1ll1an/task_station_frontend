@@ -2,7 +2,6 @@
 
 import { useEffect, useTransition, useState, useRef, useCallback } from 'react';
 import { TaskAttachmentsSection } from './task-attachments-section';
-import { useRouter } from 'next/navigation';
 import {
   Check,
   ChevronDown,
@@ -506,7 +505,7 @@ function TaskCommentsSection({
   );
 }
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict';
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export function TaskDetailDialog({
   task,
@@ -518,7 +517,6 @@ export function TaskDetailDialog({
   currentUserId,
   onClose,
 }: TaskDetailDialogProps) {
-  const router = useRouter();
   const [savePending, startSave] = useTransition();
   const [deletePending, startDelete] = useTransition();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -527,6 +525,15 @@ export function TaskDetailDialog({
 
   // Rastreia o updatedAt do servidor para optimistic locking
   const lastKnownUpdatedAtRef = useRef<string>(task?.updatedAt ?? '');
+
+  // Snapshot dos campos no momento do último sync com o servidor.
+  // hasUnsavedChanges compara o estado local contra este snapshot, não contra task.xxx,
+  // pois task.xxx pode mudar via socket enquanto o usuário não editou nada.
+  const lastSyncedFieldsRef = useRef({
+    title: task?.title ?? '',
+    description: task?.description ?? '',
+    priority: task?.priority ?? 'medium',
+  });
 
   // Sequência de saves — ignora respostas de saves desatualizados
   const saveSeqRef = useRef(0);
@@ -547,7 +554,7 @@ export function TaskDetailDialog({
   const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
   const memberDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Reset fields when task changes
+  // Reset fields when task changes (navegação entre tasks)
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     setTitle(task?.title ?? '');
@@ -563,8 +570,53 @@ export function TaskDetailDialog({
     setSaveError(null);
     /* eslint-enable react-hooks/set-state-in-effect */
     lastKnownUpdatedAtRef.current = task?.updatedAt ?? '';
+    lastSyncedFieldsRef.current = {
+      title: task?.title ?? '',
+      description: task?.description ?? '',
+      priority: task?.priority ?? 'medium',
+    };
     saveSeqRef.current = 0;
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Detecta update externo via socket: se task.updatedAt avançou enquanto o dialog está aberto
+  useEffect(() => {
+    if (!task?.updatedAt || !lastKnownUpdatedAtRef.current) return;
+
+    const serverTs = new Date(task.updatedAt).getTime();
+    const knownTs = new Date(lastKnownUpdatedAtRef.current).getTime();
+
+    if (serverTs <= knownTs) return;
+    if (saveStatus === 'saving') return;
+
+    // Sempre avança o ref — evita 409 por saves concorrentes de outros usuários
+    lastKnownUpdatedAtRef.current = task.updatedAt;
+
+    // Compara contra lastSyncedFieldsRef (valores no último sync), NÃO contra task.xxx.
+    // task.xxx já mudou via socket — comparar contra ele causaria falso conflito.
+    const hasUnsavedChanges =
+      title !== lastSyncedFieldsRef.current.title ||
+      description !== lastSyncedFieldsRef.current.description ||
+      priority !== lastSyncedFieldsRef.current.priority;
+
+    if (!hasUnsavedChanges) {
+      // Sem edições em curso: sincroniza silenciosamente os campos
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setTitle(task.title ?? '');
+      setDescription(task.description ?? '');
+      setPriority(task.priority ?? 'medium');
+      setStartDate(task.startDate ? task.startDate.split('T')[0] : '');
+      setDueDate(task.dueDate ? task.dueDate.split('T')[0] : '');
+      setSelectedAssigneeIds(task.taskAssignees.map((ta) => ta.user.id));
+      setSelectedLabelIds(task.taskLabels.map((tl) => tl.label.id));
+      /* eslint-enable react-hooks/set-state-in-effect */
+      lastSyncedFieldsRef.current = {
+        title: task.title ?? '',
+        description: task.description ?? '',
+        priority: task.priority ?? 'medium',
+      };
+    }
+    // Se hasUnsavedChanges: lastKnownUpdatedAtRef já avançado, campos mantidos
+  }, [task?.updatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close member dropdown on outside click
   useEffect(() => {
@@ -607,9 +659,6 @@ export function TaskDetailDialog({
       formData.set('dueDate', fields.dueDate);
       fields.assigneeIds.forEach((id) => formData.append('assigneeIds[]', id));
       fields.labelIds.forEach((id) => formData.append('labelIds[]', id));
-      if (lastKnownUpdatedAtRef.current) {
-        formData.set('lastKnownUpdatedAt', lastKnownUpdatedAtRef.current);
-      }
 
       startSave(async () => {
         const result = await updateTaskAction({}, formData);
@@ -618,13 +667,13 @@ export function TaskDetailDialog({
         if (seq !== saveSeqRef.current) return;
 
         if (result.success) {
-          // Atualiza o timestamp conhecido para o próximo save
-          if (result.updatedAt) lastKnownUpdatedAtRef.current = result.updatedAt;
+          lastSyncedFieldsRef.current = {
+            title: fields.title,
+            description: fields.description,
+            priority: fields.priority as 'low' | 'medium' | 'high' | 'urgent',
+          };
           setSaveStatus('saved');
           setTimeout(() => setSaveStatus('idle'), 2000);
-        } else if (result.conflict) {
-          setSaveStatus('conflict');
-          setSaveError(result.error ?? 'Conflito de edição');
         } else {
           setSaveStatus('error');
           setSaveError(result.error ?? 'Erro ao salvar');
@@ -659,7 +708,7 @@ export function TaskDetailDialog({
       const result = await deleteTaskAction(projectId, task.id, workspaceId);
       if (!result.error) {
         onClose();
-        router.refresh();
+        // Sem router.refresh() — o evento task:deleted via socket atualiza o store
       }
     });
   }
@@ -697,18 +746,7 @@ export function TaskDetailDialog({
         <DialogHeader className="px-6 pt-5 pb-3 border-b flex-row items-center justify-between">
           <DialogTitle className="text-base font-semibold">Detalhes da task</DialogTitle>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {saveStatus === 'conflict' ? (
-              <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium">
-                <span>⚠ Task editada por outro usuário.</span>
-                <button
-                  type="button"
-                  onClick={() => router.refresh()}
-                  className="underline hover:no-underline"
-                >
-                  Recarregar
-                </button>
-              </span>
-            ) : saveStatus === 'saving' || savePending ? (
+            {saveStatus === 'saving' || savePending ? (
               <span className="flex items-center gap-1">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Salvando...
