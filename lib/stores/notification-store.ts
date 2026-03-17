@@ -12,6 +12,8 @@ export interface AppNotification {
   projectId: string | null;
   actorId: string | null;
   actor: { id: string; name: string } | null;
+  task: { id: string; title: string } | null;
+  project: { id: string; name: string; workspaceId: string } | null;
 }
 
 interface NotificationState {
