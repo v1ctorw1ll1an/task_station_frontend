@@ -6,34 +6,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 interface Member {
   id: string;
   name: string;
   email: string;
-}
-
-const AVATAR_COLORS = [
-  'bg-blue-500',
-  'bg-violet-500',
-  'bg-emerald-500',
-  'bg-orange-500',
-  'bg-rose-500',
-  'bg-cyan-500',
-  'bg-amber-500',
-  'bg-pink-500',
-];
-
-function getAvatarColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  photoUrl: string | null;
 }
 
 const MAX_VISIBLE = 6;
@@ -47,18 +26,17 @@ export function MemberAvatarStack({ members }: { members: Member[] }) {
     <TooltipProvider>
       <div className="flex items-center">
         {visible.map((m, i) => (
-          <Tooltip key={m.id}>
-            <TooltipTrigger asChild>
-              <span
-                className={`inline-flex items-center justify-center h-7 w-7 rounded-full text-[11px] font-semibold text-white ring-2 ring-background cursor-default select-none ${getAvatarColor(m.name)} ${i > 0 ? '-ml-2' : ''}`}
-              >
-                {getInitials(m.name)}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>{m.name}</p>
-            </TooltipContent>
-          </Tooltip>
+          <span
+            key={m.id}
+            className={`ring-2 ring-background rounded-full cursor-default select-none ${i > 0 ? '-ml-2' : ''}`}
+          >
+            <UserAvatar
+              name={m.name}
+              email={m.email}
+              photoUrl={m.photoUrl}
+              size="md"
+            />
+          </span>
         ))}
         {overflow > 0 && (
           <Tooltip>

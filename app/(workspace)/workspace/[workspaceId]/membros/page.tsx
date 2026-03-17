@@ -40,7 +40,7 @@ export default async function MembrosPage({ params, searchParams }: PageProps) {
   const wsInfo: { companyId: string } | null = wsInfoRes.ok ? await wsInfoRes.json() : null;
 
   // Only company admins (or superusers) can add members — fetch accordingly
-  type CompanyMember = { id: string; name: string; email: string };
+  type CompanyMember = { id: string; name: string; email: string; photoUrl: string | null };
   let availableMembers: CompanyMember[] = [];
   let canAddMembers = session.user.isSuperuser;
 
@@ -67,10 +67,11 @@ export default async function MembrosPage({ params, searchParams }: PageProps) {
           (data as Array<{ user: { id: string } }>).map((m) => m.user.id),
         );
         availableMembers = (cmData.data ?? [])
-          .map((m: { user: { id: string; name: string; email: string } }) => ({
+          .map((m: { user: { id: string; name: string; email: string; photoUrl: string | null } }) => ({
             id: m.user.id,
             name: m.user.name,
             email: m.user.email,
+            photoUrl: m.user.photoUrl ?? null,
           }))
           .filter((m: CompanyMember) => !existingIds.has(m.id));
       }

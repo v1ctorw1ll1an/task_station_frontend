@@ -57,6 +57,7 @@ import type { WorkspaceMember, ProjectLabel } from './kanban-board';
 import { useActionState } from 'react';
 import { MarkdownEditor, MarkdownDisplay } from './markdown-editor';
 import type { TaskAttachment } from '@/actions/projeto/get-attachments.action';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 const FIELD_LABELS: Record<string, string> = {
   title: 'Título',
@@ -111,16 +112,6 @@ interface TaskDetailDialogProps {
   currentUserId: string;
   onClose: () => void;
 }
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
-}
-
 
 function TaskHistorySection({
   projectId,
@@ -177,8 +168,8 @@ function TaskHistorySection({
             <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
               {sorted.map((entry) => (
                 <div key={entry.id} className="flex items-start gap-2 text-xs">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[9px] font-medium mt-0.5">
-                    {getInitials(entry.user.name)}
+                  <span className="mt-0.5">
+                    <UserAvatar name={entry.user.name} email={entry.user.email} photoUrl={entry.user.photoUrl} size="xs" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <span className="font-medium">{entry.user.name}</span>
@@ -377,8 +368,8 @@ function TaskCommentsSection({
             <div className="space-y-3 pr-1">
               {sorted.map((c) => (
                 <div key={c.id} className="flex items-start gap-2 text-sm">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium mt-0.5">
-                    {getInitials(c.user.name)}
+                  <span className="mt-0.5">
+                    <UserAvatar name={c.user.name} email={c.user.email} photoUrl={c.user.photoUrl} size="sm" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 flex-wrap">
@@ -483,9 +474,7 @@ function TaskCommentsSection({
                       }}
                       className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent"
                     >
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium flex-shrink-0">
-                        {getInitials(m.name)}
-                      </span>
+                      <UserAvatar name={m.name} email={m.email} photoUrl={m.photoUrl} size="sm" />
                       <span className="flex flex-col items-start min-w-0">
                         <span className="truncate font-medium">{m.name}</span>
                         <span className="truncate text-xs text-muted-foreground">{m.email}</span>
@@ -851,13 +840,13 @@ export function TaskDetailDialog({
                 <SelectContent>
                   <SelectItem value="low">
                     <span className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
+                      <span className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500 shrink-0" />
                       Baixa
                     </span>
                   </SelectItem>
                   <SelectItem value="medium">
                     <span className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                      <span className="h-2 w-2 rounded-full bg-blue-500 dark:bg-blue-400 shrink-0" />
                       Média
                     </span>
                   </SelectItem>
@@ -890,11 +879,8 @@ export function TaskDetailDialog({
                     <span className="flex items-center gap-1 min-w-0">
                       <span className="flex -space-x-1 shrink-0">
                         {selectedMembers.slice(0, 3).map((m) => (
-                          <span
-                            key={m.id}
-                            className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium ring-1 ring-background"
-                          >
-                            {getInitials(m.name)}
+                          <span key={m.id} className="ring-1 ring-background rounded-full">
+                            <UserAvatar name={m.name} email={m.email} photoUrl={m.photoUrl} size="xs" />
                           </span>
                         ))}
                       </span>
@@ -949,9 +935,7 @@ export function TaskDetailDialog({
                             onClick={() => toggleAssignee(member.id)}
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent"
                           >
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium flex-shrink-0">
-                              {getInitials(member.name)}
-                            </span>
+                            <UserAvatar name={member.name} email={member.email} photoUrl={member.photoUrl} size="sm" />
                             <span className="flex flex-col items-start min-w-0">
                               <span className="truncate font-medium text-xs">{member.name}</span>
                               <span className="truncate text-[10px] text-muted-foreground">{member.email}</span>

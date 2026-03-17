@@ -16,11 +16,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 interface AvailableMember {
   id: string;
   name: string;
   email: string;
+  photoUrl: string | null;
 }
 
 interface AddMembroFormProps {
@@ -29,15 +31,6 @@ interface AddMembroFormProps {
 }
 
 const initialState: AddMembroActionState = {};
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
-}
 
 export function AddMembroForm({ workspaceId, availableMembers }: AddMembroFormProps) {
   const [open, setOpen] = useState(false);
@@ -110,9 +103,7 @@ export function AddMembroForm({ workspaceId, availableMembers }: AddMembroFormPr
                 >
                   {selectedMember ? (
                     <span className="flex items-center gap-2 min-w-0">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
-                        {getInitials(selectedMember.name)}
-                      </span>
+                      <UserAvatar name={selectedMember.name} email={selectedMember.email} photoUrl={selectedMember.photoUrl} size="xs" />
                       <span className="truncate">
                         {selectedMember.name}{' '}
                         <span className="text-muted-foreground">({selectedMember.email})</span>
@@ -152,9 +143,7 @@ export function AddMembroForm({ workspaceId, availableMembers }: AddMembroFormPr
                           }}
                           className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
                         >
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
-                            {getInitials(member.name)}
-                          </span>
+                          <UserAvatar name={member.name} email={member.email} photoUrl={member.photoUrl} size="sm" />
                           <span className="flex flex-col items-start min-w-0">
                             <span className="font-medium truncate">{member.name}</span>
                             <span className="text-xs text-muted-foreground truncate">

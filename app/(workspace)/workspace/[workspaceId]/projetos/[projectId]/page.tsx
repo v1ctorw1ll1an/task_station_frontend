@@ -30,7 +30,7 @@ export default async function KanbanPage({ params }: PageProps) {
 
   const kanbanData = await kanbanRes.json();
   const isAdmin = adminRes.ok;
-  const membros: { id: string; name: string; email: string }[] = membrosRes.ok
+  const membros: { id: string; name: string; email: string; photoUrl: string | null }[] = membrosRes.ok
     ? await membrosRes.json()
     : [];
   const labels: { id: string; name: string; color: string; projectId: string }[] = labelsRes.ok

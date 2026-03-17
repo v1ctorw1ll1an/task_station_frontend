@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { WorkspaceNavItem, SidebarWorkspace } from './workspace-nav-item';
 import { CreateWorkspaceInlineTrigger } from './create-workspace-inline';
 import { gravatarUrl } from '@/lib/gravatar';
+import { getProfileAction } from '@/actions/perfil/get-profile.action';
 
 interface AppSidebarProps {
   companyId: string;
@@ -37,7 +38,16 @@ export function AppSidebar({
   });
 
   useEffect(() => {
-    gravatarUrl(userEmail, 40).then(setAvatarSrc);
+    getProfileAction().then(({ data }) => {
+      if (data?.photoUrl) {
+        const url = data.photoUrl.startsWith('http')
+          ? data.photoUrl
+          : `${process.env.NEXT_PUBLIC_API_URL}${data.photoUrl}`;
+        setAvatarSrc(url);
+      } else {
+        gravatarUrl(userEmail, 40).then(setAvatarSrc);
+      }
+    });
   }, [userEmail]);
 
   // Auto-expand the current workspace when navigation changes

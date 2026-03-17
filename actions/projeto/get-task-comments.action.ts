@@ -7,7 +7,7 @@ export interface TaskComment {
   content: string;
   createdAt: string;
   updatedAt: string;
-  user: { id: string; name: string };
+  user: { id: string; name: string; email: string; photoUrl: string | null };
 }
 
 export async function getTaskCommentsAction(

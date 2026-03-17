@@ -8,7 +8,7 @@ export interface TaskHistoryEntry {
   oldValue: string | null;
   newValue: string | null;
   changedAt: string;
-  user: { id: string; name: string };
+  user: { id: string; name: string; email: string; photoUrl: string | null };
 }
 
 export async function getTaskHistoryAction(

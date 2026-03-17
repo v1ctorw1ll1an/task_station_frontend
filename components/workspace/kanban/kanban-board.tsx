@@ -64,6 +64,7 @@ export interface WorkspaceMember {
     id: string;
     name: string;
     email: string;
+    photoUrl: string | null;
 }
 
 interface KanbanBoardProps {
@@ -110,6 +111,10 @@ export function KanbanBoard({
         searchParams.get('task'),
     );
 
+    useEffect(() => {
+        setSelectedTaskId(searchParams.get('task'));
+    }, [searchParams]);
+
     // WebSocket substituindo o polling
     const { socketStatus } = useKanbanSocket(projectId, token);
 
@@ -128,7 +133,7 @@ export function KanbanBoard({
 
     useEffect(() => {
         if (createColunaState.success) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+             
             setCreateColOpen(false);
             // Sem router.refresh() — o evento column:created via socket atualiza o store
         }
