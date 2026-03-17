@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, AtSign, Bell, CheckCircle2, Megaphone, MessageSquare, Pencil, UserCheck } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -69,6 +69,7 @@ const PREF_CONFIG: {
 const PREF_KEYS = PREF_CONFIG.map((p) => p.key);
 
 export default function PreferenciasNotificacoesPage() {
+  const router = useRouter();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [savedKey, setSavedKey] = useState<string | null>(null);
@@ -105,13 +106,14 @@ export default function PreferenciasNotificacoesPage() {
       {/* Header */}
       <div className="border-b">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Link
-            href="/perfil"
+          <button
+            type="button"
+            onClick={() => router.back()}
             className="text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Voltar"
           >
             <ArrowLeft className="h-4 w-4" />
-          </Link>
+          </button>
           <span className="text-sm font-medium">Preferências de notificações</span>
         </div>
       </div>

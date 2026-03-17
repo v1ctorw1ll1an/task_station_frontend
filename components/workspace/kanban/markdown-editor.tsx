@@ -14,7 +14,10 @@ import {
   Loader2,
   Quote,
   Strikethrough,
+  X,
 } from 'lucide-react';
+import type { TaskAttachment } from '@/actions/projeto/get-attachments.action';
+import { IMAGE_MAX_COUNT, IMAGE_MAX_MB } from './task-attachments-section';
 
 // ---------------------------------------------------------------------------
 // MarkdownDisplay — read-only markdown renderer (reused in comment list)
@@ -81,6 +84,10 @@ interface MarkdownEditorProps {
   /** When provided, Ctrl+V images are uploaded to this task's attachments */
   projectId?: string;
   taskId?: string;
+  /** Current image attachment count — used to enforce the 3-image limit on paste */
+  imageCount?: number;
+  /** Called after a successful paste upload so the attachment section can reflect the new file */
+  onPasteAttachmentAdded?: (att: TaskAttachment) => void;
   disabled?: boolean;
   autoFocus?: boolean;
 }
@@ -94,12 +101,15 @@ export function MarkdownEditor({
   minRows = 4,
   projectId,
   taskId,
+  imageCount,
+  onPasteAttachmentAdded,
   disabled,
   autoFocus,
 }: MarkdownEditorProps) {
   // Start in edit mode only when autoFocus is requested (e.g. comment edit)
   const [tab, setTab] = useState<'edit' | 'preview'>(autoFocus ? 'edit' : 'preview');
   const [uploading, setUploading] = useState(false);
+  const [pasteError, setPasteError] = useState<string | null>(null);
   const internalRef = useRef<HTMLTextAreaElement>(null);
   const ref = (externalRef ?? internalRef) as React.RefObject<HTMLTextAreaElement | null>;
 
@@ -178,6 +188,19 @@ export function MarkdownEditor({
     e.preventDefault();
     const file = imgItem.getAsFile();
     if (!file) return;
+
+    if ((imageCount ?? 0) >= IMAGE_MAX_COUNT) {
+      setPasteError(
+        `Limite de ${IMAGE_MAX_COUNT} imagens atingido. Máximo ${IMAGE_MAX_MB} MB por foto.`,
+      );
+      return;
+    }
+    if (file.size > IMAGE_MAX_MB * 1024 * 1024) {
+      setPasteError(`Imagem excede o limite de ${IMAGE_MAX_MB} MB.`);
+      return;
+    }
+
+    setPasteError(null);
     setUploading(true);
     try {
       const fd = new FormData();
@@ -186,9 +209,14 @@ export function MarkdownEditor({
         `/api/files/projetos/${projectId}/tasks/${taskId}/attachments`,
         { method: 'POST', body: fd },
       );
-      if (!res.ok) return;
-      const data = (await res.json()) as { id: string };
-      const url = `/api/files/projetos/${projectId}/tasks/${taskId}/attachments/${data.id}/file`;
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { message?: string };
+        setPasteError(data.message ?? 'Erro ao enviar imagem.');
+        return;
+      }
+      const att = (await res.json()) as TaskAttachment;
+      onPasteAttachmentAdded?.(att);
+      const url = `/api/files/projetos/${projectId}/tasks/${taskId}/attachments/${att.id}/file`;
       const el = ref.current;
       const s = el?.selectionStart ?? value.length;
       const next = value.slice(0, s) + `\n\n![Imagem](${url})\n` + value.slice(s);
@@ -290,6 +318,13 @@ export function MarkdownEditor({
         </div>
       </div>
 
+      {pasteError && (
+        <p className="px-3 py-1.5 text-xs text-destructive bg-destructive/10 border-b border-destructive/20 flex items-center gap-1">
+          <X className="h-3 w-3 shrink-0" />
+          {pasteError}
+        </p>
+      )}
+
       {/* Textarea */}
       <textarea
         ref={ref}
@@ -297,6 +332,7 @@ export function MarkdownEditor({
         onChange={(e) => {
           onChange(e.target.value);
           onChangeEvent?.(e);
+          if (pasteError) setPasteError(null);
         }}
         onPaste={handlePaste}
         onBlur={() => setTab('preview')}

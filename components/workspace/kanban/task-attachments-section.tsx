@@ -21,10 +21,10 @@ import { deleteAttachmentAction } from '@/actions/projeto/delete-attachment.acti
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const IMAGE_MAX_MB = 16;
-const VIDEO_MAX_MB = 64;
-const IMAGE_MAX_COUNT = 3;
-const VIDEO_MAX_COUNT = 1;
+export const IMAGE_MAX_MB = 16;
+export const VIDEO_MAX_MB = 64;
+export const IMAGE_MAX_COUNT = 3;
+export const VIDEO_MAX_COUNT = 1;
 const ACCEPTED_IMAGES = 'image/jpeg,image/png,image/gif,image/webp,image/avif';
 const ACCEPTED_VIDEOS = 'video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska';
 
@@ -203,9 +203,12 @@ interface TaskAttachmentsSectionProps {
   projectId: string;
   taskId: string;
   isAdmin: boolean;
+  onImageCountChange?: (count: number) => void;
+  pendingAttachment?: TaskAttachment | null;
+  onPendingAttachmentConsumed?: () => void;
 }
 
-export function TaskAttachmentsSection({ projectId, taskId, isAdmin }: TaskAttachmentsSectionProps) {
+export function TaskAttachmentsSection({ projectId, taskId, isAdmin, onImageCountChange, pendingAttachment, onPendingAttachmentConsumed }: TaskAttachmentsSectionProps) {
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -218,6 +221,21 @@ export function TaskAttachmentsSection({ projectId, taskId, isAdmin }: TaskAttac
   const imagesFull = imageCount >= IMAGE_MAX_COUNT;
   const videosFull = videoCount >= VIDEO_MAX_COUNT;
   const allFull = imagesFull && videosFull;
+
+  // Notify parent when image count changes (for paste limit check in MarkdownEditor)
+  useEffect(() => {
+    onImageCountChange?.(imageCount);
+  }, [imageCount]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Consume attachment added via paste in MarkdownEditor
+  useEffect(() => {
+    if (!pendingAttachment) return;
+    setAttachments((prev) => {
+      if (prev.some((a) => a.id === pendingAttachment.id)) return prev;
+      return [...prev, pendingAttachment];
+    });
+    onPendingAttachmentConsumed?.();
+  }, [pendingAttachment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Build accepted types based on remaining slots
   const acceptedTypes = [
@@ -305,6 +323,9 @@ export function TaskAttachmentsSection({ projectId, taskId, isAdmin }: TaskAttac
           Anexos
           <span className="font-normal normal-case tracking-normal">
             {imageCount}/{IMAGE_MAX_COUNT} foto{(IMAGE_MAX_COUNT as number) !== 1 ? 's' : ''} · {videoCount}/{VIDEO_MAX_COUNT} vídeo
+          </span>
+          <span className="font-normal normal-case tracking-normal text-muted-foreground/60">
+            · fotos até {IMAGE_MAX_MB} MB, vídeo até {VIDEO_MAX_MB} MB
           </span>
         </h4>
         {isAdmin && (

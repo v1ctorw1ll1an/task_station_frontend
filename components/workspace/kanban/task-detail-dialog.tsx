@@ -56,6 +56,7 @@ import type { KanbanTask } from './kanban-card';
 import type { WorkspaceMember, ProjectLabel } from './kanban-board';
 import { useActionState } from 'react';
 import { MarkdownEditor, MarkdownDisplay } from './markdown-editor';
+import type { TaskAttachment } from '@/actions/projeto/get-attachments.action';
 
 const FIELD_LABELS: Record<string, string> = {
   title: 'Título',
@@ -521,6 +522,10 @@ export function TaskDetailDialog({
   const [deletePending, startDelete] = useTransition();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Bridge: attachment image count for paste-limit check in MarkdownEditor
+  const [attachmentImageCount, setAttachmentImageCount] = useState(0);
+  const [pendingAttachment, setPendingAttachment] = useState<TaskAttachment | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Rastreia o updatedAt do servidor para optimistic locking
@@ -790,6 +795,8 @@ export function TaskDetailDialog({
                 placeholder="Adicione uma descrição..."
                 projectId={projectId}
                 taskId={task.id}
+                imageCount={attachmentImageCount}
+                onPasteAttachmentAdded={setPendingAttachment}
               />
             </div>
 
@@ -803,6 +810,9 @@ export function TaskDetailDialog({
                 projectId={projectId}
                 taskId={task.id}
                 isAdmin={isAdmin}
+                onImageCountChange={setAttachmentImageCount}
+                pendingAttachment={pendingAttachment}
+                onPendingAttachmentConsumed={() => setPendingAttachment(null)}
               />
             </div>
 
