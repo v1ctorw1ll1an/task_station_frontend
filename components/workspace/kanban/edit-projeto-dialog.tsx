@@ -53,6 +53,11 @@ export function EditProjetoDialog({
       } else {
         setOpen(false);
         setError('');
+        window.dispatchEvent(
+          new CustomEvent('projeto:updated', {
+            detail: { projectId, name, description },
+          }),
+        );
         router.refresh();
       }
     });

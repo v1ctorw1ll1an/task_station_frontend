@@ -127,6 +127,23 @@ export function WorkspaceNavItem({
       .finally(() => setLoading(false));
   }, [isExpanded, workspace.workspaceId]);
 
+  useEffect(() => {
+    function handleProjetoUpdated(e: Event) {
+      const { projectId, name, description } = (e as CustomEvent<{
+        projectId: string;
+        name: string;
+        description: string;
+      }>).detail;
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId ? { ...p, name, description } : p,
+        ),
+      );
+    }
+    window.addEventListener('projeto:updated', handleProjetoUpdated);
+    return () => window.removeEventListener('projeto:updated', handleProjetoUpdated);
+  }, []);
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleProjectCreated = useCallback((_project: SidebarProject) => {
     // Refresh project list after creation
