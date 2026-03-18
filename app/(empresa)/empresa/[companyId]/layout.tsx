@@ -4,6 +4,7 @@ import { AppSidebar } from '@/components/navigation/app-sidebar';
 import { EmpresaUserMenu } from '@/components/empresa/user-menu';
 import { SidebarWorkspace } from '@/components/navigation/workspace-nav-item';
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface EmpresaLayoutProps {
   children: React.ReactNode;
@@ -85,6 +86,7 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
             Painel da Empresa
           </span>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <NotificationBell token={session.token} />
             <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />
           </div>

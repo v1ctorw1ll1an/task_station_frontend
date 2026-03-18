@@ -41,8 +41,8 @@ export default async function KanbanPage({ params }: PageProps) {
     : null;
 
   return (
-    <div className="space-y-4">
-      <div>
+    <div className="flex flex-col h-full gap-4">
+      <div className="flex-shrink-0">
         <h1 className="text-2xl font-bold">{projeto?.name ?? 'Kanban'}</h1>
         {projeto?.description && (
           <p className="text-sm text-muted-foreground mt-1">{projeto.description}</p>
@@ -54,16 +54,18 @@ export default async function KanbanPage({ params }: PageProps) {
         )}
       </div>
 
-      <KanbanBoard
-        data={kanbanData}
-        projectId={projectId}
-        workspaceId={workspaceId}
-        isAdmin={isAdmin}
-        membros={membros}
-        labels={labels}
-        currentUserId={session.user.id}
-        token={session.token}
-      />
+      <div className="flex-1 min-h-0">
+        <KanbanBoard
+          data={kanbanData}
+          projectId={projectId}
+          workspaceId={workspaceId}
+          isAdmin={isAdmin}
+          membros={membros}
+          labels={labels}
+          currentUserId={session.user.id}
+          token={session.token}
+        />
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { AppSidebar } from '@/components/navigation/app-sidebar';
 import { EmpresaUserMenu } from '@/components/empresa/user-menu';
 import { SidebarWorkspace } from '@/components/navigation/workspace-nav-item';
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -87,7 +88,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <AppSidebar
         companyId={companyId}
         companyName={companyName || 'Empresa'}
@@ -101,11 +102,12 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
             Painel do Workspace
           </span>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <NotificationBell token={session.token} />
             <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />
           </div>
         </header>
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
   );
