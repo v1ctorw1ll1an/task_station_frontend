@@ -23,7 +23,7 @@ export default async function ComunicadoPage({ params }: PageProps) {
 
   const companies: Array<{ companyId: string; role: string }> = await companiesRes.json();
   const company = companies.find((c) => c.companyId === companyId);
-  if (!company || company.role !== 'admin') redirect(`/empresa/${companyId}/workspaces`);
+  if (!company || company.role !== 'admin') redirect(`/empresa/${companyId}/inicio`);
 
   return (
     <div className="space-y-6">

@@ -3,7 +3,7 @@
 import { useState, useEffect, startTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
-import { Home, Megaphone, Users, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Home, LayoutGrid, Megaphone, Users, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WorkspaceNavItem, SidebarWorkspace } from './workspace-nav-item';
 import { CreateWorkspaceInlineTrigger } from './create-workspace-inline';
@@ -108,6 +108,20 @@ export function AppSidebar({
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
         {/* Top-level links */}
         <Link
+          href={`/empresa/${companyId}/inicio`}
+          className={cn(
+            'flex items-center py-1.5 rounded-md text-sm transition-colors',
+            collapsed ? 'justify-center px-0 mx-1' : 'gap-2.5 px-2',
+            pathname === `/empresa/${companyId}/inicio`
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+          )}
+        >
+          <Home className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Início</span>}
+        </Link>
+
+        <Link
           href={`/empresa/${companyId}/workspaces`}
           className={cn(
             'flex items-center py-1.5 rounded-md text-sm transition-colors',
@@ -117,8 +131,8 @@ export function AppSidebar({
               : 'text-muted-foreground hover:bg-accent hover:text-foreground',
           )}
         >
-          <Home className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Início</span>}
+          <LayoutGrid className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Workspaces</span>}
         </Link>
 
         {isCompanyAdmin && (

@@ -15,5 +15,5 @@ export async function selectCompanyAction(companyId: string) {
     maxAge: 60 * 60 * 24 * 30, // 30 dias
   });
 
-  redirect(`/empresa/${companyId}/workspaces`);
+  redirect(`/empresa/${companyId}/inicio`);
 }

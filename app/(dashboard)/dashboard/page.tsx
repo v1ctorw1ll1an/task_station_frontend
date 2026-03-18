@@ -28,12 +28,12 @@ export default async function DashboardPage() {
 
   // Tem última empresa salva e ela ainda está na lista → redirecionar direto
   if (lastCompanyId && companies.some((c) => c.companyId === lastCompanyId)) {
-    redirect(`/empresa/${lastCompanyId}/workspaces`);
+    redirect(`/empresa/${lastCompanyId}/inicio`);
   }
 
   // 1 empresa → redirecionar direto
   if (companies.length === 1) {
-    redirect(`/empresa/${companies[0].companyId}/workspaces`);
+    redirect(`/empresa/${companies[0].companyId}/inicio`);
   }
 
   // Múltiplas empresas ou nenhuma → seletor (seletor cuida da mensagem de sem acesso)
