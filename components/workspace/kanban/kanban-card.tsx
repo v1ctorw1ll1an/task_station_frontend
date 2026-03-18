@@ -12,6 +12,7 @@ export interface KanbanTaskLabel {
 
 export interface KanbanTask {
   id: string;
+  taskNumber: number | null;
   title: string;
   description: string | null;
   priority: 'low' | 'medium' | 'high' | 'urgent';
@@ -101,11 +102,12 @@ function AssigneeAvatar({ user }: { user: { name: string; email: string; photoUr
 
 interface KanbanCardProps {
   task: KanbanTask;
+  taskPrefix: string;
   onClick: (task: KanbanTask) => void;
   isDragOverlay?: boolean;
 }
 
-export function KanbanCard({ task, onClick, isDragOverlay = false }: KanbanCardProps) {
+export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false }: KanbanCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { type: 'task', task },
@@ -134,6 +136,11 @@ export function KanbanCard({ task, onClick, isDragOverlay = false }: KanbanCardP
         .filter(Boolean)
         .join(' ')}
     >
+      {task.taskNumber != null && (
+        <span className="text-[10px] font-mono text-muted-foreground">
+          {taskPrefix}-{task.taskNumber}
+        </span>
+      )}
       <p className="text-sm font-medium leading-snug">{task.title}</p>
 
       {task.taskLabels.length > 0 && (

@@ -9,6 +9,7 @@ import {
   Check,
   Filter,
   MoreVertical,
+  Palette,
   Pencil,
   ShieldAlert,
   Trash2,
@@ -49,10 +50,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { updateColunaAction, UpdateColunaActionState } from '@/actions/projeto/update-coluna.action';
+import { updateColunaColorAction } from '@/actions/projeto/update-coluna-color.action';
 import { deleteColunaAction } from '@/actions/projeto/delete-coluna.action';
+import { COLUMN_COLORS } from '@/lib/column-colors';
 import type { KanbanColumn } from './kanban-board';
 import type { ProjectLabel } from '@/actions/projeto/get-labels.action';
-import type { SortOption } from './kanban-column';
+import type { KanbanSortState } from './kanban-column';
 
 interface ColumnOptionsMenuProps {
   column: KanbanColumn;
@@ -61,10 +64,10 @@ interface ColumnOptionsMenuProps {
   workspaceId: string;
   isAdmin: boolean;
   labels: ProjectLabel[];
-  sortOption: SortOption;
+  sortState: KanbanSortState;
   filterLabelIds: string[];
   hasActiveFilters: boolean;
-  onSortChange: (sort: SortOption) => void;
+  onSortChange: (sort: KanbanSortState) => void;
   onFilterLabelToggle: (labelId: string) => void;
   onClearFilters: () => void;
 }
@@ -78,7 +81,7 @@ export function ColumnOptionsMenu({
   workspaceId,
   isAdmin,
   labels,
-  sortOption,
+  sortState,
   filterLabelIds,
   hasActiveFilters,
   onSortChange,
@@ -87,6 +90,10 @@ export function ColumnOptionsMenu({
 }: ColumnOptionsMenuProps) {
   const router = useRouter();
   const [renameOpen, setRenameOpen] = useState(false);
+  const [colorOpen, setColorOpen] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string | null>(column.color ?? null);
+  const [colorPending, startColor] = useTransition();
+  const [colorError, setColorError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [targetColumnId, setTargetColumnId] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -107,6 +114,19 @@ export function ColumnOptionsMenu({
 
   const hasTasks = column.tasks.length > 0;
   const otherColumns = allColumns.filter((c) => c.id !== column.id);
+
+  function handleSaveColor() {
+    setColorError(null);
+    startColor(async () => {
+      const result = await updateColunaColorAction(projectId, column.id, workspaceId, selectedColor);
+      if (result.error) {
+        setColorError(result.error);
+      } else {
+        setColorOpen(false);
+        router.refresh();
+      }
+    });
+  }
 
   function handleDelete() {
     if (hasTasks && !targetColumnId) {
@@ -142,48 +162,52 @@ export function ColumnOptionsMenu({
             <MoreVertical className="h-3.5 w-3.5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuContent
+          align="end"
+          className="w-60 overflow-y-auto"
+          style={{ maxHeight: 'var(--radix-dropdown-menu-content-available-height)' }}
+        >
 
-          {/* Ordenação */}
+          {/* Ordenação por data */}
           <DropdownMenuLabel className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
             <CalendarDays className="h-3 w-3" />
             Ordenar por data
           </DropdownMenuLabel>
           <DropdownMenuItem
-            onClick={() => onSortChange(sortOption === 'dueDate_asc' ? 'default' : 'dueDate_asc')}
+            onClick={() => onSortChange({ ...sortState, dueDate: sortState.dueDate === 'asc' ? null : 'asc' })}
           >
             <ArrowUp className="mr-2 h-3.5 w-3.5" />
             Mais próxima primeiro
-            {sortOption === 'dueDate_asc' && <Check className="ml-auto h-3.5 w-3.5" />}
+            {sortState.dueDate === 'asc' && <Check className="ml-auto h-3.5 w-3.5" />}
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => onSortChange(sortOption === 'dueDate_desc' ? 'default' : 'dueDate_desc')}
+            onClick={() => onSortChange({ ...sortState, dueDate: sortState.dueDate === 'desc' ? null : 'desc' })}
           >
             <ArrowDown className="mr-2 h-3.5 w-3.5" />
             Mais distante primeiro
-            {sortOption === 'dueDate_desc' && <Check className="ml-auto h-3.5 w-3.5" />}
+            {sortState.dueDate === 'desc' && <Check className="ml-auto h-3.5 w-3.5" />}
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
-          {/* Urgência */}
+          {/* Ordenação por urgência */}
           <DropdownMenuLabel className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
             <ShieldAlert className="h-3 w-3" />
             Ordenar por urgência
           </DropdownMenuLabel>
           <DropdownMenuItem
-            onClick={() => onSortChange(sortOption === 'priority_desc' ? 'default' : 'priority_desc')}
+            onClick={() => onSortChange({ ...sortState, priority: sortState.priority === 'desc' ? null : 'desc' })}
           >
             <ArrowUp className="mr-2 h-3.5 w-3.5" />
             Mais urgente primeiro
-            {sortOption === 'priority_desc' && <Check className="ml-auto h-3.5 w-3.5" />}
+            {sortState.priority === 'desc' && <Check className="ml-auto h-3.5 w-3.5" />}
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => onSortChange(sortOption === 'priority_asc' ? 'default' : 'priority_asc')}
+            onClick={() => onSortChange({ ...sortState, priority: sortState.priority === 'asc' ? null : 'asc' })}
           >
             <ArrowDown className="mr-2 h-3.5 w-3.5" />
             Menos urgente primeiro
-            {sortOption === 'priority_asc' && <Check className="ml-auto h-3.5 w-3.5" />}
+            {sortState.priority === 'asc' && <Check className="ml-auto h-3.5 w-3.5" />}
           </DropdownMenuItem>
 
           {/* Filtro por label */}
@@ -228,6 +252,10 @@ export function ColumnOptionsMenu({
           {isAdmin && (
             <>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => { setSelectedColor(column.color ?? null); setColorOpen(true); }}>
+                <Palette className="mr-2 h-3.5 w-3.5" />
+                Cor da coluna
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setRenameOpen(true)}>
                 <Pencil className="mr-2 h-3.5 w-3.5" />
                 Renomear
@@ -243,6 +271,69 @@ export function ColumnOptionsMenu({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Dialog de cor da coluna */}
+      <Dialog open={colorOpen} onOpenChange={setColorOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cor da coluna</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-5 gap-2">
+              {COLUMN_COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  title={c.label}
+                  onClick={() => setSelectedColor(c.value)}
+                  className="h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 focus:outline-none"
+                  style={{
+                    backgroundColor: c.value,
+                    borderColor: selectedColor === c.value ? 'white' : 'transparent',
+                    boxShadow: selectedColor === c.value ? `0 0 0 2px ${c.value}` : 'none',
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Preview */}
+            {selectedColor && (
+              <div
+                className="rounded-md px-3 py-2 text-sm font-semibold border-l-4"
+                style={{
+                  backgroundColor: `${selectedColor}1A`,
+                  borderLeftColor: selectedColor,
+                  color: selectedColor,
+                }}
+              >
+                {column.name}
+              </div>
+            )}
+
+            {/* Remover cor */}
+            {selectedColor && (
+              <button
+                type="button"
+                onClick={() => setSelectedColor(null)}
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+              >
+                Remover cor
+              </button>
+            )}
+
+            {colorError && <p className="text-sm text-destructive">{colorError}</p>}
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setColorOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={handleSaveColor} disabled={colorPending}>
+                {colorPending ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de renomear */}
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>

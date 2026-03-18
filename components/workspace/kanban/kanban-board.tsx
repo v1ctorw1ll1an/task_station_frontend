@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import {
     DndContext,
     DragEndEvent,
@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { KanbanColumnComponent } from "./kanban-column";
 import { KanbanCard, type KanbanTask } from "./kanban-card";
+import { KanbanBoardFilter, EMPTY_BOARD_FILTER, type KanbanBoardFilterState } from "./kanban-board-filter";
 import { TaskDetailDialog } from "./task-detail-dialog";
 import { moveTaskAction } from "@/actions/projeto/move-task.action";
 import { reorderColunasAction } from "@/actions/projeto/reorder-colunas.action";
@@ -58,6 +59,7 @@ export interface KanbanColumn {
 
 interface KanbanData {
     columns: KanbanColumn[];
+    projectName?: string;
 }
 
 export interface WorkspaceMember {
@@ -80,6 +82,12 @@ interface KanbanBoardProps {
 
 const initialCreateColunaState: CreateColunaActionState = {};
 
+function computeTaskPrefix(name: string): string {
+    const words = name.trim().split(/\s+/).filter(Boolean);
+    if (words.length >= 2) return words.map((w) => w[0].toUpperCase()).join('');
+    return words[0]?.slice(0, 3).toUpperCase() ?? 'TSK';
+}
+
 export function KanbanBoard({
     data,
     projectId,
@@ -92,6 +100,9 @@ export function KanbanBoard({
 }: KanbanBoardProps) {
     const store = useKanbanStore();
     const columns = useKanbanStore((s) => s.columns);
+    const taskPrefix = computeTaskPrefix(data.projectName ?? '');
+    const router = useRouter();
+    const pathname = usePathname();
 
     // Hidrata o store com os dados do servidor no mount e ao trocar de projeto
     useEffect(() => {
@@ -125,6 +136,7 @@ export function KanbanBoard({
               .find((t) => t.id === selectedTaskId) ?? null)
         : null;
 
+    const [boardFilter, setBoardFilter] = useState<KanbanBoardFilterState>(EMPTY_BOARD_FILTER);
     const [createColOpen, setCreateColOpen] = useState(false);
     const [, startTransition] = useTransition();
 
@@ -326,10 +338,18 @@ export function KanbanBoard({
 
     return (
         <div className="flex flex-col h-full">
-            <div className="flex justify-between items-center mb-2 flex-shrink-0">
-                <ConnectionIndicator status={socketStatus} />
+            <div className="flex justify-between items-start mb-2 flex-shrink-0 gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                    <ConnectionIndicator status={socketStatus} />
+                    <KanbanBoardFilter
+                        columns={columns}
+                        labels={labels}
+                        filter={boardFilter}
+                        onFilterChange={setBoardFilter}
+                    />
+                </div>
                 {isAdmin && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 shrink-0">
                         <TrashDialog
                             projectId={projectId}
                             workspaceId={workspaceId}
@@ -364,6 +384,8 @@ export function KanbanBoard({
                                 workspaceId={workspaceId}
                                 isAdmin={isAdmin}
                                 labels={labels}
+                                taskPrefix={taskPrefix}
+                                boardFilter={boardFilter}
                                 onTaskClick={setSelectedTaskId}
                             />
                         ))}
@@ -446,6 +468,7 @@ export function KanbanBoard({
                     {activeTaskData && (
                         <KanbanCard
                             task={activeTaskData}
+                            taskPrefix={taskPrefix}
                             onClick={() => {}}
                             isDragOverlay
                         />
@@ -456,13 +479,17 @@ export function KanbanBoard({
             <TaskDetailDialog
                 key={selectedTask?.id ?? ""}
                 task={selectedTask}
+                taskPrefix={taskPrefix}
                 projectId={projectId}
                 workspaceId={workspaceId}
                 isAdmin={isAdmin}
                 membros={membros}
                 labels={labels}
                 currentUserId={currentUserId}
-                onClose={() => setSelectedTaskId(null)}
+                onClose={() => {
+                    setSelectedTaskId(null);
+                    router.replace(pathname, { scroll: false });
+                }}
             />
         </div>
     );

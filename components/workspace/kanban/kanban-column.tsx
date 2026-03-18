@@ -12,8 +12,14 @@ import { createTaskAction } from '@/actions/projeto/create-task.action';
 import { moveTaskAction } from '@/actions/projeto/move-task.action';
 import type { KanbanColumn } from './kanban-board';
 import type { ProjectLabel } from '@/actions/projeto/get-labels.action';
+import type { KanbanBoardFilterState } from './kanban-board-filter';
 
-export type SortOption = 'default' | 'dueDate_asc' | 'dueDate_desc' | 'priority_desc' | 'priority_asc';
+export interface KanbanSortState {
+  dueDate: 'asc' | 'desc' | null;
+  priority: 'desc' | 'asc' | null;
+}
+
+export const DEFAULT_SORT_STATE: KanbanSortState = { dueDate: null, priority: null };
 
 const PRIORITY_ORDER: Record<KanbanTask['priority'], number> = {
   urgent: 0,
@@ -22,6 +28,24 @@ const PRIORITY_ORDER: Record<KanbanTask['priority'], number> = {
   low: 3,
 };
 
+function applySort(tasks: KanbanTask[], sort: KanbanSortState): KanbanTask[] {
+  if (sort.dueDate === null && sort.priority === null) return tasks;
+  return [...tasks].sort((a, b) => {
+    if (sort.priority !== null) {
+      const diff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+      if (diff !== 0) return sort.priority === 'desc' ? diff : -diff;
+    }
+    if (sort.dueDate !== null) {
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      const diff = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      return sort.dueDate === 'asc' ? diff : -diff;
+    }
+    return 0;
+  });
+}
+
 interface KanbanColumnProps {
   column: KanbanColumn;
   allColumns: KanbanColumn[];
@@ -29,6 +53,8 @@ interface KanbanColumnProps {
   workspaceId: string;
   isAdmin: boolean;
   labels: ProjectLabel[];
+  taskPrefix: string;
+  boardFilter: KanbanBoardFilterState;
   onTaskClick: (taskId: string) => void;
 }
 
@@ -39,13 +65,15 @@ export function KanbanColumnComponent({
   workspaceId,
   isAdmin,
   labels,
+  taskPrefix,
+  boardFilter,
   onTaskClick,
 }: KanbanColumnProps) {
   const [addPosition, setAddPosition] = useState<'top' | 'bottom' | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [addPending, startAdd] = useTransition();
   const [addError, setAddError] = useState<string | null>(null);
-  const [sortOption, setSortOption] = useState<SortOption>('default');
+  const [localSort, setLocalSort] = useState<KanbanSortState>(DEFAULT_SORT_STATE);
   const [filterLabelIds, setFilterLabelIds] = useState<string[]>([]);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -62,34 +90,51 @@ export function KanbanColumnComponent({
   const displayedTasks = useMemo(() => {
     let tasks = [...column.tasks];
 
-    if (filterLabelIds.length > 0) {
+    // Global: assignee filter
+    if (boardFilter.filterAssigneeIds.length > 0) {
       tasks = tasks.filter((task) =>
-        task.taskLabels.some((tl) => filterLabelIds.includes(tl.label.id)),
+        task.taskAssignees.some((ta) => boardFilter.filterAssigneeIds.includes(ta.user.id)),
       );
     }
 
-    if (sortOption === 'dueDate_asc') {
-      tasks.sort((a, b) => {
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-      });
-    } else if (sortOption === 'dueDate_desc') {
-      tasks.sort((a, b) => {
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
-      });
-    } else if (sortOption === 'priority_desc') {
-      tasks.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
-    } else if (sortOption === 'priority_asc') {
-      tasks.sort((a, b) => PRIORITY_ORDER[b.priority] - PRIORITY_ORDER[a.priority]);
+    // Global + local: label filter (union)
+    const combinedLabelIds = [...new Set([...boardFilter.filterLabelIds, ...filterLabelIds])];
+    if (combinedLabelIds.length > 0) {
+      tasks = tasks.filter((task) =>
+        task.taskLabels.some((tl) => combinedLabelIds.includes(tl.label.id)),
+      );
     }
 
-    return tasks;
-  }, [column.tasks, sortOption, filterLabelIds]);
+    // Global: search
+    if (boardFilter.search) {
+      const q = boardFilter.search.toLowerCase();
+      tasks = tasks.filter((task) => task.title.toLowerCase().includes(q));
+    }
 
-  const hasActiveFilters = sortOption !== 'default' || filterLabelIds.length > 0;
+    // Global: date filter
+    if (boardFilter.dateFrom) {
+      const dateTo = boardFilter.dateTo || boardFilter.dateFrom;
+      const fields = boardFilter.dateFields.length > 0 ? boardFilter.dateFields : (['dueDate', 'startDate'] as const);
+      tasks = tasks.filter((task) =>
+        fields.some((field) => {
+          const raw = task[field] as string | null;
+          if (!raw) return false;
+          const taskDate = raw.slice(0, 10);
+          return taskDate >= boardFilter.dateFrom && taskDate <= dateTo;
+        }),
+      );
+    }
+
+    // Sort: global takes precedence when any dimension is set, otherwise use local
+    const hasGlobalSort = boardFilter.sortState.dueDate !== null || boardFilter.sortState.priority !== null;
+    const effectiveSort = hasGlobalSort ? boardFilter.sortState : localSort;
+
+    tasks = applySort(tasks, effectiveSort);
+
+    return tasks;
+  }, [column.tasks, localSort, filterLabelIds, boardFilter]);
+
+  const hasActiveLocalFilters = localSort.dueDate !== null || localSort.priority !== null || filterLabelIds.length > 0;
 
   function handleAddTask(e: React.FormEvent) {
     e.preventDefault();
@@ -126,16 +171,21 @@ export function KanbanColumnComponent({
   }
 
   function clearFilters() {
-    setSortOption('default');
+    setLocalSort(DEFAULT_SORT_STATE);
     setFilterLabelIds([]);
   }
+
+  const headerStyle = column.color
+    ? { backgroundColor: `${column.color}1A`, borderLeft: `4px solid ${column.color}` }
+    : {};
+  const nameStyle = column.color ? { color: column.color } : {};
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={[
-        'flex w-72 flex-shrink-0 flex-col rounded-lg border bg-muted/40 h-full',
+        'flex w-72 flex-shrink-0 flex-col rounded-lg border bg-muted/40 h-full overflow-hidden',
         isDragging ? 'opacity-40' : '',
       ]
         .filter(Boolean)
@@ -143,19 +193,14 @@ export function KanbanColumnComponent({
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-3 py-2.5 cursor-grab active:cursor-grabbing"
+        className="flex items-center justify-between px-3 py-2.5 cursor-grab active:cursor-grabbing rounded-t-lg"
+        style={headerStyle}
         {...(isAdmin ? { ...attributes, ...listeners } : {})}
       >
         <div className="flex items-center gap-2">
-          {column.color && (
-            <span
-              className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-              style={{ backgroundColor: column.color }}
-            />
-          )}
-          <span className="text-sm font-semibold">{column.name}</span>
+          <span className="text-sm font-semibold" style={nameStyle}>{column.name}</span>
           <span className="text-xs text-muted-foreground">
-            ({filterLabelIds.length > 0 ? `${displayedTasks.length}/` : ''}{column.tasks.length})
+            ({displayedTasks.length < column.tasks.length ? `${displayedTasks.length}/` : ''}{column.tasks.length})
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -176,10 +221,10 @@ export function KanbanColumnComponent({
             workspaceId={workspaceId}
             isAdmin={isAdmin}
             labels={labels}
-            sortOption={sortOption}
+            sortState={localSort}
             filterLabelIds={filterLabelIds}
-            hasActiveFilters={hasActiveFilters}
-            onSortChange={setSortOption}
+            hasActiveFilters={hasActiveLocalFilters}
+            onSortChange={setLocalSort}
             onFilterLabelToggle={toggleFilterLabel}
             onClearFilters={clearFilters}
           />
@@ -219,7 +264,7 @@ export function KanbanColumnComponent({
           strategy={verticalListSortingStrategy}
         >
           {displayedTasks.map((task) => (
-            <KanbanCard key={task.id} task={task} onClick={(t) => onTaskClick(t.id)} />
+            <KanbanCard key={task.id} task={task} taskPrefix={taskPrefix} onClick={(t) => onTaskClick(t.id)} />
           ))}
         </SortableContext>
       </div>

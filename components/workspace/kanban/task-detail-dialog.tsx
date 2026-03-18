@@ -104,6 +104,7 @@ function formatHistoryDate(iso: string): string {
 
 interface TaskDetailDialogProps {
   task: KanbanTask | null;
+  taskPrefix: string;
   projectId: string;
   workspaceId: string;
   isAdmin: boolean;
@@ -499,6 +500,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export function TaskDetailDialog({
   task,
+  taskPrefix,
   projectId,
   workspaceId,
   isAdmin,
@@ -519,6 +521,8 @@ export function TaskDetailDialog({
 
   // Rastreia o updatedAt do servidor para optimistic locking
   const lastKnownUpdatedAtRef = useRef<string>(task?.updatedAt ?? '');
+
+  const isDateFocusedRef = useRef(false);
 
   // Snapshot dos campos no momento do último sync com o servidor.
   // hasUnsavedChanges compara o estado local contra este snapshot, não contra task.xxx,
@@ -735,10 +739,22 @@ export function TaskDetailDialog({
 
   return (
     <Dialog open={!!task} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent
+        className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0"
+        onPointerDownOutside={(e) => {
+          if (isDateFocusedRef.current) e.preventDefault();
+        }}
+      >
         {/* Header */}
         <DialogHeader className="px-6 pt-5 pb-3 border-b flex-row items-center justify-between">
-          <DialogTitle className="text-base font-semibold">Detalhes da task</DialogTitle>
+          <DialogTitle className="text-base font-semibold flex items-center gap-2">
+            {task?.taskNumber != null && (
+              <span className="font-mono text-sm text-muted-foreground font-normal">
+                {taskPrefix}-{task.taskNumber}
+              </span>
+            )}
+            Detalhes da task
+          </DialogTitle>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {saveStatus === 'saving' || savePending ? (
               <span className="flex items-center gap-1">
@@ -989,6 +1005,8 @@ export function TaskDetailDialog({
                   setStartDate(e.target.value);
                   scheduleAutoSave({ startDate: e.target.value });
                 }}
+                onFocus={() => { isDateFocusedRef.current = true; }}
+                onBlur={() => { isDateFocusedRef.current = false; }}
                 className="h-8 text-sm"
               />
             </div>
@@ -1002,6 +1020,8 @@ export function TaskDetailDialog({
                   setDueDate(e.target.value);
                   scheduleAutoSave({ dueDate: e.target.value });
                 }}
+                onFocus={() => { isDateFocusedRef.current = true; }}
+                onBlur={() => { isDateFocusedRef.current = false; }}
                 className="h-8 text-sm"
               />
             </div>
