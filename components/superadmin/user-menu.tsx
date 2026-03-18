@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { User, LogOut, ChevronDown, Building2 } from 'lucide-react';
+import { User, LogOut, ChevronDown, Building2, Info } from 'lucide-react';
 import { logoutAction } from '@/actions/logout.action';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,6 +46,10 @@ export function UserMenu({ email, hasCompanies = false }: UserMenuProps) {
             Minhas empresas
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem onClick={() => router.push('/sobre')}>
+          <Info className="h-4 w-4" />
+          Sobre o sistema
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"

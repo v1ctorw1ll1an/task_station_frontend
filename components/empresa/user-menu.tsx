@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, ChevronDown, Building2, LayoutDashboard } from 'lucide-react';
+import { LogOut, ChevronDown, Building2, LayoutDashboard, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { logoutAction } from '@/actions/logout.action';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,10 @@ export function EmpresaUserMenu({ email, isSuperuser = false }: UserMenuProps) {
             Painel do superusuário
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem onClick={() => router.push('/sobre')}>
+          <Info className="h-4 w-4" />
+          Sobre o sistema
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => logoutAction()}>
           <LogOut className="h-4 w-4" />
