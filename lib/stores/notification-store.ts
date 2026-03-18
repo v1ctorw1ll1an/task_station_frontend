@@ -13,7 +13,14 @@ export interface AppNotification {
   actorId: string | null;
   actor: { id: string; name: string } | null;
   task: { id: string; title: string } | null;
-  project: { id: string; name: string; workspaceId: string } | null;
+  project: {
+    id: string;
+    name: string;
+    workspaceId: string;
+    icon: string | null;
+    iconColor: string | null;
+    workspace: { name: string } | null;
+  } | null;
 }
 
 interface NotificationState {
@@ -25,6 +32,7 @@ interface NotificationState {
   markAllAsRead: () => void;
   removeNotification: (id: string) => void;
   setUnreadCount: (count: number) => void;
+  clearAll: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set) => ({
@@ -35,7 +43,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
 
   applyNewNotification: (n) =>
     set((s) => ({
-      notifications: [n, ...s.notifications].slice(0, 50),
+      notifications: [{ ...n, id: n.id ?? crypto.randomUUID() }, ...s.notifications].slice(0, 50),
       unreadCount: s.unreadCount + 1,
     })),
 
@@ -64,4 +72,6 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     })),
 
   setUnreadCount: (count) => set({ unreadCount: count }),
+
+  clearAll: () => set({ notifications: [], unreadCount: 0 }),
 }));

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bell, Settings, CheckCheck } from 'lucide-react';
+import { Bell, Settings, CheckCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useNotificationStore } from '@/lib/stores/notification-store';
@@ -11,8 +11,16 @@ import { getNotificationsAction } from '@/actions/notificacao/get-notifications.
 import { markAsReadAction } from '@/actions/notificacao/mark-as-read.action';
 import { markAllReadAction } from '@/actions/notificacao/mark-all-read.action';
 import { deleteNotificationAction } from '@/actions/notificacao/delete-notification.action';
+import { clearAllNotificationsAction } from '@/actions/notificacao/clear-all-notifications.action';
+import type { AppNotification } from '@/lib/stores/notification-store';
 
-export function NotificationPanel({ onClose }: { onClose?: () => void }) {
+export function NotificationPanel({
+  onClose,
+  onOpenBroadcast,
+}: {
+  onClose?: () => void;
+  onOpenBroadcast?: (n: AppNotification) => void;
+}) {
   const store = useNotificationStore();
   const [loaded, setLoaded] = useState(false);
 
@@ -39,6 +47,11 @@ export function NotificationPanel({ onClose }: { onClose?: () => void }) {
     await markAllReadAction();
   }
 
+  async function handleClearAll() {
+    store.clearAll();
+    await clearAllNotificationsAction();
+  }
+
   const unread = store.unreadCount;
 
   return (
@@ -48,7 +61,7 @@ export function NotificationPanel({ onClose }: { onClose?: () => void }) {
         <div className="flex items-center gap-2.5">
           <span className="text-sm font-semibold">Notificações</span>
           {unread > 0 && (
-            <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-blue-500 text-white text-[10px] font-bold px-1.5">
+            <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1.5">
               {unread > 99 ? '99+' : unread}
             </span>
           )}
@@ -63,6 +76,17 @@ export function NotificationPanel({ onClose }: { onClose?: () => void }) {
             >
               <CheckCheck className="h-3.5 w-3.5" />
               Marcar como lidas
+            </Button>
+          )}
+          {store.notifications.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              onClick={handleClearAll}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Limpar
             </Button>
           )}
           <Link href="/perfil/preferencias-notificacoes">
@@ -101,6 +125,7 @@ export function NotificationPanel({ onClose }: { onClose?: () => void }) {
                 onRead={handleRead}
                 onDelete={handleDelete}
                 onClose={onClose}
+                onOpenBroadcast={onOpenBroadcast}
               />
             ))}
           </div>
