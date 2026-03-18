@@ -24,6 +24,8 @@ export async function updateProjetoAction(
   const raw = {
     name: formData.get('name') || undefined,
     description: formData.get('description') || undefined,
+    icon: formData.get('icon') || undefined,
+    iconColor: formData.get('iconColor') || undefined,
   };
 
   const parsed = updateProjetoSchema.safeParse(raw);

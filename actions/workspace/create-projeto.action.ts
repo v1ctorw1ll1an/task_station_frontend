@@ -23,6 +23,8 @@ export async function createProjetoAction(
   const raw = {
     name: formData.get('name'),
     description: formData.get('description') || undefined,
+    icon: formData.get('icon') || undefined,
+    iconColor: formData.get('iconColor') || undefined,
   };
 
   const parsed = createProjetoSchema.safeParse(raw);

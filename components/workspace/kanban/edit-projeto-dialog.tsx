@@ -14,12 +14,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { updateProjetoAction } from '@/actions/workspace/update-projeto.action';
+import { ProjectIconPicker } from '@/components/workspace/projetos/project-icon-picker';
+import { DEFAULT_ICON, DEFAULT_COLOR } from '@/lib/icons/project-icons';
 
 interface EditProjetoDialogProps {
   projectId: string;
   workspaceId: string;
   currentName: string;
   currentDescription: string | null;
+  currentIcon?: string | null;
+  currentIconColor?: string | null;
   variant?: 'default' | 'sidebar';
   triggerClassName?: string;
 }
@@ -29,6 +33,8 @@ export function EditProjetoDialog({
   workspaceId,
   currentName,
   currentDescription,
+  currentIcon,
+  currentIconColor,
   variant = 'default',
   triggerClassName,
 }: EditProjetoDialogProps) {
@@ -36,6 +42,8 @@ export function EditProjetoDialog({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(currentName);
   const [description, setDescription] = useState(currentDescription ?? '');
+  const [icon, setIcon] = useState(currentIcon ?? DEFAULT_ICON);
+  const [iconColor, setIconColor] = useState(currentIconColor ?? DEFAULT_COLOR);
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
 
@@ -45,6 +53,8 @@ export function EditProjetoDialog({
     fd.set('projectId', projectId);
     fd.set('name', name);
     fd.set('description', description);
+    fd.set('icon', icon);
+    fd.set('iconColor', iconColor);
 
     startTransition(async () => {
       const result = await updateProjetoAction({}, fd);
@@ -55,7 +65,7 @@ export function EditProjetoDialog({
         setError('');
         window.dispatchEvent(
           new CustomEvent('projeto:updated', {
-            detail: { projectId, name, description },
+            detail: { projectId, name, description, icon, iconColor },
           }),
         );
         router.refresh();
@@ -63,18 +73,19 @@ export function EditProjetoDialog({
     });
   }
 
+  function handleOpenChange(v: boolean) {
+    setOpen(v);
+    if (v) {
+      setName(currentName);
+      setDescription(currentDescription ?? '');
+      setIcon(currentIcon ?? DEFAULT_ICON);
+      setIconColor(currentIconColor ?? DEFAULT_COLOR);
+      setError('');
+    }
+  }
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        setOpen(v);
-        if (v) {
-          setName(currentName);
-          setDescription(currentDescription ?? '');
-          setError('');
-        }
-      }}
-    >
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {variant === 'sidebar' ? (
           <button className={triggerClassName ?? 'p-1 rounded hover:bg-accent text-foreground/50 hover:text-foreground transition-colors'}>
@@ -87,7 +98,7 @@ export function EditProjetoDialog({
         )}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Editar projeto</DialogTitle>
         </DialogHeader>
@@ -113,6 +124,15 @@ export function EditProjetoDialog({
               rows={3}
               placeholder="Descrição do projeto (opcional)"
               className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Ícone e cor</Label>
+            <ProjectIconPicker
+              icon={icon}
+              color={iconColor}
+              onChange={(i, c) => { setIcon(i); setIconColor(c); }}
             />
           </div>
 

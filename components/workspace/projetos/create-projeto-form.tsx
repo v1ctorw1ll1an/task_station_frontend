@@ -17,6 +17,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { ProjectIconPicker } from './project-icon-picker';
+import { DEFAULT_ICON, DEFAULT_COLOR } from '@/lib/icons/project-icons';
 
 interface CreateProjetoFormProps {
   workspaceId: string;
@@ -27,6 +29,8 @@ const initialState: CreateProjetoActionState = {};
 export function CreateProjetoForm({ workspaceId }: CreateProjetoFormProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createProjetoAction, initialState);
+  const [icon, setIcon] = useState(DEFAULT_ICON);
+  const [iconColor, setIconColor] = useState(DEFAULT_COLOR);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,14 +39,22 @@ export function CreateProjetoForm({ workspaceId }: CreateProjetoFormProps) {
       setOpen(false);
       router.push(`/workspace/${workspaceId}/projetos/${state.projectId}`);
     } else if (state.success) {
-       
+
       setOpen(false);
       router.refresh();
     }
   }, [state.success, state.projectId, workspaceId, router]);
 
+  function handleOpenChange(v: boolean) {
+    setOpen(v);
+    if (v) {
+      setIcon(DEFAULT_ICON);
+      setIconColor(DEFAULT_COLOR);
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm">
           <PlusCircle className="h-4 w-4 mr-2" />
@@ -55,6 +67,8 @@ export function CreateProjetoForm({ workspaceId }: CreateProjetoFormProps) {
         </DialogHeader>
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="workspaceId" value={workspaceId} />
+          <input type="hidden" name="icon" value={icon} />
+          <input type="hidden" name="iconColor" value={iconColor} />
 
           <div className="space-y-2">
             <Label htmlFor="name">Nome do projeto</Label>
@@ -64,6 +78,15 @@ export function CreateProjetoForm({ workspaceId }: CreateProjetoFormProps) {
           <div className="space-y-2">
             <Label htmlFor="description">Descrição (opcional)</Label>
             <Input id="description" name="description" placeholder="Descrição do projeto" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Ícone e cor</Label>
+            <ProjectIconPicker
+              icon={icon}
+              color={iconColor}
+              onChange={(i, c) => { setIcon(i); setIconColor(c); }}
+            />
           </div>
 
           {state.error && <p className="text-sm text-destructive">{state.error}</p>}

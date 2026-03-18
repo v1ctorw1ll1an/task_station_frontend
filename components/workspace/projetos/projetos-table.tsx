@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useCallback, useState, useTransition, useActionState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Pencil, Power, PowerOff, Trash2 } from 'lucide-react';
+import { useCallback, useState, useTransition } from 'react';
+import { ChevronLeft, ChevronRight, Power, PowerOff, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,22 +32,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { activateProjetoAction } from '@/actions/workspace/activate-projeto.action';
 import { deactivateProjetoAction } from '@/actions/workspace/deactivate-projeto.action';
 import { deleteProjetoAction } from '@/actions/workspace/delete-projeto.action';
-import {
-  updateProjetoAction,
-  UpdateProjetoActionState,
-} from '@/actions/workspace/update-projeto.action';
+import { EditProjetoDialog } from '@/components/workspace/kanban/edit-projeto-dialog';
 
 interface Projeto {
   id: string;
@@ -55,87 +43,8 @@ interface Projeto {
   description: string | null;
   isActive: boolean;
   createdAt: string;
-}
-
-interface ProjetosTableProps {
-  data: Projeto[];
-  total: number;
-  page: number;
-  limit: number;
-  workspaceId: string;
-  isAdmin?: boolean;
-}
-
-const initialUpdateState: UpdateProjetoActionState = {};
-
-function EditProjetoDialog({
-  projeto,
-  workspaceId,
-}: {
-  projeto: Projeto;
-  workspaceId: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const router = useRouter();
-  const [state, formAction, isPending] = useActionState(updateProjetoAction, initialUpdateState);
-
-  useEffect(() => {
-    if (state.success) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setOpen(false);
-      router.refresh();
-    }
-  }, [state.success, router]);
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" title="Editar projeto">
-          <Pencil className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Editar projeto</DialogTitle>
-        </DialogHeader>
-        <form action={formAction} className="space-y-4">
-          <input type="hidden" name="workspaceId" value={workspaceId} />
-          <input type="hidden" name="projectId" value={projeto.id} />
-
-          <div className="space-y-2">
-            <Label htmlFor={`name-${projeto.id}`}>Nome</Label>
-            <Input
-              id={`name-${projeto.id}`}
-              name="name"
-              defaultValue={projeto.name}
-              placeholder="Nome do projeto"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={`desc-${projeto.id}`}>Descrição</Label>
-            <Input
-              id={`desc-${projeto.id}`}
-              name="description"
-              defaultValue={projeto.description ?? ''}
-              placeholder="Descrição (opcional)"
-            />
-          </div>
-
-          {state.error && <p className="text-sm text-destructive">{state.error}</p>}
-
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
+  icon?: string | null;
+  iconColor?: string | null;
 }
 
 export function ProjetosTable({
@@ -263,7 +172,14 @@ export function ProjetosTable({
                   {isAdmin && (
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <EditProjetoDialog projeto={projeto} workspaceId={workspaceId} />
+                      <EditProjetoDialog
+                        projectId={projeto.id}
+                        workspaceId={workspaceId}
+                        currentName={projeto.name}
+                        currentDescription={projeto.description}
+                        currentIcon={projeto.icon}
+                        currentIconColor={projeto.iconColor}
+                      />
 
                       {projeto.isActive ? (
                         <AlertDialog>
@@ -274,7 +190,7 @@ export function ProjetosTable({
                               disabled={actionPending}
                               title="Inativar projeto"
                             >
-                              <PowerOff className="h-4 w-4 text-orange-500" />
+                              <PowerOff className="h-4 w-4 text-orange-500 dark:text-orange-400" />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
@@ -302,7 +218,7 @@ export function ProjetosTable({
                               disabled={actionPending}
                               title="Reativar projeto"
                             >
-                              <Power className="h-4 w-4 text-green-600" />
+                              <Power className="h-4 w-4 text-green-600 dark:text-green-400" />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
