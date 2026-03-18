@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   ChevronRight,
   ChevronDown,
+  LayoutList,
   Plus,
   Users,
   Loader2,
@@ -263,6 +264,20 @@ export function WorkspaceNavItem({
               );
             })
           )}
+
+          {/* Visão Geral — available to all workspace members */}
+          <Link
+            href={`/workspace/${workspace.workspaceId}/visao-geral`}
+            className={cn(
+              'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+              pathname.startsWith(`/workspace/${workspace.workspaceId}/visao-geral`)
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+            )}
+          >
+            <LayoutList className="h-3 w-3 shrink-0" />
+            Visão Geral
+          </Link>
 
           {/* Workspace admin link */}
           {isAdmin && (
