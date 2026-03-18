@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
-const APP_VERSION = '0.1.0-alpha.3';
+const APP_VERSION = '0.1.0-alpha.4';
 
 type ChangeType = 'feat' | 'fix' | 'chore';
 
@@ -20,6 +20,21 @@ interface Release {
 }
 
 const releases: Release[] = [
+  {
+    version: '0.1.0-alpha.4',
+    date: '2026-03-18',
+    changes: [
+      { type: 'feat', text: 'Tela de início (dashboard pessoal) com saudação por hora do dia, tarefas a vencer com filtros (hoje / amanhã / esta semana / atrasadas / personalizado) e feed de notificações recentes' },
+      { type: 'feat', text: 'Numeração automática de tasks (#N) com contador atômico por projeto — exibida nos cards do kanban como prefixo derivado do nome do projeto (ex: BE-42)' },
+      { type: 'feat', text: 'Visão geral do workspace — todos os projetos com tasks agrupadas por coluna, filtros de assignee e label, e deep-link para task via taskRef' },
+      { type: 'feat', text: 'Color picker para colunas do kanban com preset de cores e opção de limpar' },
+      { type: 'feat', text: 'Board filter no kanban — filtro global por assignee e labels aplicado a todas as colunas simultaneamente' },
+      { type: 'feat', text: 'Sort multi-critério nas colunas — eixos independentes de dueDate e priority' },
+      { type: 'feat', text: 'Link "Workspaces" separado na sidebar; "Início" agora aponta para o dashboard pessoal' },
+      { type: 'fix', text: 'Redirecionamento pós-login e seleção de empresa agora aterrisam em /inicio em vez de /workspaces' },
+      { type: 'chore', text: 'Migration add_task_numbering — colunas task_counter e task_number adicionadas ao banco de dados' },
+    ],
+  },
   {
     version: '0.1.0-alpha.3',
     date: '2026-03-18',
