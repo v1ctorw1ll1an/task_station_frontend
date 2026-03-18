@@ -133,7 +133,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         <p className="text-sm text-destructive">{state.error}</p>
       )}
       {showSuccess && (
-        <div className="flex items-center gap-2 text-sm text-green-600">
+        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
           <CheckCircle2 className="h-4 w-4" />
           Perfil atualizado com sucesso.
         </div>

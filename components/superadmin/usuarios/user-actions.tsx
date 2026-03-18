@@ -43,9 +43,9 @@ export function UserActions({ id, isActive, isSelf }: UserActionsProps) {
       <AlertDialogTrigger asChild>
         <Button variant="ghost" size="sm" disabled={isPending}>
           {isActive ? (
-            <UserX className="h-4 w-4 text-orange-500" />
+            <UserX className="h-4 w-4 text-orange-500 dark:text-orange-400" />
           ) : (
-            <UserCheck className="h-4 w-4 text-green-600" />
+            <UserCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
           )}
         </Button>
       </AlertDialogTrigger>

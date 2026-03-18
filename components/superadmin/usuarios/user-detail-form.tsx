@@ -2,9 +2,10 @@
 
 import { useEffect, useActionState, useState, useTransition, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, CheckCircle2, UserX, UserCheck } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, UserX, UserCheck, ShieldCheck, ShieldOff } from 'lucide-react';
 import { editUserAction, EditUserActionState } from '@/actions/superadmin/edit-user.action';
 import { updateUserAction } from '@/actions/superadmin/update-user.action';
+import { toggleSuperuserAction } from '@/actions/superadmin/toggle-superuser.action';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +29,7 @@ interface UserDetailFormProps {
     email: string;
     phone: string | null;
     isActive: boolean;
+    isSuperuser: boolean;
     isSelf: boolean;
   };
 }
@@ -39,6 +41,8 @@ export function UserDetailForm({ user }: UserDetailFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [state, formAction, isPending] = useActionState(editUserAction, initialState);
   const [togglePending, startToggle] = useTransition();
+  const [superuserPending, startSuperuserToggle] = useTransition();
+  const [superuserError, setSuperuserError] = useState<string | null>(null);
 
   const [showSuccess, setShowSuccess] = useState(false);
   useEffect(() => {
@@ -56,6 +60,18 @@ export function UserDetailForm({ user }: UserDetailFormProps) {
     startToggle(async () => {
       await updateUserAction(user.id, !user.isActive);
       router.refresh();
+    });
+  }
+
+  function handleToggleSuperuser() {
+    setSuperuserError(null);
+    startSuperuserToggle(async () => {
+      const result = await toggleSuperuserAction(user.id, !user.isSuperuser);
+      if (result.error) {
+        setSuperuserError(result.error);
+      } else {
+        router.refresh();
+      }
     });
   }
 
@@ -124,7 +140,7 @@ export function UserDetailForm({ user }: UserDetailFormProps) {
 
         {state.error && <p className="text-sm text-destructive">{state.error}</p>}
         {showSuccess && (
-          <div className="flex items-center gap-2 text-sm text-green-600">
+          <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
             <CheckCircle2 className="h-4 w-4" />
             Dados atualizados com sucesso.
           </div>
@@ -188,6 +204,62 @@ export function UserDetailForm({ user }: UserDetailFormProps) {
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction onClick={handleToggleActive}>Confirmar</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+
+            {/* Toggle superusuário */}
+            <div className="flex items-center justify-between rounded-lg border border-destructive/30 p-4">
+              <div>
+                <p className="text-sm font-medium">
+                  {user.isSuperuser ? 'Revogar superusuário' : 'Promover a superusuário'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {user.isSuperuser
+                    ? 'O usuário perderá acesso total ao painel de administração.'
+                    : 'O usuário terá acesso total ao painel de administração do sistema.'}
+                </p>
+                {superuserError && (
+                  <p className="text-xs text-destructive mt-1">{superuserError}</p>
+                )}
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant={user.isSuperuser ? 'destructive' : 'outline'}
+                    size="sm"
+                    disabled={superuserPending}
+                  >
+                    {user.isSuperuser ? (
+                      <>
+                        <ShieldOff className="h-4 w-4 mr-1" />
+                        Revogar
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="h-4 w-4 mr-1" />
+                        Promover
+                      </>
+                    )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {user.isSuperuser ? 'Revogar superusuário?' : 'Promover a superusuário?'}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {user.isSuperuser
+                        ? 'O usuário perderá acesso total ao painel de administração.'
+                        : 'O usuário terá acesso total ao painel de administração do sistema.'}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleToggleSuperuser}>
+                      Confirmar
+                    </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

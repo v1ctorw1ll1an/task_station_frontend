@@ -111,6 +111,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               email: user.email,
               phone: user.phone,
               isActive: user.isActive,
+              isSuperuser: user.isSuperuser,
               isSelf,
             }}
           />

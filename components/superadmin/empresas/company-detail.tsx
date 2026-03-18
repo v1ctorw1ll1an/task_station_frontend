@@ -128,7 +128,7 @@ export function CompanyDetail({ company, admins }: CompanyDetailProps) {
 
         {state.error && <p className="text-sm text-destructive">{state.error}</p>}
         {showSuccess && (
-          <div className="flex items-center gap-2 text-sm text-green-600">
+          <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
             <CheckCircle2 className="h-4 w-4" />
             Dados atualizados com sucesso.
           </div>
@@ -207,7 +207,7 @@ export function CompanyDetail({ company, admins }: CompanyDetailProps) {
                         disabled={removingId === admin.membershipId}
                         title="Inativar acesso à empresa"
                       >
-                        <UserMinus className="h-4 w-4 text-orange-500" />
+                        <UserMinus className="h-4 w-4 text-orange-500 dark:text-orange-400" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -253,7 +253,7 @@ export function CompanyDetail({ company, admins }: CompanyDetailProps) {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" disabled={dangerPending}>
-                  <PowerOff className="h-4 w-4 mr-1 text-orange-500" />
+                  <PowerOff className="h-4 w-4 mr-1 text-orange-500 dark:text-orange-400" />
                   Inativar
                 </Button>
               </AlertDialogTrigger>
