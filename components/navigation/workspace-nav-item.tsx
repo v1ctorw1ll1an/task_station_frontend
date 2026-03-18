@@ -6,11 +6,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   ChevronRight,
   ChevronDown,
-  LayoutDashboard,
   Plus,
   Users,
   Loader2,
 } from 'lucide-react';
+import { ICON_MAP, DEFAULT_ICON, DEFAULT_COLOR } from '@/lib/icons/project-icons';
 import { cn } from '@/lib/utils';
 import {
   getWorkspaceProjectsForSidebar,
@@ -129,14 +129,16 @@ export function WorkspaceNavItem({
 
   useEffect(() => {
     function handleProjetoUpdated(e: Event) {
-      const { projectId, name, description } = (e as CustomEvent<{
+      const { projectId, name, description, icon, iconColor } = (e as CustomEvent<{
         projectId: string;
         name: string;
         description: string;
+        icon: string;
+        iconColor: string;
       }>).detail;
       setProjects((prev) =>
         prev.map((p) =>
-          p.id === projectId ? { ...p, name, description } : p,
+          p.id === projectId ? { ...p, name, description, icon, iconColor } : p,
         ),
       );
     }
@@ -214,6 +216,7 @@ export function WorkspaceNavItem({
             visibleProjects.map((project) => {
               const href = `/workspace/${workspace.workspaceId}/projetos/${project.id}`;
               const isActive = pathname.includes(`/projetos/${project.id}`);
+              const IconComponent = ICON_MAP[project.icon ?? DEFAULT_ICON] ?? ICON_MAP[DEFAULT_ICON];
               return (
                 <div
                   key={project.id}
@@ -229,7 +232,10 @@ export function WorkspaceNavItem({
                     href={href}
                     className="flex flex-1 items-center gap-2 px-2 py-1.5 text-sm min-w-0"
                   >
-                    <LayoutDashboard className="h-3.5 w-3.5 shrink-0" />
+                    <IconComponent
+                      className="h-3.5 w-3.5 shrink-0"
+                      style={{ color: project.iconColor ?? DEFAULT_COLOR }}
+                    />
                     <span className="truncate">{project.name}</span>
                   </Link>
                   {isAdmin && (
@@ -242,6 +248,8 @@ export function WorkspaceNavItem({
                         workspaceId={workspace.workspaceId}
                         currentName={project.name}
                         currentDescription={project.description}
+                        currentIcon={project.icon}
+                        currentIconColor={project.iconColor}
                         variant="sidebar"
                         triggerClassName={
                           isActive

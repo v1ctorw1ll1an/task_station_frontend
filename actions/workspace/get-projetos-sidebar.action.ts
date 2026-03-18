@@ -7,6 +7,8 @@ export interface SidebarProject {
   name: string;
   description: string | null;
   isActive: boolean;
+  icon: string | null;
+  iconColor: string | null;
 }
 
 export async function getWorkspaceProjectsForSidebar(
