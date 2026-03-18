@@ -6,6 +6,7 @@ import { getSession } from '@/lib/auth';
 export interface CreateTaskActionState {
   error?: string;
   success?: boolean;
+  taskId?: string;
 }
 
 export async function createTaskAction(
@@ -62,10 +63,11 @@ export async function createTaskAction(
       const data = await res.json().catch(() => ({}));
       return { error: data.message ?? 'Erro ao criar task' };
     }
+
+    const task = await res.json().catch(() => null);
+    revalidatePath(`/workspace/${workspaceId}/projetos/${projectId}`);
+    return { success: true, taskId: task?.id };
   } catch {
     return { error: 'Erro ao conectar com o servidor' };
   }
-
-  revalidatePath(`/workspace/${workspaceId}/projetos/${projectId}`);
-  return { success: true };
 }

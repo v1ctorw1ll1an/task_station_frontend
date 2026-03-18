@@ -102,11 +102,11 @@ export function ContratarMembroModal({ companyId }: ContratarMembroModalProps) {
                     </div>
 
                     {state.emailFailed && state.magicLink && (
-                        <div className="rounded-md border border-yellow-400 bg-yellow-50 p-3 space-y-2">
-                            <p className="text-sm font-medium text-yellow-800">
+                        <div className="rounded-md border border-yellow-400 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-700 p-3 space-y-2">
+                            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
                                 Colaborador criado, mas o email falhou ao ser enviado.
                             </p>
-                            <p className="text-xs text-yellow-700">
+                            <p className="text-xs text-yellow-700 dark:text-yellow-400">
                                 Compartilhe o link abaixo com o colaborador para o primeiro acesso:
                             </p>
                             <div className="flex items-center gap-2">

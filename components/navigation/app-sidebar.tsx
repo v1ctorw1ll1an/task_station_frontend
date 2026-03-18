@@ -3,7 +3,7 @@
 import { useState, useEffect, startTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
-import { Home, Users } from 'lucide-react';
+import { Home, Megaphone, Users, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WorkspaceNavItem, SidebarWorkspace } from './workspace-nav-item';
 import { CreateWorkspaceInlineTrigger } from './create-workspace-inline';
@@ -29,6 +29,7 @@ export function AppSidebar({
   const params = useParams();
   const currentWorkspaceId = params?.workspaceId as string | undefined;
 
+  const [collapsed, setCollapsed] = useState(false);
   const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
 
@@ -75,15 +76,32 @@ export function AppSidebar({
   };
 
   return (
-    <aside className="w-60 min-h-screen bg-sidebar border-r flex flex-col">
+    <aside
+      className={cn(
+        'h-screen sticky top-0 bg-sidebar border-r flex flex-col transition-[width] duration-300 ease-in-out',
+        collapsed ? 'w-14' : 'w-60',
+      )}
+    >
       {/* Company header */}
-      <div className="px-4 py-4 border-b">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">
-          Empresa
-        </p>
-        <p className="text-sm font-semibold truncate leading-tight" title={companyName}>
-          {companyName}
-        </p>
+      <div className="px-3 py-4 border-b flex items-center justify-between min-h-[60px]">
+        {!collapsed && (
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">
+              Empresa
+            </p>
+            <p className="text-sm font-semibold truncate leading-tight" title={companyName}>
+              {companyName}
+            </p>
+          </div>
+        )}
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className="shrink-0 h-7 w-7 flex items-center justify-center rounded-md
+                     text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          aria-label={collapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+        >
+          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+        </button>
       </div>
 
       {/* Navigation */}
@@ -92,63 +110,84 @@ export function AppSidebar({
         <Link
           href={`/empresa/${companyId}/workspaces`}
           className={cn(
-            'flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors',
+            'flex items-center py-1.5 rounded-md text-sm transition-colors',
+            collapsed ? 'justify-center px-0 mx-1' : 'gap-2.5 px-2',
             pathname === `/empresa/${companyId}/workspaces`
               ? 'bg-primary text-primary-foreground'
               : 'text-muted-foreground hover:bg-accent hover:text-foreground',
           )}
         >
           <Home className="h-4 w-4 shrink-0" />
-          <span>Início</span>
+          {!collapsed && <span>Início</span>}
         </Link>
 
         {isCompanyAdmin && (
           <Link
             href={`/empresa/${companyId}/membros`}
             className={cn(
-              'flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors',
+              'flex items-center py-1.5 rounded-md text-sm transition-colors',
+              collapsed ? 'justify-center px-0 mx-1' : 'gap-2.5 px-2',
               pathname.startsWith(`/empresa/${companyId}/membros`)
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-accent hover:text-foreground',
             )}
           >
             <Users className="h-4 w-4 shrink-0" />
-            <span>Membros</span>
+            {!collapsed && <span>Membros</span>}
           </Link>
         )}
 
-        {/* Workspaces section divider */}
-        <div className="pt-3 pb-1 flex items-center justify-between px-2">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Workspaces
-          </span>
-          {isCompanyAdmin && (
-            <CreateWorkspaceInlineTrigger companyId={companyId} />
-          )}
-        </div>
-
-        {/* Workspace tree */}
-        {workspaces.length === 0 ? (
-          <div className="px-2 py-3 text-center">
-            <p className="text-xs text-muted-foreground italic mb-2">
-              Nenhum workspace ainda.
-            </p>
-            {isCompanyAdmin && (
-              <CreateWorkspaceInlineTrigger companyId={companyId} variant="button" />
+        {isCompanyAdmin && (
+          <Link
+            href={`/empresa/${companyId}/comunicado`}
+            className={cn(
+              'flex items-center py-1.5 rounded-md text-sm transition-colors',
+              collapsed ? 'justify-center px-0 mx-1' : 'gap-2.5 px-2',
+              pathname.startsWith(`/empresa/${companyId}/comunicado`)
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground',
             )}
-          </div>
-        ) : (
-          <div className="space-y-0.5">
-            {workspaces.map((ws) => (
-              <WorkspaceNavItem
-                key={ws.workspaceId}
-                workspace={ws}
-                isExpanded={expandedWorkspaces.has(ws.workspaceId)}
-                onToggle={toggleWorkspace}
-                isAdmin={isCompanyAdmin || ws.role === 'workspace_admin'}
-              />
-            ))}
-          </div>
+          >
+            <Megaphone className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Comunicados</span>}
+          </Link>
+        )}
+
+        {/* Workspaces section — hidden when collapsed */}
+        {!collapsed && (
+          <>
+            <div className="pt-3 pb-1 flex items-center justify-between px-2">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Workspaces
+              </span>
+              {isCompanyAdmin && (
+                <CreateWorkspaceInlineTrigger companyId={companyId} />
+              )}
+            </div>
+
+            {workspaces.length === 0 ? (
+              <div className="px-2 py-3 text-center">
+                <p className="text-xs text-muted-foreground italic mb-2">
+                  Nenhum workspace ainda.
+                </p>
+                {isCompanyAdmin && (
+                  <CreateWorkspaceInlineTrigger companyId={companyId} variant="button" />
+                )}
+              </div>
+            ) : (
+              <div className="space-y-0.5">
+                {workspaces.map((ws) => (
+                  <WorkspaceNavItem
+                    key={ws.workspaceId}
+                    workspace={ws}
+                    isExpanded={expandedWorkspaces.has(ws.workspaceId)}
+                    onToggle={toggleWorkspace}
+                    isAdmin={isCompanyAdmin || ws.role === 'workspace_admin'}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </nav>
 
@@ -156,9 +195,10 @@ export function AppSidebar({
       <div className="border-t">
         <Link
           href="/perfil"
-          className="w-full flex items-center gap-2.5 px-3 py-3 text-sm
-                     text-muted-foreground hover:bg-accent hover:text-foreground
-                     transition-colors"
+          className={cn(
+            'w-full flex items-center px-3 py-3 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors',
+            collapsed ? 'justify-center' : 'gap-2.5',
+          )}
         >
           <span className="relative shrink-0 h-7 w-7 rounded-full overflow-hidden
                            bg-muted flex items-center justify-center text-xs font-medium">
@@ -176,8 +216,12 @@ export function AppSidebar({
               </span>
             )}
           </span>
-          <span className="truncate text-xs font-medium flex-1">{userEmail}</span>
-          <span className="text-xs text-muted-foreground shrink-0">Perfil</span>
+          {!collapsed && (
+            <>
+              <span className="truncate text-xs font-medium flex-1">{userEmail}</span>
+              <span className="text-xs text-muted-foreground shrink-0">Perfil</span>
+            </>
+          )}
         </Link>
       </div>
     </aside>

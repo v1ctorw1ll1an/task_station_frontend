@@ -13,7 +13,14 @@ export function PerformancePatch() {
       } catch {
         // Turbopack sometimes calls performance.measure with stale/cleared marks
         // that produce negative timestamps — silently ignore.
-        return new PerformanceMeasure();
+        return {
+          detail: null,
+          duration: 0,
+          entryType: 'measure' as const,
+          name: '',
+          startTime: 0,
+          toJSON: () => ({}),
+        } as PerformanceMeasure;
       }
     };
   }, []);

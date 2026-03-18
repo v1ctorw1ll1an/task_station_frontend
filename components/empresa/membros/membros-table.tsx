@@ -245,7 +245,7 @@ export function MembrosTable({
                                 {member.user.isActive ? (
                                   <UserX className="h-4 w-4 text-destructive" />
                                 ) : (
-                                  <UserCheck className="h-4 w-4 text-green-600" />
+                                  <UserCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
                                 )}
                               </Button>
                             </AlertDialogTrigger>

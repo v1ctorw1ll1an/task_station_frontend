@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CalendarDays, Tag, User } from 'lucide-react';
+import { AlignLeft, CalendarDays, MessageSquare, Tag, User } from 'lucide-react';
 import { gravatarUrl } from '@/lib/gravatar';
 
 export interface KanbanTaskLabel {
@@ -24,6 +24,7 @@ export interface KanbanTask {
   taskAssignees: { user: { id: string; name: string; email: string; photoUrl: string | null } }[];
   reporter: { id: string; name: string; email: string; photoUrl: string | null };
   taskLabels: KanbanTaskLabel[];
+  _count: { taskComments: number };
 }
 
 const PRIORITY_LABELS: Record<KanbanTask['priority'], string> = {
@@ -151,9 +152,20 @@ export function KanbanCard({ task, onClick, isDragOverlay = false }: KanbanCardP
       )}
 
       <div className="flex items-center justify-between gap-2">
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_CLASSES[task.priority]}`}>
-          {PRIORITY_LABELS[task.priority]}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_CLASSES[task.priority]}`}>
+            {PRIORITY_LABELS[task.priority]}
+          </span>
+          {task.description && (
+            <AlignLeft className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+          )}
+          {task._count.taskComments > 0 && (
+            <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+              <MessageSquare className="h-3.5 w-3.5" />
+              {task._count.taskComments}
+            </span>
+          )}
+        </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           {task.dueDate && (

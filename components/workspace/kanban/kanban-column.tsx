@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { KanbanCard, type KanbanTask } from './kanban-card';
 import { ColumnOptionsMenu } from './column-options-menu';
 import { createTaskAction } from '@/actions/projeto/create-task.action';
+import { moveTaskAction } from '@/actions/projeto/move-task.action';
 import type { KanbanColumn } from './kanban-board';
 import type { ProjectLabel } from '@/actions/projeto/get-labels.action';
 
@@ -40,7 +41,7 @@ export function KanbanColumnComponent({
   labels,
   onTaskClick,
 }: KanbanColumnProps) {
-  const [addingTask, setAddingTask] = useState(false);
+  const [addPosition, setAddPosition] = useState<'top' | 'bottom' | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [addPending, startAdd] = useTransition();
   const [addError, setAddError] = useState<string | null>(null);
@@ -95,6 +96,7 @@ export function KanbanColumnComponent({
     if (!newTaskTitle.trim()) return;
     setAddError(null);
 
+    const currentPosition = addPosition;
     const formData = new FormData();
     formData.set('projectId', projectId);
     formData.set('workspaceId', workspaceId);
@@ -105,10 +107,15 @@ export function KanbanColumnComponent({
       const result = await createTaskAction({}, formData);
       if (result.error) {
         setAddError(result.error);
-      } else {
-        setNewTaskTitle('');
-        setAddingTask(false);
+        return;
       }
+
+      if (currentPosition === 'top' && result.taskId) {
+        await moveTaskAction(projectId, result.taskId, workspaceId, column.id, null);
+      }
+
+      setNewTaskTitle('');
+      setAddPosition(null);
     });
   }
 
@@ -128,7 +135,7 @@ export function KanbanColumnComponent({
       ref={setNodeRef}
       style={style}
       className={[
-        'flex w-72 flex-shrink-0 flex-col rounded-lg border bg-muted/40 max-h-[calc(100vh-180px)]',
+        'flex w-72 flex-shrink-0 flex-col rounded-lg border bg-muted/40 h-full',
         isDragging ? 'opacity-40' : '',
       ]
         .filter(Boolean)
@@ -151,24 +158,62 @@ export function KanbanColumnComponent({
             ({filterLabelIds.length > 0 ? `${displayedTasks.length}/` : ''}{column.tasks.length})
           </span>
         </div>
-        <ColumnOptionsMenu
-          column={column}
-          allColumns={allColumns}
-          projectId={projectId}
-          workspaceId={workspaceId}
-          isAdmin={isAdmin}
-          labels={labels}
-          sortOption={sortOption}
-          filterLabelIds={filterLabelIds}
-          hasActiveFilters={hasActiveFilters}
-          onSortChange={setSortOption}
-          onFilterLabelToggle={toggleFilterLabel}
-          onClearFilters={clearFilters}
-        />
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => setAddPosition('top')}
+            title="Adicionar task no topo"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+          <ColumnOptionsMenu
+            column={column}
+            allColumns={allColumns}
+            projectId={projectId}
+            workspaceId={workspaceId}
+            isAdmin={isAdmin}
+            labels={labels}
+            sortOption={sortOption}
+            filterLabelIds={filterLabelIds}
+            hasActiveFilters={hasActiveFilters}
+            onSortChange={setSortOption}
+            onFilterLabelToggle={toggleFilterLabel}
+            onClearFilters={clearFilters}
+          />
+        </div>
       </div>
 
       {/* Tasks */}
       <div className="flex flex-col gap-2 px-3 py-1 flex-1 min-h-0 overflow-y-auto">
+        {addPosition === 'top' && (
+          <form onSubmit={handleAddTask} className="space-y-1.5">
+            <Input
+              autoFocus
+              placeholder="Título da task"
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              onKeyDown={(e) => e.key === 'Escape' && (setAddPosition(null), setNewTaskTitle(''), setAddError(null))}
+              disabled={addPending}
+            />
+            {addError && <p className="text-xs text-destructive">{addError}</p>}
+            <div className="flex gap-1">
+              <Button type="submit" size="sm" disabled={addPending || !newTaskTitle.trim()}>
+                {addPending ? 'Adicionando...' : 'Adicionar'}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => { setAddPosition(null); setNewTaskTitle(''); setAddError(null); }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        )}
         <SortableContext
           items={displayedTasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
@@ -181,14 +226,14 @@ export function KanbanColumnComponent({
 
       {/* Footer — adicionar task */}
       <div className="px-3 pb-3 pt-1">
-        {addingTask ? (
+        {addPosition === 'bottom' ? (
           <form onSubmit={handleAddTask} className="space-y-1.5">
             <Input
               autoFocus
               placeholder="Título da task"
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
-              onKeyDown={(e) => e.key === 'Escape' && setAddingTask(false)}
+              onKeyDown={(e) => e.key === 'Escape' && (setAddPosition(null), setNewTaskTitle(''), setAddError(null))}
               disabled={addPending}
             />
             {addError && <p className="text-xs text-destructive">{addError}</p>}
@@ -200,11 +245,7 @@ export function KanbanColumnComponent({
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => {
-                  setAddingTask(false);
-                  setNewTaskTitle('');
-                  setAddError(null);
-                }}
+                onClick={() => { setAddPosition(null); setNewTaskTitle(''); setAddError(null); }}
               >
                 Cancelar
               </Button>
@@ -215,7 +256,7 @@ export function KanbanColumnComponent({
             variant="ghost"
             size="sm"
             className="w-full justify-start text-muted-foreground text-xs"
-            onClick={() => setAddingTask(true)}
+            onClick={() => setAddPosition('bottom')}
           >
             <Plus className="h-3.5 w-3.5 mr-1" />
             Adicionar task
