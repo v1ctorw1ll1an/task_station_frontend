@@ -62,7 +62,7 @@ function CreateProjetoSidebarDialog({
     if (state.success && state.projectId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false);
-      onCreated({ id: state.projectId, name: '', isActive: true, description: null });
+      onCreated({ id: state.projectId, name: '', isActive: true, description: null, icon: null, iconColor: null });
       router.push(
         `/workspace/${workspaceId}/projetos/${state.projectId}`,
       );

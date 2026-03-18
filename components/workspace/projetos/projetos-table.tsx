@@ -47,6 +47,15 @@ interface Projeto {
   iconColor?: string | null;
 }
 
+interface ProjetosTableProps {
+  data: Projeto[];
+  total: number;
+  page: number;
+  limit: number;
+  workspaceId: string;
+  isAdmin?: boolean;
+}
+
 export function ProjetosTable({
   data,
   total,
