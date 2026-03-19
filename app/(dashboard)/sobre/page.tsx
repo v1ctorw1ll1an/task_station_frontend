@@ -97,7 +97,10 @@ function versionBadgeClass(version: string) {
 }
 
 function formatDate(iso: string) {
-  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(iso));
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(
+    new Date(year, month - 1, day),
+  );
 }
 
 export default function SobrePage() {
