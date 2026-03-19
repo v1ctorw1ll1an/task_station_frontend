@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
-const APP_VERSION = '0.1.0-alpha.4';
+const APP_VERSION = '0.1.0-alpha.5';
 
 type ChangeType = 'feat' | 'fix' | 'chore';
 
@@ -20,6 +20,17 @@ interface Release {
 }
 
 const releases: Release[] = [
+  {
+    version: '0.1.0-alpha.5',
+    date: '2026-03-19',
+    changes: [
+      { type: 'feat', text: 'Ordenação personalizada da sidebar por drag-and-drop — workspaces e projetos podem ser reordenados individualmente; posições persistidas por usuário no banco' },
+      { type: 'feat', text: 'Mover projeto entre workspaces via drag-and-drop na sidebar' },
+      { type: 'feat', text: 'Filtro por reporter no board filter do kanban — seção dedicada no painel, chips ativos e limpeza com "Limpar"' },
+      { type: 'fix', text: 'Ranking de busca de membros no task-detail-dialog — nomes que começam com o termo de busca aparecem antes de nomes que apenas o contêm' },
+      { type: 'chore', text: 'Migration add_user_sidebar_order — tabelas user_workspace_orders e user_project_orders; removida coluna notification_id de tasks; constraints de cascade em task_history corrigidas' },
+    ],
+  },
   {
     version: '0.1.0-alpha.4',
     date: '2026-03-18',

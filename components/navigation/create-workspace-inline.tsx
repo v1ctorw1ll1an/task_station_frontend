@@ -49,10 +49,21 @@ export function CreateWorkspaceInlineTrigger({
       startTransition(() => {
         setOpen(false);
         setSuccessMessage(state.workspaceName ?? 'Workspace criado!');
+        if (state.workspaceId && state.workspaceName) {
+          window.dispatchEvent(
+            new CustomEvent('workspace:created', {
+              detail: {
+                workspaceId: state.workspaceId,
+                workspaceName: state.workspaceName,
+                companyId,
+              },
+            }),
+          );
+        }
         router.refresh();
       });
     }
-  }, [state.success, state.workspaceName, router]);
+  }, [state.success, state.workspaceName, state.workspaceId, companyId, router]);
 
   useEffect(() => {
     if (!successMessage) return;

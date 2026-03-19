@@ -5,6 +5,7 @@ import { EmpresaUserMenu } from '@/components/empresa/user-menu';
 import { SidebarWorkspace } from '@/components/navigation/workspace-nav-item';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { fetchAndApplySidebarOrder } from '@/lib/sidebar-order';
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -87,14 +88,19 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     }
   }
 
+  // Pre-order workspaces and get project orders from server (eliminates flash)
+  const { workspaces: orderedWorkspaces, projectOrders } =
+    await fetchAndApplySidebarOrder(session.token, companyId, workspaces);
+
   return (
     <div className="flex h-screen overflow-hidden">
       <AppSidebar
         companyId={companyId}
         companyName={companyName || 'Empresa'}
         isCompanyAdmin={isCompanyAdmin}
-        workspaces={workspaces}
+        workspaces={orderedWorkspaces}
         userEmail={session.user.email}
+        initialProjectOrders={projectOrders}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b flex items-center justify-between px-6 shrink-0">

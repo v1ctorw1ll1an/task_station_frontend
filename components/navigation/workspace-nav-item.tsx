@@ -6,17 +6,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   ChevronRight,
   ChevronDown,
+  GripVertical,
   LayoutList,
   Plus,
   Users,
   Loader2,
 } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { ICON_MAP, DEFAULT_ICON, DEFAULT_COLOR } from '@/lib/icons/project-icons';
 import { cn } from '@/lib/utils';
-import {
-  getWorkspaceProjectsForSidebar,
-  SidebarProject,
-} from '@/actions/workspace/get-projetos-sidebar.action';
 import {
   createProjetoAction,
   CreateProjetoActionState,
@@ -32,6 +32,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { EditProjetoDialog } from '@/components/workspace/kanban/edit-projeto-dialog';
+import { SidebarProject } from '@/actions/workspace/get-projetos-sidebar.action';
 
 export interface SidebarWorkspace {
   workspaceId: string;
@@ -44,6 +45,9 @@ interface WorkspaceNavItemProps {
   isExpanded: boolean;
   onToggle: (workspaceId: string) => void;
   isAdmin: boolean;
+  projects: SidebarProject[];
+  loadingProjects: boolean;
+  onProjectCreated: (workspaceId: string, project: SidebarProject) => void;
 }
 
 const initialProjetoState: CreateProjetoActionState = {};
@@ -64,9 +68,7 @@ function CreateProjetoSidebarDialog({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false);
       onCreated({ id: state.projectId, name: '', isActive: true, description: null, icon: null, iconColor: null });
-      router.push(
-        `/workspace/${workspaceId}/projetos/${state.projectId}`,
-      );
+      router.push(`/workspace/${workspaceId}/projetos/${state.projectId}`);
     }
   }, [state.success, state.projectId, workspaceId, router, onCreated]);
 
@@ -105,67 +107,147 @@ function CreateProjetoSidebarDialog({
   );
 }
 
+function SortableProject({
+  project,
+  workspaceId,
+  isAdmin,
+  isActive: isCurrentPage,
+}: {
+  project: SidebarProject;
+  workspaceId: string;
+  isAdmin: boolean;
+  isActive: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: project.id,
+    data: { type: 'project', workspaceId },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const href = `/workspace/${workspaceId}/projetos/${project.id}`;
+  const IconComponent = ICON_MAP[project.icon ?? DEFAULT_ICON] ?? ICON_MAP[DEFAULT_ICON];
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'group flex items-center gap-1 rounded-md transition-colors',
+        isDragging ? 'opacity-50' : '',
+        isCurrentPage
+          ? 'bg-primary text-primary-foreground'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+        !project.isActive && 'opacity-50',
+      )}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="opacity-0 group-hover:opacity-40 cursor-grab active:cursor-grabbing shrink-0 p-0.5 pl-1"
+        tabIndex={-1}
+        aria-label="Arrastar projeto"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <Link
+        href={href}
+        className="flex flex-1 items-center gap-2 py-1.5 text-sm min-w-0"
+      >
+        <IconComponent
+          className="h-3.5 w-3.5 shrink-0"
+          style={{ color: project.iconColor ?? DEFAULT_COLOR }}
+        />
+        <span className="truncate">{project.name}</span>
+      </Link>
+      {isAdmin && (
+        <span className="pr-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <EditProjetoDialog
+            projectId={project.id}
+            workspaceId={workspaceId}
+            currentName={project.name}
+            currentDescription={project.description}
+            currentIcon={project.icon}
+            currentIconColor={project.iconColor}
+            variant="sidebar"
+            triggerClassName={
+              isCurrentPage
+                ? 'p-1 rounded hover:bg-primary-foreground/20 text-primary-foreground/70 hover:text-primary-foreground transition-colors'
+                : 'p-1 rounded hover:bg-accent text-foreground/50 hover:text-foreground transition-colors'
+            }
+          />
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function WorkspaceNavItem({
   workspace,
   isExpanded,
   onToggle,
   isAdmin,
+  projects,
+  loadingProjects,
+  onProjectCreated,
 }: WorkspaceNavItemProps) {
   const pathname = usePathname();
-  const [projects, setProjects] = useState<SidebarProject[]>([]);
-  const [loading, setLoading] = useState(false);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: workspace.workspaceId,
+    data: { type: 'workspace' },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   const isWorkspaceActive =
     pathname.startsWith(`/workspace/${workspace.workspaceId}/`) ||
     pathname === `/workspace/${workspace.workspaceId}/projetos`;
 
-  useEffect(() => {
-    if (!isExpanded) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    getWorkspaceProjectsForSidebar(workspace.workspaceId)
-      .then((data) => setProjects(data))
-      .finally(() => setLoading(false));
-  }, [isExpanded, workspace.workspaceId]);
-
-  useEffect(() => {
-    function handleProjetoUpdated(e: Event) {
-      const { projectId, name, description, icon, iconColor } = (e as CustomEvent<{
-        projectId: string;
-        name: string;
-        description: string;
-        icon: string;
-        iconColor: string;
-      }>).detail;
-      setProjects((prev) =>
-        prev.map((p) =>
-          p.id === projectId ? { ...p, name, description, icon, iconColor } : p,
-        ),
-      );
-    }
-    window.addEventListener('projeto:updated', handleProjetoUpdated);
-    return () => window.removeEventListener('projeto:updated', handleProjetoUpdated);
-  }, []);
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleProjectCreated = useCallback((_project: SidebarProject) => {
-    // Refresh project list after creation
-    getWorkspaceProjectsForSidebar(workspace.workspaceId).then(setProjects);
-  }, [workspace.workspaceId]);
-
   const visibleProjects = isAdmin ? projects : projects.filter((p) => p.isActive);
 
+  const handleCreated = useCallback(
+    (project: SidebarProject) => {
+      onProjectCreated(workspace.workspaceId, project);
+    },
+    [workspace.workspaceId, onProjectCreated],
+  );
+
   return (
-    <div>
+    <div ref={setNodeRef} style={style} className={cn(isDragging ? 'opacity-50' : '')}>
       {/* Workspace row */}
       <div
         className={cn(
-          'group flex items-center gap-1 px-2 py-1.5 rounded-md transition-colors cursor-pointer',
+          'group flex items-center gap-1 px-1 py-1.5 rounded-md transition-colors cursor-pointer',
           isWorkspaceActive
             ? 'bg-accent text-accent-foreground'
             : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
         )}
       >
+        {/* Drag handle */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="opacity-0 group-hover:opacity-40 cursor-grab active:cursor-grabbing shrink-0 p-0.5"
+          tabIndex={-1}
+          aria-label="Arrastar workspace"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+
         {/* Toggle arrow */}
         <button
           onClick={() => onToggle(workspace.workspaceId)}
@@ -195,7 +277,7 @@ export function WorkspaceNavItem({
           {isAdmin && (
             <CreateProjetoSidebarDialog
               workspaceId={workspace.workspaceId}
-              onCreated={handleProjectCreated}
+              onCreated={handleCreated}
             />
           )}
         </div>
@@ -204,7 +286,7 @@ export function WorkspaceNavItem({
       {/* Expanded content */}
       {isExpanded && (
         <div className="ml-5 mt-0.5 space-y-0.5 border-l border-border/50 pl-2">
-          {loading ? (
+          {loadingProjects ? (
             <div className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
               Carregando...
@@ -214,58 +296,23 @@ export function WorkspaceNavItem({
               Nenhum projeto ainda
             </p>
           ) : (
-            visibleProjects.map((project) => {
-              const href = `/workspace/${workspace.workspaceId}/projetos/${project.id}`;
-              const isActive = pathname.includes(`/projetos/${project.id}`);
-              const IconComponent = ICON_MAP[project.icon ?? DEFAULT_ICON] ?? ICON_MAP[DEFAULT_ICON];
-              return (
-                <div
+            <SortableContext
+              items={visibleProjects.map((p) => p.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {visibleProjects.map((project) => (
+                <SortableProject
                   key={project.id}
-                  className={cn(
-                    'group flex items-center gap-1 rounded-md transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                    !project.isActive && 'opacity-50',
-                  )}
-                >
-                  <Link
-                    href={href}
-                    className="flex flex-1 items-center gap-2 px-2 py-1.5 text-sm min-w-0"
-                  >
-                    <IconComponent
-                      className="h-3.5 w-3.5 shrink-0"
-                      style={{ color: project.iconColor ?? DEFAULT_COLOR }}
-                    />
-                    <span className="truncate">{project.name}</span>
-                  </Link>
-                  {isAdmin && (
-                    <span
-                      className="pr-1 shrink-0"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <EditProjetoDialog
-                        projectId={project.id}
-                        workspaceId={workspace.workspaceId}
-                        currentName={project.name}
-                        currentDescription={project.description}
-                        currentIcon={project.icon}
-                        currentIconColor={project.iconColor}
-                        variant="sidebar"
-                        triggerClassName={
-                          isActive
-                            ? 'p-1 rounded hover:bg-primary-foreground/20 text-primary-foreground/70 hover:text-primary-foreground transition-colors'
-                            : 'p-1 rounded hover:bg-accent text-foreground/50 hover:text-foreground transition-colors'
-                        }
-                      />
-                    </span>
-                  )}
-                </div>
-              );
-            })
+                  project={project}
+                  workspaceId={workspace.workspaceId}
+                  isAdmin={isAdmin}
+                  isActive={pathname.includes(`/projetos/${project.id}`)}
+                />
+              ))}
+            </SortableContext>
           )}
 
-          {/* Visão Geral — available to all workspace members */}
+          {/* Visão Geral */}
           <Link
             href={`/workspace/${workspace.workspaceId}/visao-geral`}
             className={cn(
@@ -279,7 +326,6 @@ export function WorkspaceNavItem({
             Visão Geral
           </Link>
 
-          {/* Workspace admin link */}
           {isAdmin && (
             <Link
               href={`/workspace/${workspace.workspaceId}/membros`}

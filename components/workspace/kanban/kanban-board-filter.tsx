@@ -12,6 +12,7 @@ export interface KanbanBoardFilterState {
   sortState: KanbanSortState;
   filterLabelIds: string[];
   filterAssigneeIds: string[];
+  filterReporterIds: string[];
   dateFrom: string;
   dateTo: string;
   dateFields: ('dueDate' | 'startDate')[];
@@ -22,6 +23,7 @@ export const EMPTY_BOARD_FILTER: KanbanBoardFilterState = {
   sortState: DEFAULT_SORT_STATE,
   filterLabelIds: [],
   filterAssigneeIds: [],
+  filterReporterIds: [],
   dateFrom: '',
   dateTo: '',
   dateFields: ['dueDate', 'startDate'],
@@ -77,6 +79,18 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
   }
   allAssignees.sort((a, b) => a.name.localeCompare(b.name));
 
+  const allReporters: Assignee[] = [];
+  const seenReporterIds = new Set<string>();
+  for (const col of columns) {
+    for (const task of col.tasks) {
+      if (!seenReporterIds.has(task.reporter.id)) {
+        seenReporterIds.add(task.reporter.id);
+        allReporters.push({ id: task.reporter.id, name: task.reporter.name, photoUrl: task.reporter.photoUrl });
+      }
+    }
+  }
+  allReporters.sort((a, b) => a.name.localeCompare(b.name));
+
   const dateActive = !!filter.dateFrom;
   const sortActive = filter.sortState.dueDate !== null || filter.sortState.priority !== null;
 
@@ -84,6 +98,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
     (sortActive ? 1 : 0) +
     filter.filterLabelIds.length +
     filter.filterAssigneeIds.length +
+    filter.filterReporterIds.length +
     (dateActive ? 1 : 0);
 
   const update = useCallback(
@@ -103,6 +118,13 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
       ? filter.filterAssigneeIds.filter((x) => x !== id)
       : [...filter.filterAssigneeIds, id];
     update({ filterAssigneeIds: next });
+  }
+
+  function toggleReporter(id: string) {
+    const next = filter.filterReporterIds.includes(id)
+      ? filter.filterReporterIds.filter((x) => x !== id)
+      : [...filter.filterReporterIds, id];
+    update({ filterReporterIds: next });
   }
 
   function toggleDueDate(dir: 'asc' | 'desc') {
@@ -190,7 +212,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
       {/* Expandable panel */}
       {panelOpen && (
         <div className="absolute top-full left-0 mt-1.5 z-50 w-[540px] max-w-[90vw] rounded-lg border bg-card shadow-lg p-4 space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {/* Sort */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ordenação</p>
@@ -278,6 +300,46 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
                           className="h-3.5 w-3.5 rounded accent-primary"
                           checked={filter.filterAssigneeIds.includes(a.id)}
                           onChange={() => toggleAssignee(a.id)}
+                        />
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium ring-1 ring-background overflow-hidden shrink-0">
+                          {src ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={src} alt={a.name} className="w-full h-full object-cover" />
+                          ) : (
+                            initials
+                          )}
+                        </span>
+                        <span className="text-xs truncate">{a.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Reporters */}
+            {allReporters.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reporter</p>
+                <div className="space-y-1 max-h-44 overflow-y-auto">
+                  {allReporters.map((a) => {
+                    const initials = a.name
+                      .split(' ')
+                      .slice(0, 2)
+                      .map((w) => w[0]?.toUpperCase() ?? '')
+                      .join('');
+                    const src = a.photoUrl
+                      ? a.photoUrl.startsWith('http')
+                        ? a.photoUrl
+                        : `${process.env.NEXT_PUBLIC_API_URL}${a.photoUrl}`
+                      : null;
+                    return (
+                      <label key={a.id} className="flex items-center gap-2 cursor-pointer rounded px-1 py-0.5 hover:bg-muted/50">
+                        <input
+                          type="checkbox"
+                          className="h-3.5 w-3.5 rounded accent-primary"
+                          checked={filter.filterReporterIds.includes(a.id)}
+                          onChange={() => toggleReporter(a.id)}
                         />
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium ring-1 ring-background overflow-hidden shrink-0">
                           {src ? (
@@ -385,6 +447,18 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
               <span key={id} className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs text-primary">
                 {a.name}
                 <button type="button" onClick={() => toggleAssignee(id)}>
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            );
+          })}
+          {filter.filterReporterIds.map((id) => {
+            const a = allReporters.find((x) => x.id === id);
+            if (!a) return null;
+            return (
+              <span key={id} className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs text-primary">
+                Reporter: {a.name}
+                <button type="button" onClick={() => toggleReporter(id)}>
                   <X className="h-3 w-3" />
                 </button>
               </span>

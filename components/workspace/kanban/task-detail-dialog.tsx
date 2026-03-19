@@ -729,11 +729,20 @@ export function TaskDetailDialog({
 
   if (!task) return null;
 
-  const filteredMembros = membros.filter(
-    (m) =>
-      m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
-      m.email.toLowerCase().includes(memberSearch.toLowerCase()),
-  );
+  const filteredMembros = membros
+    .filter(
+      (m) =>
+        m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
+        m.email.toLowerCase().includes(memberSearch.toLowerCase()),
+    )
+    .sort((a, b) => {
+      if (!memberSearch) return 0;
+      const q = memberSearch.toLowerCase();
+      const aStarts = a.name.toLowerCase().startsWith(q);
+      const bStarts = b.name.toLowerCase().startsWith(q);
+      if (aStarts !== bStarts) return aStarts ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
 
   const selectedMembers = membros.filter((m) => selectedAssigneeIds.includes(m.id));
 

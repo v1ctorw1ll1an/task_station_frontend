@@ -97,6 +97,13 @@ export function KanbanColumnComponent({
       );
     }
 
+    // Global: reporter filter
+    if (boardFilter.filterReporterIds.length > 0) {
+      tasks = tasks.filter((task) =>
+        boardFilter.filterReporterIds.includes(task.reporter.id),
+      );
+    }
+
     // Global + local: label filter (union)
     const combinedLabelIds = [...new Set([...boardFilter.filterLabelIds, ...filterLabelIds])];
     if (combinedLabelIds.length > 0) {
