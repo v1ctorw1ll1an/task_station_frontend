@@ -782,9 +782,9 @@ export function TaskDetailDialog({
         </DialogHeader>
 
         {/* Body — two columns */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
           {/* Left: title + description + comments + history */}
-          <div className="flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-4 min-w-0">
+          <div className="flex flex-col flex-1 md:overflow-y-auto px-4 md:px-6 py-4 gap-4 min-w-0">
             {/* Title */}
             <input
               type="text"
@@ -848,7 +848,7 @@ export function TaskDetailDialog({
           </div>
 
           {/* Right: metadata sidebar */}
-          <div className="w-56 shrink-0 border-l overflow-y-auto px-4 py-4 space-y-5">
+          <div className="w-full md:w-56 shrink-0 border-t md:border-t-0 md:border-l md:overflow-y-auto px-4 py-4 space-y-5">
             {/* Priority */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Prioridade</p>

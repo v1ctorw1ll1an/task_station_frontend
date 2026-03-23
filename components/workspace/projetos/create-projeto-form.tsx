@@ -30,7 +30,7 @@ export function CreateProjetoForm({ workspaceId }: CreateProjetoFormProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createProjetoAction, initialState);
   const [icon, setIcon] = useState(DEFAULT_ICON);
-  const [iconColor, setIconColor] = useState(DEFAULT_COLOR);
+  const [iconColor, setIconColor] = useState<string | null>(DEFAULT_COLOR);
   const router = useRouter();
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export function CreateProjetoForm({ workspaceId }: CreateProjetoFormProps) {
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="workspaceId" value={workspaceId} />
           <input type="hidden" name="icon" value={icon} />
-          <input type="hidden" name="iconColor" value={iconColor} />
+          <input type="hidden" name="iconColor" value={iconColor ?? ''} />
 
           <div className="space-y-2">
             <Label htmlFor="name">Nome do projeto</Label>

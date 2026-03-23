@@ -61,7 +61,7 @@ export function CompaniesTable({ data, total, page, limit }: CompaniesTableProps
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -97,16 +97,16 @@ export function CompaniesTable({ data, total, page, limit }: CompaniesTableProps
           <TableHeader>
             <TableRow>
               <TableHead>Razão Social</TableHead>
-              <TableHead>CNPJ</TableHead>
+              <TableHead className="hidden md:table-cell">CNPJ</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Criado em</TableHead>
+              <TableHead className="hidden md:table-cell">Criado em</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={99} className="text-center text-muted-foreground py-8">
                   Nenhuma empresa encontrada.
                 </TableCell>
               </TableRow>
@@ -114,13 +114,13 @@ export function CompaniesTable({ data, total, page, limit }: CompaniesTableProps
               data.map((company) => (
                 <TableRow key={company.id}>
                   <TableCell className="font-medium">{company.legalName}</TableCell>
-                  <TableCell className="font-mono text-sm">{company.taxId}</TableCell>
+                  <TableCell className="hidden md:table-cell font-mono text-sm">{company.taxId}</TableCell>
                   <TableCell>
                     <Badge variant={company.isActive ? 'default' : 'secondary'}>
                       {company.isActive ? 'Ativo' : 'Inativo'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                     {new Date(company.createdAt).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell className="text-right">
@@ -138,7 +138,7 @@ export function CompaniesTable({ data, total, page, limit }: CompaniesTableProps
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
           <span>
             {total} empresa{total !== 1 ? 's' : ''} encontrada{total !== 1 ? 's' : ''}
           </span>

@@ -17,6 +17,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { ICON_MAP, DEFAULT_ICON, DEFAULT_COLOR } from '@/lib/icons/project-icons';
 import { cn } from '@/lib/utils';
+import { useMobileNav } from './sidebar-shell';
 import {
   createProjetoAction,
   CreateProjetoActionState,
@@ -24,6 +25,7 @@ import {
 import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +34,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { EditProjetoDialog } from '@/components/workspace/kanban/edit-projeto-dialog';
+import { ProjectIconPicker } from '@/components/workspace/projetos/project-icon-picker';
 import { SidebarProject } from '@/actions/workspace/get-projetos-sidebar.action';
 
 export interface SidebarWorkspace {
@@ -47,7 +50,7 @@ interface WorkspaceNavItemProps {
   isAdmin: boolean;
   projects: SidebarProject[];
   loadingProjects: boolean;
-  onProjectCreated: (workspaceId: string, project: SidebarProject) => void;
+  onProjectCreated: (workspaceId: string) => void;
 }
 
 const initialProjetoState: CreateProjetoActionState = {};
@@ -61,19 +64,29 @@ function CreateProjetoSidebarDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createProjetoAction, initialProjetoState);
+  const [icon, setIcon] = useState(DEFAULT_ICON);
+  const [iconColor, setIconColor] = useState<string | null>(DEFAULT_COLOR);
   const router = useRouter();
 
   useEffect(() => {
     if (state.success && state.projectId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false);
-      onCreated({ id: state.projectId, name: '', isActive: true, description: null, icon: null, iconColor: null });
+      onCreated({ id: state.projectId, name: '', isActive: true, description: null, icon, iconColor });
       router.push(`/workspace/${workspaceId}/projetos/${state.projectId}`);
     }
-  }, [state.success, state.projectId, workspaceId, router, onCreated]);
+  }, [state.success, state.projectId, workspaceId, router, onCreated, icon, iconColor]);
+
+  function handleOpenChange(v: boolean) {
+    setOpen(v);
+    if (v) {
+      setIcon(DEFAULT_ICON);
+      setIconColor(DEFAULT_COLOR);
+    }
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <button
           title="Novo projeto"
@@ -90,8 +103,25 @@ function CreateProjetoSidebarDialog({
         </DialogHeader>
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="workspaceId" value={workspaceId} />
-          <Input name="name" placeholder="Nome do projeto" required autoFocus />
+          <input type="hidden" name="icon" value={icon} />
+          <input type="hidden" name="iconColor" value={iconColor ?? ''} />
+
+          <div className="space-y-2">
+            <Label htmlFor="sidebar-proj-name">Nome do projeto</Label>
+            <Input id="sidebar-proj-name" name="name" placeholder="Ex: Site Institucional" required autoFocus />
+          </div>
+
           <Input name="description" placeholder="Descrição (opcional)" />
+
+          <div className="space-y-2">
+            <Label>Ícone e cor</Label>
+            <ProjectIconPicker
+              icon={icon}
+              color={iconColor}
+              onChange={(i, c) => { setIcon(i); setIconColor(c); }}
+            />
+          </div>
+
           {state.error && <p className="text-sm text-destructive">{state.error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
@@ -118,6 +148,7 @@ function SortableProject({
   isAdmin: boolean;
   isActive: boolean;
 }) {
+  const mobileNav = useMobileNav();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
     data: { type: 'project', workspaceId },
@@ -155,11 +186,12 @@ function SortableProject({
       </button>
       <Link
         href={href}
+        onClick={mobileNav?.close}
         className="flex flex-1 items-center gap-2 py-1.5 text-sm min-w-0"
       >
         <IconComponent
           className="h-3.5 w-3.5 shrink-0"
-          style={{ color: project.iconColor ?? DEFAULT_COLOR }}
+          style={project.iconColor ? { color: project.iconColor } : undefined}
         />
         <span className="truncate">{project.name}</span>
       </Link>
@@ -195,6 +227,7 @@ export function WorkspaceNavItem({
   onProjectCreated,
 }: WorkspaceNavItemProps) {
   const pathname = usePathname();
+  const mobileNav = useMobileNav();
 
   const {
     attributes,
@@ -220,8 +253,8 @@ export function WorkspaceNavItem({
   const visibleProjects = isAdmin ? projects : projects.filter((p) => p.isActive);
 
   const handleCreated = useCallback(
-    (project: SidebarProject) => {
-      onProjectCreated(workspace.workspaceId, project);
+    () => {
+      onProjectCreated(workspace.workspaceId);
     },
     [workspace.workspaceId, onProjectCreated],
   );
@@ -267,6 +300,7 @@ export function WorkspaceNavItem({
           className="flex-1 text-sm font-medium truncate min-w-0"
           onClick={() => {
             if (!isExpanded) onToggle(workspace.workspaceId);
+            mobileNav?.close();
           }}
         >
           {workspace.workspaceName}
@@ -315,6 +349,7 @@ export function WorkspaceNavItem({
           {/* Visão Geral */}
           <Link
             href={`/workspace/${workspace.workspaceId}/visao-geral`}
+            onClick={mobileNav?.close}
             className={cn(
               'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
               pathname.startsWith(`/workspace/${workspace.workspaceId}/visao-geral`)
@@ -329,6 +364,7 @@ export function WorkspaceNavItem({
           {isAdmin && (
             <Link
               href={`/workspace/${workspace.workspaceId}/membros`}
+              onClick={mobileNav?.close}
               className={cn(
                 'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
                 pathname.startsWith(`/workspace/${workspace.workspaceId}/membros`)

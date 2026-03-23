@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { LogOut, ChevronDown, Building2, LayoutDashboard, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { logoutAction } from '@/actions/logout.action';
@@ -20,6 +21,22 @@ interface UserMenuProps {
 
 export function EmpresaUserMenu({ email, isSuperuser = false }: UserMenuProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
+  // Static placeholder during SSR to avoid Radix ID hydration mismatch
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="sm" className="gap-2 text-sm">
+        <span className="text-foreground font-medium">{email}</span>
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu>

@@ -19,11 +19,17 @@ export function ThemeToggle() {
     else setTheme('light');
   }
 
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" aria-label="Alternar tema" disabled>
+        <Monitor className="h-4 w-4" />
+      </Button>
+    );
+  }
+
   return (
     <Button variant="ghost" size="icon" onClick={cycle} aria-label="Alternar tema">
-      {!mounted ? (
-        <Monitor className="h-4 w-4" />
-      ) : theme === 'light' ? (
+      {theme === 'light' ? (
         <Sun className="h-4 w-4" />
       ) : theme === 'dark' ? (
         <Moon className="h-4 w-4" />

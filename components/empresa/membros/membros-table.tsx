@@ -125,7 +125,7 @@ export function MembrosTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -163,17 +163,17 @@ export function MembrosTable({
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead className="hidden md:table-cell">Email</TableHead>
               <TableHead>Papéis adicionais</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Membro desde</TableHead>
+              <TableHead className="hidden md:table-cell">Membro desde</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={99} className="text-center text-muted-foreground py-8">
                   Nenhum membro encontrado.
                 </TableCell>
               </TableRow>
@@ -187,7 +187,7 @@ export function MembrosTable({
                 return (
                   <TableRow key={member.membershipId}>
                     <TableCell className="font-medium">{member.user.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                       {member.user.email}
                     </TableCell>
 
@@ -216,7 +216,7 @@ export function MembrosTable({
                         {member.user.isActive ? 'Ativo' : 'Inativo'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                       {new Date(member.memberSince).toLocaleDateString('pt-BR')}
                     </TableCell>
 
@@ -318,7 +318,7 @@ export function MembrosTable({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
           <span>
             {total} membro{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
           </span>

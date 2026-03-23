@@ -43,7 +43,7 @@ export function EditProjetoDialog({
   const [name, setName] = useState(currentName);
   const [description, setDescription] = useState(currentDescription ?? '');
   const [icon, setIcon] = useState(currentIcon ?? DEFAULT_ICON);
-  const [iconColor, setIconColor] = useState(currentIconColor ?? DEFAULT_COLOR);
+  const [iconColor, setIconColor] = useState<string | null>(currentIconColor ?? DEFAULT_COLOR);
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
 
@@ -54,7 +54,7 @@ export function EditProjetoDialog({
     fd.set('name', name);
     fd.set('description', description);
     fd.set('icon', icon);
-    fd.set('iconColor', iconColor);
+    fd.set('iconColor', iconColor ?? '');
 
     startTransition(async () => {
       const result = await updateProjetoAction({}, fd);

@@ -45,7 +45,7 @@ export default async function FirstAccessPage({ searchParams }: FirstAccessPageP
     return (
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Bem-vindo ao Task Station</CardTitle>
+          <CardTitle>Bem-vindo ao TaskDY</CardTitle>
           <CardDescription>
             Informe seu nome completo e crie uma senha para continuar.
           </CardDescription>
@@ -71,7 +71,7 @@ export default async function FirstAccessPage({ searchParams }: FirstAccessPageP
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle>Bem-vindo ao Task Station</CardTitle>
+        <CardTitle>Bem-vindo ao TaskDY</CardTitle>
         <CardDescription>
           Este é seu primeiro acesso. Informe seu nome completo e crie uma senha para continuar.
         </CardDescription>

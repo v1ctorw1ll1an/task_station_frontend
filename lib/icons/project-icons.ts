@@ -96,4 +96,4 @@ export const FEATURED_ICONS = [
 ];
 
 export const DEFAULT_ICON = 'FolderKanban';
-export const DEFAULT_COLOR = '#166534';
+export const DEFAULT_COLOR: string | null = null;

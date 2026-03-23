@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { AppSidebar } from '@/components/navigation/app-sidebar';
+import { SidebarShell } from '@/components/navigation/sidebar-shell';
 import { EmpresaUserMenu } from '@/components/empresa/user-menu';
 import { SidebarWorkspace } from '@/components/navigation/workspace-nav-item';
 import { NotificationBell } from '@/components/notifications/notification-bell';
@@ -77,28 +78,31 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
     await fetchAndApplySidebarOrder(session.token, companyId, workspaces);
 
   return (
-    <div className="flex min-h-screen">
-      <AppSidebar
-        companyId={companyId}
-        companyName={company.legalName}
-        isCompanyAdmin={isCompanyAdmin}
-        workspaces={orderedWorkspaces}
-        userEmail={session.user.email}
-        initialProjectOrders={projectOrders}
-      />
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b flex items-center justify-between px-6 shrink-0">
-          <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-            Painel da Empresa
-          </span>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <NotificationBell token={session.token} />
-            <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />
-          </div>
-        </header>
-        <main className="flex-1 p-6">{children}</main>
-      </div>
-    </div>
+    <SidebarShell
+      sidebar={
+        <AppSidebar
+          companyId={companyId}
+          companyName={company.legalName}
+          isCompanyAdmin={isCompanyAdmin}
+          workspaces={orderedWorkspaces}
+          userEmail={session.user.email}
+          initialProjectOrders={projectOrders}
+        />
+      }
+      headerLeft={
+        <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+          Painel da Empresa
+        </span>
+      }
+      headerRight={
+        <>
+          <ThemeToggle />
+          <NotificationBell token={session.token} />
+          <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />
+        </>
+      }
+    >
+      {children}
+    </SidebarShell>
   );
 }

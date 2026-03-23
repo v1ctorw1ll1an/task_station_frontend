@@ -11,9 +11,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { ICON_MAP, FEATURED_ICONS, DEFAULT_ICON, DEFAULT_COLOR } from '@/lib/icons/project-icons';
+import { ICON_MAP, FEATURED_ICONS, DEFAULT_ICON } from '@/lib/icons/project-icons';
 
-const COLORS = [
+const COLORS: (string | null)[] = [
+  null, // tema (preto/branco conforme light/dark mode)
   '#6366f1', '#8b5cf6', '#ec4899', '#ef4444',
   '#f97316', '#eab308', '#22c55e', '#10b981',
   '#06b6d4', '#3b82f6', '#64748b', '#1d4ed8',
@@ -21,8 +22,8 @@ const COLORS = [
 
 interface ProjectIconPickerProps {
   icon: string;
-  color: string;
-  onChange: (icon: string, color: string) => void;
+  color: string | null;
+  onChange: (icon: string, color: string | null) => void;
 }
 
 export function ProjectIconPicker({ icon, color, onChange }: ProjectIconPickerProps) {
@@ -50,7 +51,7 @@ export function ProjectIconPicker({ icon, color, onChange }: ProjectIconPickerPr
       <div className="flex items-center gap-3">
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-muted"
-          style={{ color }}
+          style={color ? { color } : undefined}
         >
           <PreviewIcon className="h-5 w-5" />
         </div>
@@ -59,18 +60,31 @@ export function ProjectIconPicker({ icon, color, onChange }: ProjectIconPickerPr
 
       {/* Color swatches */}
       <div className="flex flex-wrap gap-2">
-        {COLORS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            className={cn(
-              'h-6 w-6 rounded-full border-2 transition-transform hover:scale-110',
-              color === c ? 'border-foreground scale-110' : 'border-transparent',
-            )}
-            style={{ backgroundColor: c }}
-            onClick={() => onChange(icon, c)}
-          />
-        ))}
+        {COLORS.map((c) =>
+          c === null ? (
+            <button
+              key="theme"
+              type="button"
+              title="Cor do tema"
+              className={cn(
+                'h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 bg-gradient-to-br from-foreground/80 to-foreground/30',
+                color === null ? 'border-foreground scale-110' : 'border-transparent',
+              )}
+              onClick={() => onChange(icon, null)}
+            />
+          ) : (
+            <button
+              key={c}
+              type="button"
+              className={cn(
+                'h-6 w-6 rounded-full border-2 transition-transform hover:scale-110',
+                color === c ? 'border-foreground scale-110' : 'border-transparent',
+              )}
+              style={{ backgroundColor: c }}
+              onClick={() => onChange(icon, c)}
+            />
+          ),
+        )}
       </div>
 
       {/* Search */}
@@ -98,7 +112,7 @@ export function ProjectIconPicker({ icon, color, onChange }: ProjectIconPickerPr
                 'flex h-8 w-8 items-center justify-center rounded-md border transition-colors hover:bg-muted',
                 icon === name ? 'ring-2 ring-primary border-primary' : 'border-transparent',
               )}
-              style={{ color: icon === name ? color : undefined }}
+              style={icon === name && color ? { color } : undefined}
               onClick={() => onChange(name, color)}
             >
               <Icon className="h-4 w-4" />
@@ -148,7 +162,7 @@ export function ProjectIconPicker({ icon, color, onChange }: ProjectIconPickerPr
                       'flex flex-col items-center gap-1 rounded-md p-2 text-[10px] transition-colors hover:bg-muted',
                       icon === name ? 'ring-2 ring-primary bg-muted' : '',
                     )}
-                    style={{ color: icon === name ? color : undefined }}
+                    style={icon === name && color ? { color } : undefined}
                     onClick={() => {
                       onChange(name, color);
                       setDialogOpen(false);

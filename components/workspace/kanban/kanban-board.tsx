@@ -338,7 +338,7 @@ export function KanbanBoard({
 
     return (
         <div className="flex flex-col h-full">
-            <div className="flex justify-between items-start mb-2 flex-shrink-0 gap-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start mb-2 flex-shrink-0 gap-2">
                 <div className="flex items-center gap-3 flex-wrap">
                     <ConnectionIndicator status={socketStatus} />
                     <KanbanBoardFilter
@@ -370,7 +370,7 @@ export function KanbanBoard({
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
             >
-                <div className="flex flex-row gap-4 overflow-x-auto pb-4 flex-1 min-h-0">
+                <div className="flex flex-row gap-3 md:gap-4 overflow-x-auto pb-4 flex-1 min-h-0">
                     <SortableContext
                         items={columns.map((c) => c.id)}
                         strategy={horizontalListSortingStrategy}
@@ -399,7 +399,7 @@ export function KanbanBoard({
                             <DialogTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="w-72 flex-shrink-0 h-12 border-dashed text-muted-foreground self-start"
+                                    className="w-64 md:w-72 flex-shrink-0 h-12 border-dashed text-muted-foreground self-start"
                                 >
                                     <Plus className="h-4 w-4 mr-2" />
                                     Nova coluna

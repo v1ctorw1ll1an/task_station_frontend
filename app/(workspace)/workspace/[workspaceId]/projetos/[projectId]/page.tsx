@@ -46,7 +46,7 @@ export default async function KanbanPage({ params }: PageProps) {
       <div className="flex-shrink-0">
         <div className="flex items-center justify-between gap-4">
           <h1
-            className="text-2xl font-bold truncate max-w-[50%]"
+            className="text-2xl font-bold truncate max-w-[70%] md:max-w-[50%]"
             title={projeto?.name ?? 'Kanban'}
           >
             {projeto?.name ?? 'Kanban'}

@@ -64,7 +64,7 @@ export function UsersTable({ data, total, page, limit }: UsersTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -100,17 +100,17 @@ export function UsersTable({ data, total, page, limit }: UsersTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead className="hidden md:table-cell">Email</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Superusuário</TableHead>
-              <TableHead>Criado em</TableHead>
+              <TableHead className="hidden md:table-cell">Superusuário</TableHead>
+              <TableHead className="hidden md:table-cell">Criado em</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={99} className="text-center text-muted-foreground py-8">
                   Nenhum usuário encontrado.
                 </TableCell>
               </TableRow>
@@ -118,20 +118,20 @@ export function UsersTable({ data, total, page, limit }: UsersTableProps) {
               data.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell className="text-sm">{user.email}</TableCell>
+                  <TableCell className="hidden md:table-cell text-sm">{user.email}</TableCell>
                   <TableCell>
                     <Badge variant={user.isActive ? 'default' : 'secondary'}>
                       {user.isActive ? 'Ativo' : 'Inativo'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {user.isSuperuser ? (
                       <Badge variant="outline">Sim</Badge>
                     ) : (
                       <span className="text-muted-foreground text-sm">Não</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                     {new Date(user.createdAt).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell className="text-right">
@@ -149,7 +149,7 @@ export function UsersTable({ data, total, page, limit }: UsersTableProps) {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
           <span>
             {total} usuário{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
           </span>

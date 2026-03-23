@@ -167,7 +167,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
             placeholder="Buscar tasks..."
             value={filter.search}
             onChange={(e) => update({ search: e.target.value })}
-            className="w-48 rounded-md border bg-background px-3 py-1.5 pl-8 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-32 sm:w-48 rounded-md border bg-background px-3 py-1.5 pl-8 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
           {filter.search && (
             <button

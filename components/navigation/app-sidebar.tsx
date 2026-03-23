@@ -29,6 +29,7 @@ import {
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { cn } from "@/lib/utils";
+import { useMobileNav } from "./sidebar-shell";
 import { WorkspaceNavItem, SidebarWorkspace } from "./workspace-nav-item";
 import { CreateWorkspaceInlineTrigger } from "./create-workspace-inline";
 import { gravatarUrl } from "@/lib/gravatar";
@@ -37,7 +38,7 @@ import {
     getWorkspaceProjectsForSidebar,
     SidebarProject,
 } from "@/actions/workspace/get-projetos-sidebar.action";
-import { getSidebarOrderAction, ProjectOrderEntry } from "@/actions/me/get-sidebar-order.action";
+import { type ProjectOrderEntry } from "@/actions/me/get-sidebar-order.action";
 import { saveWorkspaceOrderAction } from "@/actions/me/save-workspace-order.action";
 import { saveProjectOrderAction } from "@/actions/me/save-project-order.action";
 import { moveProjectToWorkspaceAction } from "@/actions/workspace/move-project-workspace.action";
@@ -49,6 +50,8 @@ interface AppSidebarProps {
     workspaces: SidebarWorkspace[];
     userEmail: string;
     initialProjectOrders?: ProjectOrderEntry[];
+    forceExpanded?: boolean;
+    onNavigate?: () => void;
 }
 
 type ActiveDrag =
@@ -128,12 +131,19 @@ export function AppSidebar({
     workspaces,
     userEmail,
     initialProjectOrders = [],
+    forceExpanded,
+    onNavigate,
 }: AppSidebarProps) {
     const pathname = usePathname();
     const params = useParams();
     const currentWorkspaceId = params?.workspaceId as string | undefined;
+    const mobileNav = useMobileNav();
 
-    const [collapsed, setCollapsed] = useState(false);
+    const isDrawer = forceExpanded || mobileNav?.isDrawer;
+    const handleNavigate = onNavigate ?? mobileNav?.close;
+
+    const [collapsedState, setCollapsed] = useState(false);
+    const collapsed = isDrawer ? false : collapsedState;
     const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
     const [avatarError, setAvatarError] = useState(false);
 
@@ -349,7 +359,7 @@ export function AppSidebar({
     };
 
     const handleProjectCreated = useCallback(
-        (workspaceId: string, _project: SidebarProject) => {
+        (workspaceId: string) => {
             // Refresh projects for that workspace, apply existing cache order
             getWorkspaceProjectsForSidebar(workspaceId).then((data) => {
                 setProjectsMap((prev) => {
@@ -527,20 +537,22 @@ export function AppSidebar({
                         </p>
                     </div>
                 )}
-                <button
-                    onClick={() => setCollapsed((c) => !c)}
-                    className="shrink-0 h-7 w-7 flex items-center justify-center rounded-md
-                     text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                    aria-label={
-                        collapsed ? "Expandir sidebar" : "Recolher sidebar"
-                    }
-                >
-                    {collapsed ? (
-                        <PanelLeftOpen className="h-4 w-4" />
-                    ) : (
-                        <PanelLeftClose className="h-4 w-4" />
-                    )}
-                </button>
+                {!isDrawer && (
+                    <button
+                        onClick={() => setCollapsed((c) => !c)}
+                        className="shrink-0 h-7 w-7 flex items-center justify-center rounded-md
+                         text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                        aria-label={
+                            collapsed ? "Expandir sidebar" : "Recolher sidebar"
+                        }
+                    >
+                        {collapsed ? (
+                            <PanelLeftOpen className="h-4 w-4" />
+                        ) : (
+                            <PanelLeftClose className="h-4 w-4" />
+                        )}
+                    </button>
+                )}
             </div>
 
             {/* Navigation */}
@@ -548,6 +560,7 @@ export function AppSidebar({
                 {/* Top-level links */}
                 <Link
                     href={`/empresa/${companyId}/inicio`}
+                    onClick={handleNavigate}
                     className={cn(
                         "flex items-center py-1.5 rounded-md text-sm transition-colors",
                         collapsed ? "justify-center px-0 mx-1" : "gap-2.5 px-2",
@@ -562,6 +575,7 @@ export function AppSidebar({
 
                 <Link
                     href={`/empresa/${companyId}/workspaces`}
+                    onClick={handleNavigate}
                     className={cn(
                         "flex items-center py-1.5 rounded-md text-sm transition-colors",
                         collapsed ? "justify-center px-0 mx-1" : "gap-2.5 px-2",
@@ -577,6 +591,7 @@ export function AppSidebar({
                 {isCompanyAdmin && (
                     <Link
                         href={`/empresa/${companyId}/membros`}
+                        onClick={handleNavigate}
                         className={cn(
                             "flex items-center py-1.5 rounded-md text-sm transition-colors",
                             collapsed
@@ -595,6 +610,7 @@ export function AppSidebar({
                 {isCompanyAdmin && (
                     <Link
                         href={`/empresa/${companyId}/comunicado`}
+                        onClick={handleNavigate}
                         className={cn(
                             "flex items-center py-1.5 rounded-md text-sm transition-colors",
                             collapsed
@@ -711,6 +727,7 @@ export function AppSidebar({
             <div className="border-t">
                 <Link
                     href="/perfil"
+                    onClick={handleNavigate}
                     className={cn(
                         "w-full flex items-center px-3 py-3 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
                         collapsed ? "justify-center" : "gap-2.5",

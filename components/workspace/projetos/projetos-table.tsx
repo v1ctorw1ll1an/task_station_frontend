@@ -143,16 +143,16 @@ export function ProjetosTable({
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>Descrição</TableHead>
+              <TableHead className="hidden md:table-cell">Descrição</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Criado em</TableHead>
+              <TableHead className="hidden md:table-cell">Criado em</TableHead>
               {isAdmin && <TableHead className="text-right">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 5 : 4} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={99} className="text-center text-muted-foreground py-8">
                   Nenhum projeto encontrado.
                 </TableCell>
               </TableRow>
@@ -167,7 +167,7 @@ export function ProjetosTable({
                       {projeto.name}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                     {projeto.description ?? '—'}
                   </TableCell>
                   <TableCell>
@@ -175,7 +175,7 @@ export function ProjetosTable({
                       {projeto.isActive ? 'Ativo' : 'Inativo'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                     {new Date(projeto.createdAt).toLocaleDateString('pt-BR')}
                   </TableCell>
                   {isAdmin && (
@@ -289,7 +289,7 @@ export function ProjetosTable({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
           <span>
             {total} projeto{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
           </span>

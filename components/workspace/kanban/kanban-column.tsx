@@ -192,7 +192,7 @@ export function KanbanColumnComponent({
       ref={setNodeRef}
       style={style}
       className={[
-        'flex w-72 flex-shrink-0 flex-col rounded-lg border bg-muted/40 h-full overflow-hidden',
+        'flex w-64 md:w-72 flex-shrink-0 flex-col rounded-lg border bg-muted/40 h-full overflow-hidden',
         isDragging ? 'opacity-40' : '',
       ]
         .filter(Boolean)
