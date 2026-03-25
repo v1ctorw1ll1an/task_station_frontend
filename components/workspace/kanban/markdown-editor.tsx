@@ -90,6 +90,9 @@ interface MarkdownEditorProps {
   onPasteAttachmentAdded?: (att: TaskAttachment) => void;
   disabled?: boolean;
   autoFocus?: boolean;
+  alwaysEdit?: boolean;
+  /** Truncates the preview to ~5 lines with a gradient + "Ver mais/menos" toggle */
+  collapsible?: boolean;
 }
 
 export function MarkdownEditor({
@@ -105,13 +108,17 @@ export function MarkdownEditor({
   onPasteAttachmentAdded,
   disabled,
   autoFocus,
+  alwaysEdit,
+  collapsible,
 }: MarkdownEditorProps) {
-  // Start in edit mode only when autoFocus is requested (e.g. comment edit)
-  const [tab, setTab] = useState<'edit' | 'preview'>(autoFocus ? 'edit' : 'preview');
+  // Start in edit mode when autoFocus is requested or alwaysEdit is true
+  const [tab, setTab] = useState<'edit' | 'preview'>(autoFocus || alwaysEdit ? 'edit' : 'preview');
+  const [previewExpanded, setPreviewExpanded] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [pasteError, setPasteError] = useState<string | null>(null);
   const internalRef = useRef<HTMLTextAreaElement>(null);
   const ref = (externalRef ?? internalRef) as React.RefObject<HTMLTextAreaElement | null>;
+
 
   // -------------------------------------------------------------------------
   // Toolbar helpers
@@ -260,19 +267,48 @@ export function MarkdownEditor({
   // -------------------------------------------------------------------------
 
   if (tab === 'preview') {
+    const enterEdit = () => {
+      setTab('edit');
+      setTimeout(() => ref.current?.focus(), 0);
+    };
+
+    if (collapsible && value) {
+      return (
+        <div>
+          <div className="relative">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={enterEdit}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); enterEdit(); } }}
+              className={`cursor-text rounded-md px-3 py-2 hover:bg-muted/30 transition-colors overflow-hidden${previewExpanded ? '' : ' max-h-[7.5rem]'}`}
+            >
+              <MarkdownDisplay content={value} />
+            </div>
+            {!previewExpanded && (
+              <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent pointer-events-none rounded-b-md" />
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setPreviewExpanded((v) => !v)}
+            className="mt-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {previewExpanded ? 'Ver menos' : 'Ver mais'}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div
         role="button"
         tabIndex={0}
-        onClick={() => {
-          setTab('edit');
-          setTimeout(() => ref.current?.focus(), 0);
-        }}
+        onClick={enterEdit}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            setTab('edit');
-            setTimeout(() => ref.current?.focus(), 0);
+            enterEdit();
           }
         }}
         className="cursor-text min-h-[5rem] rounded-md px-3 py-2 hover:bg-muted/30 transition-colors"
@@ -335,12 +371,12 @@ export function MarkdownEditor({
           if (pasteError) setPasteError(null);
         }}
         onPaste={handlePaste}
-        onBlur={() => setTab('preview')}
+        onBlur={alwaysEdit ? undefined : () => setTab('preview')}
         placeholder={placeholder}
         rows={minRows}
         disabled={disabled}
         autoFocus={autoFocus}
-        className="flex w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
+        className="flex w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-y-auto"
       />
     </div>
   );

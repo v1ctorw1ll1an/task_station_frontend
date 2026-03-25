@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useTransition, useState, useRef, useCallback } from 'react';
-import { TaskAttachmentsSection } from './task-attachments-section';
+import { TaskAttachmentsSection, IMAGE_MAX_MB, IMAGE_MAX_COUNT } from './task-attachments-section';
 import {
   Check,
   ChevronDown,
@@ -247,8 +247,8 @@ function TaskCommentsSection({
   );
   const formRef = useRef<HTMLFormElement>(null);
 
-  const loadComments = () => {
-    setLoading(true);
+  const loadComments = (silent = false) => {
+    if (!silent) setLoading(true);
     getTaskCommentsAction(projectId, taskId).then((data) => {
       setComments(data);
       setLoading(false);
@@ -265,10 +265,10 @@ function TaskCommentsSection({
       formRef.current?.reset();
       setNewCommentValue('');
       setMentionQuery(null);
-      loadComments();
+      loadComments(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [commentState.success]);
+  }, [commentState]);
 
   async function handleEditSave(commentId: string) {
     if (!editContent.trim()) return;
@@ -278,7 +278,7 @@ function TaskCommentsSection({
       setEditError(result.error);
     } else {
       setEditingId(null);
-      loadComments();
+      loadComments(true);
     }
   }
 
@@ -288,7 +288,7 @@ function TaskCommentsSection({
     if (result.error) {
       setDeleteError(result.error);
     } else {
-      loadComments();
+      loadComments(true);
     }
   }
 
@@ -498,6 +498,15 @@ function TaskCommentsSection({
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
+function isTextInput(el: EventTarget | null): boolean {
+  if (!el || !(el instanceof HTMLElement)) return false;
+  return (
+    el.tagName === 'TEXTAREA' ||
+    el.tagName === 'INPUT' ||
+    el.isContentEditable
+  );
+}
+
 export function TaskDetailDialog({
   task,
   taskPrefix,
@@ -518,6 +527,11 @@ export function TaskDetailDialog({
   const [attachmentImageCount, setAttachmentImageCount] = useState(0);
   const [pendingAttachment, setPendingAttachment] = useState<TaskAttachment | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Direct paste/drop to attachments
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [dialogUploadError, setDialogUploadError] = useState<string | null>(null);
+  const [dialogUploading, setDialogUploading] = useState(false);
 
   // Rastreia o updatedAt do servidor para optimistic locking
   const lastKnownUpdatedAtRef = useRef<string>(task?.updatedAt ?? '');
@@ -554,7 +568,7 @@ export function TaskDetailDialog({
 
   // Reset fields when task changes (navegação entre tasks)
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
+     
     setTitle(task?.title ?? '');
     setDescription(task?.description ?? '');
     setPriority(task?.priority ?? 'medium');
@@ -566,7 +580,7 @@ export function TaskDetailDialog({
     setMemberDropdownOpen(false);
     setSaveStatus('idle');
     setSaveError(null);
-    /* eslint-enable react-hooks/set-state-in-effect */
+     
     lastKnownUpdatedAtRef.current = task?.updatedAt ?? '';
     lastSyncedFieldsRef.current = {
       title: task?.title ?? '',
@@ -598,7 +612,7 @@ export function TaskDetailDialog({
 
     if (!hasUnsavedChanges) {
       // Sem edições em curso: sincroniza silenciosamente os campos
-      /* eslint-disable react-hooks/set-state-in-effect */
+       
       setTitle(task.title ?? '');
       setDescription(task.description ?? '');
       setPriority(task.priority ?? 'medium');
@@ -606,7 +620,7 @@ export function TaskDetailDialog({
       setDueDate(task.dueDate ? task.dueDate.split('T')[0] : '');
       setSelectedAssigneeIds(task.taskAssignees.map((ta) => ta.user.id));
       setSelectedLabelIds(task.taskLabels.map((tl) => tl.label.id));
-      /* eslint-enable react-hooks/set-state-in-effect */
+       
       lastSyncedFieldsRef.current = {
         title: task.title ?? '',
         description: task.description ?? '',
@@ -711,6 +725,37 @@ export function TaskDetailDialog({
     });
   }
 
+  async function uploadDirectAttachment(file: File) {
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > IMAGE_MAX_MB * 1024 * 1024) {
+      setDialogUploadError(`Imagem excede o limite de ${IMAGE_MAX_MB} MB.`);
+      return;
+    }
+    if (attachmentImageCount >= IMAGE_MAX_COUNT) {
+      setDialogUploadError(`Limite de ${IMAGE_MAX_COUNT} imagens atingido.`);
+      return;
+    }
+    setDialogUploadError(null);
+    setDialogUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file, `paste-${Date.now()}.png`);
+      const res = await fetch(
+        `/api/files/projetos/${projectId}/tasks/${task!.id}/attachments`,
+        { method: 'POST', body: fd },
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { message?: string };
+        setDialogUploadError(data.message ?? 'Erro ao enviar imagem.');
+        return;
+      }
+      const att = (await res.json()) as TaskAttachment;
+      setPendingAttachment(att);
+    } finally {
+      setDialogUploading(false);
+    }
+  }
+
   function toggleAssignee(id: string) {
     const next = selectedAssigneeIds.includes(id)
       ? selectedAssigneeIds.filter((x) => x !== id)
@@ -753,7 +798,44 @@ export function TaskDetailDialog({
         onPointerDownOutside={(e) => {
           if (isDateFocusedRef.current) e.preventDefault();
         }}
+        onPaste={(e) => {
+          if (isTextInput(e.target)) return;
+          const imgItem = Array.from(e.clipboardData.items).find(
+            (item) => item.kind === 'file' && item.type.startsWith('image/'),
+          );
+          if (!imgItem) return;
+          e.preventDefault();
+          const file = imgItem.getAsFile();
+          if (file) uploadDirectAttachment(file);
+        }}
+        onDragOver={(e) => {
+          const hasImage = Array.from(e.dataTransfer.items).some(
+            (item) => item.kind === 'file' && item.type.startsWith('image/'),
+          );
+          if (!hasImage) return;
+          e.preventDefault();
+          setIsDragOver(true);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            setIsDragOver(false);
+          }
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragOver(false);
+          const file = Array.from(e.dataTransfer.files).find((f) =>
+            f.type.startsWith('image/'),
+          );
+          if (file) uploadDirectAttachment(file);
+        }}
       >
+        {isDragOver && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/5 pointer-events-none">
+            <p className="text-sm font-medium text-primary">Soltar para anexar imagem</p>
+          </div>
+        )}
+
         {/* Header */}
         <DialogHeader className="px-6 pt-5 pb-3 border-b flex-row items-center justify-between">
           <DialogTitle className="text-base font-semibold flex items-center gap-2">
@@ -780,6 +862,18 @@ export function TaskDetailDialog({
             ) : null}
           </div>
         </DialogHeader>
+
+        {(dialogUploading || dialogUploadError) && (
+          <div className={`px-6 py-2 text-xs flex items-center gap-2 border-b ${dialogUploadError ? 'text-destructive bg-destructive/10' : 'text-muted-foreground'}`}>
+            {dialogUploading && <Loader2 className="h-3 w-3 animate-spin shrink-0" />}
+            {dialogUploading ? 'Enviando imagem para anexos...' : dialogUploadError}
+            {dialogUploadError && (
+              <button type="button" onClick={() => setDialogUploadError(null)} className="ml-auto">
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Body — two columns */}
         <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
@@ -811,6 +905,7 @@ export function TaskDetailDialog({
                 taskId={task.id}
                 imageCount={attachmentImageCount}
                 onPasteAttachmentAdded={setPendingAttachment}
+                collapsible
               />
             </div>
 
