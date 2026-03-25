@@ -3,7 +3,7 @@ import { ArrowLeft, Sparkles, Wrench, FileText, Tag } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-const APP_VERSION = "0.1.0-alpha.5";
+const APP_VERSION = "0.1.0-alpha.6";
 
 type ChangeType = "feat" | "fix" | "chore";
 
@@ -19,6 +19,28 @@ interface Release {
 }
 
 const releases: Release[] = [
+    {
+        version: "0.1.0-alpha.6",
+        date: "2026-03-25",
+        changes: [
+            {
+                type: "feat",
+                text: "Arrastar ou colar imagem diretamente no dialog de detalhes da task — upload direto para anexos sem precisar abrir a seção; overlay de drag-over e barra de status inline",
+            },
+            {
+                type: "feat",
+                text: "Descrição da task colapsável — preview truncado a ~5 linhas com gradiente e toggle \"Ver mais / Ver menos\"",
+            },
+            {
+                type: "fix",
+                text: "Dialog de detalhes da task aparecia deslocado para baixo da tela — `relative` sobrescrevia `fixed` via tailwind-merge, removendo o posicionamento centralizado",
+            },
+            {
+                type: "fix",
+                text: "Hydration mismatch do Radix UI — NotificationBell agora renderiza apenas no cliente via wrapper com ssr:false; removidos guards mounted redundantes de UserMenu e SidebarShell",
+            },
+        ],
+    },
     {
         version: "0.1.0-alpha.5",
         date: "2026-03-19",
