@@ -4,7 +4,7 @@ import { AppSidebar } from '@/components/navigation/app-sidebar';
 import { SidebarShell } from '@/components/navigation/sidebar-shell';
 import { EmpresaUserMenu } from '@/components/empresa/user-menu';
 import { SidebarWorkspace } from '@/components/navigation/workspace-nav-item';
-import { NotificationBell } from '@/components/notifications/notification-bell';
+import { NotificationBellClient } from '@/components/notifications/notification-bell-client';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { fetchAndApplySidebarOrder } from '@/lib/sidebar-order';
 
@@ -114,7 +114,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
       headerRight={
         <>
           <ThemeToggle />
-          <NotificationBell token={session.token} />
+          <NotificationBellClient token={session.token} />
           <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />
         </>
       }

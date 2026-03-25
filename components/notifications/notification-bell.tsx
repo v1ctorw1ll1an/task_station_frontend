@@ -26,26 +26,14 @@ interface NotificationBellProps {
 
 export function NotificationBell({ token }: NotificationBellProps) {
   const { unreadCount, setUnreadCount } = useNotificationStore();
-  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [broadcastDetail, setBroadcastDetail] = useState<AppNotification | null>(null);
 
   useNotificationSocket(token);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
     getUnreadCountAction().then(setUnreadCount);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Static placeholder during SSR to avoid Radix ID hydration mismatch
-  if (!mounted) {
-    return (
-      <Button variant="ghost" size="icon" className="relative h-9 w-9">
-        <Bell className="h-4 w-4" />
-      </Button>
-    );
-  }
 
   return (
     <>

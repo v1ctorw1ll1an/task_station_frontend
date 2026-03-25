@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 
@@ -27,11 +27,6 @@ export function SidebarShell({
   variant = 'min-height',
 }: SidebarShellProps) {
   const [open, setOpen] = useState(false);
-  // Delay Sheet mount until after hydration so its Radix IDs don't shift
-  // the IDs generated for header components (NotificationBell, UserMenu, etc.)
-  const [mounted, setMounted] = useState(false);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration guard
-  useEffect(() => { setMounted(true); }, []);
 
   const isFullHeight = variant === 'full-height';
 
@@ -48,17 +43,15 @@ export function SidebarShell({
         {sidebar}
       </div>
 
-      {/* Mobile drawer — mounted only after hydration to avoid Radix ID mismatch */}
-      {mounted && (
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent side="left" className="w-60 p-0 [&>button]:hidden" aria-describedby={undefined}>
-            <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-            <MobileNavContext.Provider value={{ close: () => setOpen(false), isDrawer: true }}>
-              {sidebar}
-            </MobileNavContext.Provider>
-          </SheetContent>
-        </Sheet>
-      )}
+      {/* Mobile drawer */}
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="left" className="w-60 p-0 [&>button]:hidden" aria-describedby={undefined}>
+          <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
+          <MobileNavContext.Provider value={{ close: () => setOpen(false), isDrawer: true }}>
+            {sidebar}
+          </MobileNavContext.Provider>
+        </SheetContent>
+      </Sheet>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
