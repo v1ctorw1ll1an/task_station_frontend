@@ -61,6 +61,7 @@ import { useActionState } from 'react';
 import { MarkdownEditor, MarkdownDisplay } from './markdown-editor';
 import type { TaskAttachment } from '@/actions/projeto/get-attachments.action';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const FIELD_LABELS: Record<string, string> = {
   title: 'Título',
@@ -1093,25 +1094,19 @@ export function TaskDetailDialog({
             {/* Dates */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Data início</p>
-              <Input
-                type="date"
+              <DatePicker
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                onFocus={() => { isDateFocusedRef.current = true; }}
-                onBlur={() => { isDateFocusedRef.current = false; }}
-                className="h-8 text-sm"
+                onChange={setStartDate}
+                placeholder="Sem data de início"
               />
             </div>
 
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Prazo</p>
-              <Input
-                type="date"
+              <DatePicker
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                onFocus={() => { isDateFocusedRef.current = true; }}
-                onBlur={() => { isDateFocusedRef.current = false; }}
-                className="h-8 text-sm"
+                onChange={setDueDate}
+                placeholder="Sem prazo"
               />
             </div>
 
