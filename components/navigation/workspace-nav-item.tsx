@@ -12,6 +12,7 @@ import {
   Users,
   Loader2,
 } from 'lucide-react';
+import { WorkspaceSettingsDialog } from './workspace-settings-dialog';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -40,6 +41,7 @@ import { SidebarProject } from '@/actions/workspace/get-projetos-sidebar.action'
 export interface SidebarWorkspace {
   workspaceId: string;
   workspaceName: string;
+  companyId: string;
   role: string;
 }
 
@@ -58,9 +60,11 @@ const initialProjetoState: CreateProjetoActionState = {};
 function CreateProjetoSidebarDialog({
   workspaceId,
   onCreated,
+  footerMode = false,
 }: {
   workspaceId: string;
   onCreated: (project: SidebarProject) => void;
+  footerMode?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createProjetoAction, initialProjetoState);
@@ -88,14 +92,25 @@ function CreateProjetoSidebarDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <button
-          title="Novo projeto"
-          className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-          onClick={(e) => e.stopPropagation()}
-          suppressHydrationWarning
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
+        {footerMode ? (
+          <button
+            title="Novo projeto"
+            className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Plus className="h-3 w-3 shrink-0" />
+            Novo projeto
+          </button>
+        ) : (
+          <button
+            title="Novo projeto"
+            className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+            onClick={(e) => e.stopPropagation()}
+            suppressHydrationWarning
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -309,10 +324,7 @@ export function WorkspaceNavItem({
         {/* Actions (visible on hover) */}
         <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0">
           {isAdmin && (
-            <CreateProjetoSidebarDialog
-              workspaceId={workspace.workspaceId}
-              onCreated={handleCreated}
-            />
+            <WorkspaceSettingsDialog workspace={workspace} />
           )}
         </div>
       </div>
@@ -344,6 +356,15 @@ export function WorkspaceNavItem({
                 />
               ))}
             </SortableContext>
+          )}
+
+          {/* Novo projeto */}
+          {isAdmin && (
+            <CreateProjetoSidebarDialog
+              workspaceId={workspace.workspaceId}
+              onCreated={handleCreated}
+              footerMode
+            />
           )}
 
           {/* Visão Geral */}

@@ -62,6 +62,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
         (ws: { id: string; name: string; isActive: boolean }) => ({
           workspaceId: ws.id,
           workspaceName: ws.name,
+          companyId,
           role: 'admin',
         }),
       );
@@ -84,6 +85,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
         .map((ws) => ({
           workspaceId: ws.workspaceId,
           workspaceName: ws.workspaceName,
+          companyId,
           role: ws.role,
         }));
     }

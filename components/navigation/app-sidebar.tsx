@@ -321,6 +321,7 @@ export function AppSidebar({
             const newWs: SidebarWorkspace = {
                 workspaceId,
                 workspaceName,
+                companyId: eventCompanyId,
                 role: "workspace_admin",
             };
 
