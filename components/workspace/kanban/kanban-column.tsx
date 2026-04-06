@@ -75,11 +75,12 @@ export function KanbanColumnComponent({
   const [addError, setAddError] = useState<string | null>(null);
   const [localSort, setLocalSort] = useState<KanbanSortState>(DEFAULT_SORT_STATE);
   const [filterLabelIds, setFilterLabelIds] = useState<string[]>([]);
+  const [menuDialogOpen, setMenuDialogOpen] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column.id,
     data: { type: 'column', column },
-    disabled: !isAdmin,
+    disabled: !isAdmin || menuDialogOpen,
   });
 
   const style = {
@@ -237,6 +238,7 @@ export function KanbanColumnComponent({
             onSortChange={setLocalSort}
             onFilterLabelToggle={toggleFilterLabel}
             onClearFilters={clearFilters}
+            onDialogOpenChange={setMenuDialogOpen}
           />
         </div>
       </div>

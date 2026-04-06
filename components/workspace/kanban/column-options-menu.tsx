@@ -73,6 +73,7 @@ interface ColumnOptionsMenuProps {
   onSortChange: (sort: KanbanSortState) => void;
   onFilterLabelToggle: (labelId: string) => void;
   onClearFilters: () => void;
+  onDialogOpenChange: (open: boolean) => void;
 }
 
 const initialRenameState: UpdateColunaActionState = {};
@@ -90,6 +91,7 @@ export function ColumnOptionsMenu({
   onSortChange,
   onFilterLabelToggle,
   onClearFilters,
+  onDialogOpenChange,
 }: ColumnOptionsMenuProps) {
   const router = useRouter();
   const [renameOpen, setRenameOpen] = useState(false);
@@ -297,7 +299,7 @@ export function ColumnOptionsMenu({
       </DropdownMenu>
 
       {/* Dialog de cor da coluna */}
-      <Dialog open={colorOpen} onOpenChange={setColorOpen}>
+      <Dialog open={colorOpen} onOpenChange={(open) => { setColorOpen(open); onDialogOpenChange(open); }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Cor da coluna</DialogTitle>
@@ -360,7 +362,7 @@ export function ColumnOptionsMenu({
       </Dialog>
 
       {/* Dialog de renomear */}
-      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+      <Dialog open={renameOpen} onOpenChange={(open) => { setRenameOpen(open); onDialogOpenChange(open); }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Renomear coluna</DialogTitle>
@@ -395,7 +397,7 @@ export function ColumnOptionsMenu({
       </Dialog>
 
       {/* AlertDialog de exclusão */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <AlertDialog open={deleteOpen} onOpenChange={(open) => { setDeleteOpen(open); onDialogOpenChange(open); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir coluna &quot;{column.name}&quot;?</AlertDialogTitle>
