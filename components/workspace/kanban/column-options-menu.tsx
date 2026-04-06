@@ -265,11 +265,11 @@ export function ColumnOptionsMenu({
           {isAdmin && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => { setSelectedColor(column.color ?? null); setColorOpen(true); }}>
+              <DropdownMenuItem onClick={() => { setSelectedColor(column.color ?? null); setColorOpen(true); onDialogOpenChange(true); }}>
                 <Palette className="mr-2 h-3.5 w-3.5" />
                 Cor da coluna
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+              <DropdownMenuItem onClick={() => { setRenameOpen(true); onDialogOpenChange(true); }}>
                 <Pencil className="mr-2 h-3.5 w-3.5" />
                 Renomear
               </DropdownMenuItem>
@@ -287,7 +287,7 @@ export function ColumnOptionsMenu({
                 )}
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => setDeleteOpen(true)}
+                onClick={() => { setDeleteOpen(true); onDialogOpenChange(true); }}
                 className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="mr-2 h-3.5 w-3.5" />
