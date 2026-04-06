@@ -152,7 +152,7 @@ export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false, c
           {taskPrefix}-{task.taskNumber}
         </span>
       )}
-      <p className="text-sm font-medium leading-snug">{task.title}</p>
+      <p className={`text-sm font-medium leading-snug ${columnIsDone ? 'line-through text-muted-foreground' : ''}`}>{task.title}</p>
 
       {task.taskLabels.length > 0 && (
         <div className="flex flex-wrap gap-1">
@@ -187,7 +187,7 @@ export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false, c
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           {task.dueDate && (
-            <span className={`flex items-center gap-0.5 ${overdue ? 'text-destructive' : ''}`}>
+            <span className={`flex items-center gap-0.5 ${columnIsDone ? 'line-through text-green-600 dark:text-green-500' : overdue ? 'text-destructive' : ''}`}>
               <CalendarDays className="h-3 w-3" />
               {(() => {
                 const [, m, d] = task.dueDate.split('T')[0].split('-');
