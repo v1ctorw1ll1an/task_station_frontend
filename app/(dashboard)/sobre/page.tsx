@@ -39,6 +39,10 @@ const releases: Release[] = [
                 type: "fix",
                 text: "Hydration mismatch do Radix UI no layout da empresa — NotificationBell agora renderiza somente no cliente (ssr:false), corrigindo IDs aria-controls divergentes entre servidor e cliente",
             },
+            {
+                type: "feat",
+                text: "Colunas podem ser marcadas como \"concluída\" — tasks nessas colunas deixam de aparecer como atrasadas (badge vermelho no card) e são excluídas dos filtros de data da página inicial (hoje, amanhã, atrasadas)",
+            },
         ],
     },
     {

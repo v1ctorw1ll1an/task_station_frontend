@@ -275,12 +275,12 @@ export function ColumnOptionsMenu({
                 {column.isDone ? (
                   <>
                     <Circle className="mr-2 h-3.5 w-3.5" />
-                    Desmarcar como concluída
+                    Desmarcar como coluna de tasks concluídas
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="mr-2 h-3.5 w-3.5 text-green-500" />
-                    Marcar como concluída
+                    Definir como coluna de tasks concluídas
                   </>
                 )}
               </DropdownMenuItem>
