@@ -3,7 +3,7 @@ import { ArrowLeft, Sparkles, Wrench, FileText, Tag } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-const APP_VERSION = "0.1.0-alpha.6";
+const APP_VERSION = "0.1.0-alpha.7";
 
 type ChangeType = "feat" | "fix" | "chore";
 
@@ -19,6 +19,28 @@ interface Release {
 }
 
 const releases: Release[] = [
+    {
+        version: "0.1.0-alpha.7",
+        date: "2026-04-06",
+        changes: [
+            {
+                type: "feat",
+                text: "Copiar ou mover tasks entre projetos — menu de contexto no card (clique direito) e botões no dialog de detalhes; dialog em 2 etapas para escolher destino e quais dados transferir (responsáveis, labels, comentários, anexos, datas, histórico)",
+            },
+            {
+                type: "feat",
+                text: "Enter simples no editor markdown agora cria quebra de linha visível — comportamento consistente com editores modernos (GitHub-style breaks)",
+            },
+            {
+                type: "feat",
+                text: "Salvamento ao fechar dialog — campos da task só são enviados ao servidor quando o usuário fecha o card, eliminando múltiplos requests durante a digitação",
+            },
+            {
+                type: "fix",
+                text: "Hydration mismatch do Radix UI no layout da empresa — NotificationBell agora renderiza somente no cliente (ssr:false), corrigindo IDs aria-controls divergentes entre servidor e cliente",
+            },
+        ],
+    },
     {
         version: "0.1.0-alpha.6",
         date: "2026-03-25",

@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import {
   Bold,
   Code,
@@ -62,7 +63,7 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>['components'] = {
 
 export function MarkdownDisplay({ content }: { content: string }) {
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={mdComponents}>
       {content}
     </ReactMarkdown>
   );

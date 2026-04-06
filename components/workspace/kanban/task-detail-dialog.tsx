@@ -529,7 +529,6 @@ export function TaskDetailDialog({
   // Bridge: attachment image count for paste-limit check in MarkdownEditor
   const [attachmentImageCount, setAttachmentImageCount] = useState(0);
   const [pendingAttachment, setPendingAttachment] = useState<TaskAttachment | null>(null);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Direct paste/drop to attachments
   const [isDragOver, setIsDragOver] = useState(false);
@@ -702,24 +701,6 @@ export function TaskDetailDialog({
     [task, projectId, workspaceId, startSave],  
   );
 
-  const scheduleAutoSave = useCallback(
-    (overrides?: Partial<Parameters<typeof doSave>[0]>) => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        doSave({
-          title,
-          description,
-          priority,
-          startDate,
-          dueDate,
-          assigneeIds: selectedAssigneeIds,
-          labelIds: selectedLabelIds,
-          ...overrides,
-        });
-      }, 800);
-    },
-    [title, description, priority, startDate, dueDate, selectedAssigneeIds, selectedLabelIds, doSave],
-  );
 
   function handleDelete() {
     if (!task) return;
@@ -768,7 +749,6 @@ export function TaskDetailDialog({
       ? selectedAssigneeIds.filter((x) => x !== id)
       : [...selectedAssigneeIds, id];
     setSelectedAssigneeIds(next);
-    scheduleAutoSave({ assigneeIds: next });
   }
 
   function toggleLabel(id: string) {
@@ -776,7 +756,6 @@ export function TaskDetailDialog({
       ? selectedLabelIds.filter((x) => x !== id)
       : [...selectedLabelIds, id];
     setSelectedLabelIds(next);
-    scheduleAutoSave({ labelIds: next });
   }
 
   if (!task) return null;
@@ -799,7 +778,23 @@ export function TaskDetailDialog({
   const selectedMembers = membros.filter((m) => selectedAssigneeIds.includes(m.id));
 
   return (
-    <Dialog open={!!task} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={!!task}
+      onOpenChange={(open) => {
+        if (!open) {
+          doSave({
+            title,
+            description,
+            priority,
+            startDate,
+            dueDate,
+            assigneeIds: selectedAssigneeIds,
+            labelIds: selectedLabelIds,
+          });
+          onClose();
+        }
+      }}
+    >
       <DialogContent
         className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0"
         onPointerDownOutside={(e) => {
@@ -890,10 +885,7 @@ export function TaskDetailDialog({
             <input
               type="text"
               value={title}
-              onChange={(e) => {
-                setTitle(e.target.value);
-                scheduleAutoSave({ title: e.target.value });
-              }}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="Título da task"
               className="w-full text-lg font-semibold bg-transparent border-0 border-b border-transparent focus:border-input focus:outline-none focus:ring-0 pb-1 placeholder:text-muted-foreground/50 transition-colors"
             />
@@ -903,10 +895,7 @@ export function TaskDetailDialog({
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Descrição</p>
               <MarkdownEditor
                 value={description}
-                onChange={(val) => {
-                  setDescription(val);
-                  scheduleAutoSave({ description: val });
-                }}
+                onChange={(val) => setDescription(val)}
                 placeholder="Adicione uma descrição..."
                 projectId={projectId}
                 taskId={task.id}
@@ -956,10 +945,7 @@ export function TaskDetailDialog({
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Prioridade</p>
               <Select
                 value={priority}
-                onValueChange={(val) => {
-                  setPriority(val as 'low' | 'medium' | 'high' | 'urgent');
-                  scheduleAutoSave({ priority: val });
-                }}
+                onValueChange={(val) => setPriority(val as 'low' | 'medium' | 'high' | 'urgent')}
               >
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue />
@@ -1039,10 +1025,8 @@ export function TaskDetailDialog({
                         <button
                           type="button"
                           onClick={() => {
-                            const next: string[] = [];
-                            setSelectedAssigneeIds(next);
+                            setSelectedAssigneeIds([]);
                             setMemberSearch('');
-                            scheduleAutoSave({ assigneeIds: next });
                           }}
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent text-muted-foreground"
                         >
@@ -1112,10 +1096,7 @@ export function TaskDetailDialog({
               <Input
                 type="date"
                 value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  scheduleAutoSave({ startDate: e.target.value });
-                }}
+                onChange={(e) => setStartDate(e.target.value)}
                 onFocus={() => { isDateFocusedRef.current = true; }}
                 onBlur={() => { isDateFocusedRef.current = false; }}
                 className="h-8 text-sm"
@@ -1127,10 +1108,7 @@ export function TaskDetailDialog({
               <Input
                 type="date"
                 value={dueDate}
-                onChange={(e) => {
-                  setDueDate(e.target.value);
-                  scheduleAutoSave({ dueDate: e.target.value });
-                }}
+                onChange={(e) => setDueDate(e.target.value)}
                 onFocus={() => { isDateFocusedRef.current = true; }}
                 onBlur={() => { isDateFocusedRef.current = false; }}
                 className="h-8 text-sm"
