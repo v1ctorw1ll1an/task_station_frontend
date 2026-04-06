@@ -173,7 +173,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
             <button
               type="button"
               onClick={() => update({ search: '' })}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -183,7 +183,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
         <button
           type="button"
           onClick={() => setPanelOpen((v) => !v)}
-          className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors ${
+          className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors cursor-pointer ${
             panelOpen || activeCount > 0
               ? 'border-primary bg-primary/5 text-primary'
               : 'bg-background text-muted-foreground hover:bg-muted/50'
@@ -202,7 +202,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
           <button
             type="button"
             onClick={clearAll}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
             Limpar
           </button>
@@ -414,7 +414,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
           {filter.sortState.dueDate !== null && (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs text-primary">
               {filter.sortState.dueDate === 'asc' ? 'Prazo: mais próximo' : 'Prazo: mais distante'}
-              <button type="button" onClick={() => update({ sortState: { ...filter.sortState, dueDate: null } })}>
+              <button type="button" className="cursor-pointer" onClick={() => update({ sortState: { ...filter.sortState, dueDate: null } })}>
                 <X className="h-3 w-3" />
               </button>
             </span>
@@ -422,7 +422,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
           {filter.sortState.priority !== null && (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs text-primary">
               {filter.sortState.priority === 'desc' ? 'Mais urgente primeiro' : 'Menos urgente primeiro'}
-              <button type="button" onClick={() => update({ sortState: { ...filter.sortState, priority: null } })}>
+              <button type="button" className="cursor-pointer" onClick={() => update({ sortState: { ...filter.sortState, priority: null } })}>
                 <X className="h-3 w-3" />
               </button>
             </span>
@@ -434,7 +434,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
               <span key={id} className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs text-primary">
                 <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: label.color }} />
                 {label.name}
-                <button type="button" onClick={() => toggleLabel(id)}>
+                <button type="button" className="cursor-pointer" onClick={() => toggleLabel(id)}>
                   <X className="h-3 w-3" />
                 </button>
               </span>
@@ -446,7 +446,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
             return (
               <span key={id} className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs text-primary">
                 {a.name}
-                <button type="button" onClick={() => toggleAssignee(id)}>
+                <button type="button" className="cursor-pointer" onClick={() => toggleAssignee(id)}>
                   <X className="h-3 w-3" />
                 </button>
               </span>
@@ -458,7 +458,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
             return (
               <span key={id} className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs text-primary">
                 Reporter: {a.name}
-                <button type="button" onClick={() => toggleReporter(id)}>
+                <button type="button" className="cursor-pointer" onClick={() => toggleReporter(id)}>
                   <X className="h-3 w-3" />
                 </button>
               </span>
@@ -467,7 +467,7 @@ export function KanbanBoardFilter({ columns, labels, filter, onFilterChange }: K
           {dateActive && (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs text-primary">
               Período: {dateChipLabel}
-              <button type="button" onClick={() => update({ dateFrom: '', dateTo: '' })}>
+              <button type="button" className="cursor-pointer" onClick={() => update({ dateFrom: '', dateTo: '' })}>
                 <X className="h-3 w-3" />
               </button>
             </span>

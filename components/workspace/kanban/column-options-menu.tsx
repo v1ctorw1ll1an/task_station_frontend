@@ -312,7 +312,7 @@ export function ColumnOptionsMenu({
                   type="button"
                   title={c.label}
                   onClick={() => setSelectedColor(c.value)}
-                  className="h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 focus:outline-none"
+                  className="h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 focus:outline-none cursor-pointer"
                   style={{
                     backgroundColor: c.value,
                     borderColor: selectedColor === c.value ? 'white' : 'transparent',

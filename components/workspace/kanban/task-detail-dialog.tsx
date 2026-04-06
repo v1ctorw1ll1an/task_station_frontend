@@ -146,7 +146,7 @@ function TaskHistorySection({
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}
-        className="flex w-full items-center justify-between text-sm font-medium hover:text-foreground/80 transition-colors"
+        className="flex w-full items-center justify-between text-sm font-medium hover:text-foreground/80 transition-colors cursor-pointer"
       >
         <span className="flex items-center gap-1.5">
           <Clock className="h-4 w-4 text-muted-foreground" />
@@ -346,7 +346,7 @@ function TaskCommentsSection({
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}
-        className="flex w-full items-center justify-between text-sm font-medium hover:text-foreground/80 transition-colors"
+        className="flex w-full items-center justify-between text-sm font-medium hover:text-foreground/80 transition-colors cursor-pointer"
       >
         <span className="flex items-center gap-1.5">
           <MessageSquare className="h-4 w-4" />
@@ -431,7 +431,7 @@ function TaskCommentsSection({
                             setEditContent(c.content);
                             setEditError(null);
                           }}
-                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                           <Pencil className="h-3 w-3" />
                         </button>
@@ -440,7 +440,7 @@ function TaskCommentsSection({
                         type="button"
                         title="Excluir"
                         onClick={() => handleDelete(c.id)}
-                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive"
+                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive cursor-pointer"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
@@ -476,7 +476,7 @@ function TaskCommentsSection({
                         e.preventDefault();
                         insertMention(m.name);
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent"
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer"
                     >
                       <UserAvatar name={m.name} email={m.email} photoUrl={m.photoUrl} size="sm" />
                       <span className="flex flex-col items-start min-w-0">
@@ -870,7 +870,7 @@ export function TaskDetailDialog({
             {dialogUploading && <Loader2 className="h-3 w-3 animate-spin shrink-0" />}
             {dialogUploading ? 'Enviando imagem para anexos...' : dialogUploadError}
             {dialogUploadError && (
-              <button type="button" onClick={() => setDialogUploadError(null)} className="ml-auto">
+              <button type="button" onClick={() => setDialogUploadError(null)} className="ml-auto cursor-pointer">
                 <X className="h-3 w-3" />
               </button>
             )}
@@ -986,7 +986,7 @@ export function TaskDetailDialog({
                 <button
                   type="button"
                   onClick={() => setMemberDropdownOpen((v) => !v)}
-                  className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
                 >
                   {selectedMembers.length > 0 ? (
                     <span className="flex items-center gap-1 min-w-0">
@@ -1028,7 +1028,7 @@ export function TaskDetailDialog({
                             setSelectedAssigneeIds([]);
                             setMemberSearch('');
                           }}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent text-muted-foreground"
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent text-muted-foreground cursor-pointer"
                         >
                           <X className="h-3.5 w-3.5" />
                           Remover todos
@@ -1044,7 +1044,7 @@ export function TaskDetailDialog({
                             key={member.id}
                             type="button"
                             onClick={() => toggleAssignee(member.id)}
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer"
                           >
                             <UserAvatar name={member.name} email={member.email} photoUrl={member.photoUrl} size="sm" />
                             <span className="flex flex-col items-start min-w-0">
@@ -1075,7 +1075,7 @@ export function TaskDetailDialog({
                         key={label.id}
                         type="button"
                         onClick={() => toggleLabel(label.id)}
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium transition-opacity ${isSelected ? 'opacity-100 ring-2' : 'opacity-40'}`}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium transition-opacity cursor-pointer ${isSelected ? 'opacity-100 ring-2' : 'opacity-40'}`}
                         style={{
                           backgroundColor: label.color + '22',
                           color: label.color,
