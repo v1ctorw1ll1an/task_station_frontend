@@ -7,6 +7,8 @@ import {
   ArrowUp,
   CalendarDays,
   Check,
+  CheckCircle2,
+  Circle,
   Filter,
   MoreVertical,
   Palette,
@@ -51,6 +53,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { updateColunaAction, UpdateColunaActionState } from '@/actions/projeto/update-coluna.action';
 import { updateColunaColorAction } from '@/actions/projeto/update-coluna-color.action';
+import { updateColunaDoneAction } from '@/actions/projeto/update-coluna-done.action';
 import { deleteColunaAction } from '@/actions/projeto/delete-coluna.action';
 import { COLUMN_COLORS } from '@/lib/column-colors';
 import type { KanbanColumn } from './kanban-board';
@@ -98,6 +101,7 @@ export function ColumnOptionsMenu({
   const [targetColumnId, setTargetColumnId] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletePending, startDelete] = useTransition();
+  const [donePending, startDone] = useTransition();
 
   const [renameState, renameFormAction, isRenamePending] = useActionState(
     updateColunaAction,
@@ -125,6 +129,13 @@ export function ColumnOptionsMenu({
         setColorOpen(false);
         router.refresh();
       }
+    });
+  }
+
+  function handleToggleDone() {
+    startDone(async () => {
+      await updateColunaDoneAction(projectId, column.id, workspaceId, !column.isDone);
+      router.refresh();
     });
   }
 
@@ -259,6 +270,19 @@ export function ColumnOptionsMenu({
               <DropdownMenuItem onClick={() => setRenameOpen(true)}>
                 <Pencil className="mr-2 h-3.5 w-3.5" />
                 Renomear
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleToggleDone} disabled={donePending}>
+                {column.isDone ? (
+                  <>
+                    <Circle className="mr-2 h-3.5 w-3.5" />
+                    Desmarcar como concluída
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="mr-2 h-3.5 w-3.5 text-green-500" />
+                    Marcar como concluída
+                  </>
+                )}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setDeleteOpen(true)}

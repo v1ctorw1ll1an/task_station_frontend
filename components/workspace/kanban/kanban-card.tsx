@@ -112,9 +112,10 @@ interface KanbanCardProps {
   taskPrefix: string;
   onClick: (task: KanbanTask) => void;
   isDragOverlay?: boolean;
+  columnIsDone?: boolean;
 }
 
-export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false }: KanbanCardProps) {
+export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false, columnIsDone = false }: KanbanCardProps) {
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferMode, setTransferMode] = useState<'copy' | 'cut'>('copy');
 
@@ -128,7 +129,7 @@ export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false }:
     transition,
   };
 
-  const overdue = isOverdue(task.dueDate);
+  const overdue = !columnIsDone && isOverdue(task.dueDate);
   const assignees = task.taskAssignees.map((ta) => ta.user);
 
   const cardContent = (

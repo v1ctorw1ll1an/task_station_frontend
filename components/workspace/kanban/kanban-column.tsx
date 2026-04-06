@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from 'react';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus } from 'lucide-react';
+import { CheckCircle2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { KanbanCard, type KanbanTask } from './kanban-card';
@@ -206,6 +206,9 @@ export function KanbanColumnComponent({
       >
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold" style={nameStyle}>{column.name}</span>
+          {column.isDone && (
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
+          )}
           <span className="text-xs text-muted-foreground">
             ({displayedTasks.length < column.tasks.length ? `${displayedTasks.length}/` : ''}{column.tasks.length})
           </span>
@@ -271,7 +274,7 @@ export function KanbanColumnComponent({
           strategy={verticalListSortingStrategy}
         >
           {displayedTasks.map((task) => (
-            <KanbanCard key={task.id} task={task} taskPrefix={taskPrefix} onClick={(t) => onTaskClick(t.id)} />
+            <KanbanCard key={task.id} task={task} taskPrefix={taskPrefix} onClick={(t) => onTaskClick(t.id)} columnIsDone={column.isDone} />
           ))}
         </SortableContext>
       </div>

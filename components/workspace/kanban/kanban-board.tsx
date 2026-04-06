@@ -54,6 +54,7 @@ export interface KanbanColumn {
     name: string;
     color: string | null;
     order: number;
+    isDone: boolean;
     tasks: KanbanTask[];
 }
 
