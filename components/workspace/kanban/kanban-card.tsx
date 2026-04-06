@@ -3,8 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { AlignLeft, CalendarDays, MessageSquare, Tag, User } from 'lucide-react';
+import { AlignLeft, CalendarDays, Copy, MessageSquare, Scissors, Tag, User } from 'lucide-react';
 import { gravatarUrl } from '@/lib/gravatar';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
+import { TransferTaskDialog } from './transfer-task-dialog';
 
 export interface KanbanTaskLabel {
   label: { id: string; name: string; color: string };
@@ -108,6 +115,9 @@ interface KanbanCardProps {
 }
 
 export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false }: KanbanCardProps) {
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferMode, setTransferMode] = useState<'copy' | 'cut'>('copy');
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { type: 'task', task },
@@ -121,7 +131,7 @@ export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false }:
   const overdue = isOverdue(task.dueDate);
   const assignees = task.taskAssignees.map((ta) => ta.user);
 
-  return (
+  const cardContent = (
     <div
       ref={setNodeRef}
       style={style}
@@ -207,5 +217,44 @@ export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false }:
         </div>
       </div>
     </div>
+  );
+
+  if (isDragOverlay) return cardContent;
+
+  return (
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>{cardContent}</ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              setTransferMode('copy');
+              setTransferOpen(true);
+            }}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Copiar para outro projeto
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              setTransferMode('cut');
+              setTransferOpen(true);
+            }}
+          >
+            <Scissors className="mr-2 h-4 w-4" />
+            Mover para outro projeto
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+      <TransferTaskDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        task={task}
+        projectId={task.projectId}
+        defaultMode={transferMode}
+      />
+    </>
   );
 }

@@ -7,9 +7,11 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  Copy,
   Loader2,
   MessageSquare,
   Pencil,
+  Scissors,
   Trash2,
   X,
 } from 'lucide-react';
@@ -53,6 +55,7 @@ import { createTaskCommentAction, type CreateCommentActionState } from '@/action
 import { updateTaskCommentAction } from '@/actions/projeto/update-task-comment.action';
 import { deleteTaskCommentAction } from '@/actions/projeto/delete-task-comment.action';
 import type { KanbanTask } from './kanban-card';
+import { TransferTaskDialog } from './transfer-task-dialog';
 import type { WorkspaceMember, ProjectLabel } from './kanban-board';
 import { useActionState } from 'react';
 import { MarkdownEditor, MarkdownDisplay } from './markdown-editor';
@@ -532,6 +535,10 @@ export function TaskDetailDialog({
   const [isDragOver, setIsDragOver] = useState(false);
   const [dialogUploadError, setDialogUploadError] = useState<string | null>(null);
   const [dialogUploading, setDialogUploading] = useState(false);
+
+  // Transfer dialog
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferMode, setTransferMode] = useState<'copy' | 'cut'>('copy');
 
   // Rastreia o updatedAt do servidor para optimistic locking
   const lastKnownUpdatedAtRef = useRef<string>(task?.updatedAt ?? '');
@@ -1130,6 +1137,36 @@ export function TaskDetailDialog({
               />
             </div>
 
+            {/* Transfer */}
+            <div className="pt-2 border-t space-y-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => {
+                  setTransferMode('copy');
+                  setTransferOpen(true);
+                }}
+              >
+                <Copy className="h-3.5 w-3.5 mr-1.5" />
+                Copiar para outro projeto
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => {
+                  setTransferMode('cut');
+                  setTransferOpen(true);
+                }}
+              >
+                <Scissors className="h-3.5 w-3.5 mr-1.5" />
+                Mover para outro projeto
+              </Button>
+            </div>
+
             {/* Delete */}
             {isAdmin && (
               <div className="pt-2 border-t">
@@ -1169,6 +1206,13 @@ export function TaskDetailDialog({
           </div>
         </div>
       </DialogContent>
+      <TransferTaskDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        task={task}
+        projectId={projectId}
+        defaultMode={transferMode}
+      />
     </Dialog>
   );
 }
