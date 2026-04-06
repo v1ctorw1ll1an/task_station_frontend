@@ -191,7 +191,7 @@ function SortableProject({
       >
         <IconComponent
           className="h-3.5 w-3.5 shrink-0"
-          style={project.iconColor ? { color: project.iconColor } : undefined}
+          style={project.iconColor && !isCurrentPage ? { color: project.iconColor } : undefined}
         />
         <span className="truncate">{project.name}</span>
       </Link>
