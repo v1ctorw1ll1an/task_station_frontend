@@ -36,6 +36,39 @@ import {
   Boxes, Folders, FolderOpen,
   // Bem-estar / Equipe
   Dumbbell, Smile, Laugh,
+  // IA / Bot
+  Bot, Braces, CircuitBoard, Fingerprint, Webhook, Microchip, Variable, MemoryStick,
+  // Arquivos / Código
+  FileCode, FileJson, FileSpreadsheet, FolderGit2, GitCommit, GitFork,
+  // Dispositivos
+  Laptop, Tablet,
+  // Comunicação
+  MessageSquare, MessagesSquare, AtSign, Megaphone, Headphones, Contact,
+  // Negócios / Parcerias
+  Receipt, PiggyBank, Handshake, Building2, Warehouse, Presentation, LayoutTemplate,
+  // Design extra
+  Eraser, Frame, Paintbrush2,
+  // Organização extra
+  StickyNote, Clipboard, Table2, LayoutGrid, LayoutList, LayoutPanelLeft, Milestone,
+  Blocks, PackageCheck, Layers2, Layers3,
+  // Saúde
+  HeartPulse, Stethoscope,
+  // Alimentação / Lifestyle
+  Coffee, UtensilsCrossed, ChefHat,
+  // Ciência extra
+  Telescope, Satellite, TestTube, Beaker,
+  // Games / Entretenimento
+  Gamepad2, Joystick, Dice5,
+  // Localização / Rotas
+  MapPin, Route,
+  // Suporte / Utilidades
+  LifeBuoy, QrCode, Scan, Cable, PlugZap,
+  // Mídia / Conteúdo
+  Newspaper, Rss, BookMarked,
+  // Gráficos extra
+  ChartArea, ChartColumn, ChartCandlestick,
+  // Matemática / Lógica
+  Sigma, Pi, BadgeCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -78,6 +111,39 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   Boxes, Folders, FolderOpen,
   // Bem-estar / Equipe
   Dumbbell, Smile, Laugh,
+  // IA / Bot
+  Bot, Braces, CircuitBoard, Fingerprint, Webhook, Microchip, Variable, MemoryStick,
+  // Arquivos / Código
+  FileCode, FileJson, FileSpreadsheet, FolderGit2, GitCommit, GitFork,
+  // Dispositivos
+  Laptop, Tablet,
+  // Comunicação
+  MessageSquare, MessagesSquare, AtSign, Megaphone, Headphones, Contact,
+  // Negócios / Parcerias
+  Receipt, PiggyBank, Handshake, Building2, Warehouse, Presentation, LayoutTemplate,
+  // Design extra
+  Eraser, Frame, Paintbrush2,
+  // Organização extra
+  StickyNote, Clipboard, Table2, LayoutGrid, LayoutList, LayoutPanelLeft, Milestone,
+  Blocks, PackageCheck, Layers2, Layers3,
+  // Saúde
+  HeartPulse, Stethoscope,
+  // Alimentação / Lifestyle
+  Coffee, UtensilsCrossed, ChefHat,
+  // Ciência extra
+  Telescope, Satellite, TestTube, Beaker,
+  // Games / Entretenimento
+  Gamepad2, Joystick, Dice5,
+  // Localização / Rotas
+  MapPin, Route,
+  // Suporte / Utilidades
+  LifeBuoy, QrCode, Scan, Cable, PlugZap,
+  // Mídia / Conteúdo
+  Newspaper, Rss, BookMarked,
+  // Gráficos extra
+  ChartArea, ChartColumn, ChartCandlestick,
+  // Matemática / Lógica
+  Sigma, Pi, BadgeCheck,
 };
 
 export const FEATURED_ICONS = [
