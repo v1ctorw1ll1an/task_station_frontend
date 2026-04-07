@@ -9,6 +9,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { fetchAndApplySidebarOrder } from '@/lib/sidebar-order';
 import { TrackingWidget } from '@/components/workspace/task-tracking/tracking-widget';
 import { getMyActiveSessionsAction } from '@/actions/task-session/get-my-active-sessions.action';
+import { StickyNotesButtonClient, StickyNotesManagerClient } from '@/components/sticky-notes/sticky-notes-client';
 
 interface EmpresaLayoutProps {
   children: React.ReactNode;
@@ -103,6 +104,7 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
       headerRight={
         <>
           <ThemeToggle />
+          <StickyNotesButtonClient />
           <NotificationBellClient token={session.token} />
           <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />
         </>
@@ -110,6 +112,7 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
     >
       {children}
       <TrackingWidget initialSessions={mySessions} />
+      <StickyNotesManagerClient />
     </SidebarShell>
   );
 }

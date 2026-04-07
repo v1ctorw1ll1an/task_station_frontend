@@ -5,6 +5,7 @@ import { SidebarShell } from '@/components/navigation/sidebar-shell';
 import { UserMenu } from '@/components/superadmin/user-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationSocketProvider } from '@/components/notifications/notification-socket-provider';
+import { StickyNotesButtonClient, StickyNotesManagerClient } from '@/components/sticky-notes/sticky-notes-client';
 
 export default async function SuperadminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -37,11 +38,13 @@ export default async function SuperadminLayout({ children }: { children: React.R
         headerRight={
           <>
             <ThemeToggle />
+            <StickyNotesButtonClient />
             <UserMenu email={session.user.email} hasCompanies={companies.length > 0} />
           </>
         }
       >
         {children}
+        <StickyNotesManagerClient />
       </SidebarShell>
     </>
   );
