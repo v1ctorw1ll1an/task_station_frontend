@@ -3,7 +3,7 @@ import { ArrowLeft, Sparkles, Wrench, FileText, Tag } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-const APP_VERSION = "0.1.0-alpha.7";
+const APP_VERSION = "0.1.0-alpha.8";
 
 type ChangeType = "feat" | "fix" | "chore";
 
@@ -19,6 +19,44 @@ interface Release {
 }
 
 const releases: Release[] = [
+    {
+        version: "0.1.0-alpha.8",
+        date: "2026-04-07",
+        changes: [
+            {
+                type: "feat",
+                text: "Rastreamento de tempo por task — botão \"Iniciar\" no dialog de detalhes; widget fixo no canto inferior direito com timer ao vivo, pause e encerrar; visível em todas as páginas (dashboard, empresa e workspace)",
+            },
+            {
+                type: "feat",
+                text: "Acompanhamento de atividades em tempo real — admins da empresa visualizam todas as tarefas em execução dos membros agrupadas por pessoa, com timer ao vivo via WebSocket; membros colapsáveis individualmente",
+            },
+            {
+                type: "feat",
+                text: "Destaque visual no card do kanban quando o usuário tem uma sessão ativa naquela task (ring colorido)",
+            },
+            {
+                type: "feat",
+                text: "Aviso nativo do browser ao tentar fechar ou recarregar a página com sessões em execução",
+            },
+            {
+                type: "fix",
+                text: "TypeError ao receber evento WebSocket taskSession:started — payload WS é flat (TaskSessionStartedPayload) enquanto rawToActiveSession esperava formato aninhado; ActiveSession agora é construída diretamente do payload",
+            },
+            {
+                type: "fix",
+                text: "Link \"Ver card\" nas páginas de atividades usava ?taskId= mas o KanbanBoard lê ?task= — corrigido para abrir o dialog de detalhes corretamente",
+            },
+            {
+                type: "fix",
+                text: "Mensagem de erro ao atingir limite de 3 tarefas simultâneas exibida abaixo do botão \"Iniciar\" no dialog de detalhes",
+            },
+            {
+                type: "chore",
+                text: "Botão \"Excluir task\" movido para abaixo de \"Mover\" no painel lateral do dialog (sempre visível, sem scroll); cursor-pointer adicionado em todos os elementos clicáveis do card",
+            },
+        ],
+    },
     {
         version: "0.1.0-alpha.7",
         date: "2026-04-06",
