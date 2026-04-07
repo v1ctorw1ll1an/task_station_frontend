@@ -5,6 +5,7 @@ import { CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getMyTasksAction } from '@/actions/me/get-my-tasks.action';
 import { TaskDueCard, type TaskDueCardData } from './task-due-card';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const FILTERS = [
   { key: 'today', label: 'Hoje' },
@@ -105,21 +106,21 @@ export function TasksDueSoon({ companyId, initialData, initialTotal }: TasksDueS
       {activeFilter === 'custom' && (
         <div className="flex flex-wrap items-end gap-3 px-4 py-3 border-b">
           <div>
-            <label className="text-xs text-muted-foreground block mb-1">De</label>
-            <input
-              type="date"
+            <p className="text-xs text-muted-foreground mb-1">De</p>
+            <DatePicker
               value={dueDateFrom}
-              onChange={(e) => setDueDateFrom(e.target.value)}
-              className="rounded-md border bg-background px-2 py-1 text-sm"
+              onChange={setDueDateFrom}
+              placeholder="Selecionar"
+              className="w-44"
             />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground block mb-1">Até</label>
-            <input
-              type="date"
+            <p className="text-xs text-muted-foreground mb-1">Até</p>
+            <DatePicker
               value={dueDateTo}
-              onChange={(e) => setDueDateTo(e.target.value)}
-              className="rounded-md border bg-background px-2 py-1 text-sm"
+              onChange={setDueDateTo}
+              placeholder="Selecionar"
+              className="w-44"
             />
           </div>
           <button

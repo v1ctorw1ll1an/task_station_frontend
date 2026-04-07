@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Filter, X, Search } from 'lucide-react';
 import type { OverviewProject, OverviewAssignee } from '@/actions/workspace/get-workspace-overview.action';
 import { ICON_MAP } from '@/lib/icons/project-icons';
+import { DatePicker } from '@/components/ui/date-picker';
 
 export interface FilterState {
   search: string;
@@ -301,25 +302,24 @@ export function OverviewFilters({ projects, filters, onFiltersChange }: Overview
           <div className="space-y-2 border-t pt-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Período</p>
             <div className="flex flex-wrap items-center gap-2">
-              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 De:
-                <input
-                  type="date"
+                <DatePicker
                   value={filters.dateFrom}
-                  onChange={(e) => update({ dateFrom: e.target.value })}
-                  className="rounded-md border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  onChange={(v) => update({ dateFrom: v })}
+                  placeholder="Selecionar"
+                  className="w-40"
                 />
-              </label>
-              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 Até:
-                <input
-                  type="date"
+                <DatePicker
                   value={filters.dateTo}
-                  min={filters.dateFrom || undefined}
-                  onChange={(e) => update({ dateTo: e.target.value })}
-                  className="rounded-md border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  onChange={(v) => update({ dateTo: v })}
+                  placeholder="Selecionar"
+                  className="w-40"
                 />
-              </label>
+              </div>
             </div>
             <div className="flex flex-wrap gap-3">
               {(
