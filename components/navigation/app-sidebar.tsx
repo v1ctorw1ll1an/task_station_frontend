@@ -4,6 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef, startTransition, useCallb
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import {
+    Activity,
     Home,
     LayoutGrid,
     Megaphone,
@@ -626,6 +627,27 @@ export function AppSidebar({
                     >
                         <Megaphone className="h-4 w-4 shrink-0" />
                         {!collapsed && <span>Comunicados</span>}
+                    </Link>
+                )}
+
+                {isCompanyAdmin && (
+                    <Link
+                        href={`/empresa/${companyId}/atividades`}
+                        onClick={handleNavigate}
+                        className={cn(
+                            "flex items-center py-1.5 rounded-md text-sm transition-colors",
+                            collapsed
+                                ? "justify-center px-0 mx-1"
+                                : "gap-2.5 px-2",
+                            pathname.startsWith(
+                                `/empresa/${companyId}/atividades`,
+                            )
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                        )}
+                    >
+                        <Activity className="h-4 w-4 shrink-0" />
+                        {!collapsed && <span>Acompanhamento</span>}
                     </Link>
                 )}
 

@@ -7,6 +7,8 @@ import { SidebarWorkspace } from '@/components/navigation/workspace-nav-item';
 import { NotificationBellClient } from '@/components/notifications/notification-bell-client';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { fetchAndApplySidebarOrder } from '@/lib/sidebar-order';
+import { TrackingWidget } from '@/components/workspace/task-tracking/tracking-widget';
+import { getMyActiveSessionsAction } from '@/actions/task-session/get-my-active-sessions.action';
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -95,6 +97,8 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
   const { workspaces: orderedWorkspaces, projectOrders } =
     await fetchAndApplySidebarOrder(session.token, companyId, workspaces);
 
+  const mySessions = await getMyActiveSessionsAction();
+
   return (
     <SidebarShell
       variant="full-height"
@@ -122,6 +126,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
       }
     >
       {children}
+      <TrackingWidget initialSessions={mySessions} />
     </SidebarShell>
   );
 }

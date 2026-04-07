@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useKanbanStore } from '@/lib/stores/kanban-store';
+import { useTaskTrackingStore } from '@/lib/stores/task-tracking-store';
 import { getKanbanDataAction } from '@/actions/projeto/get-kanban.action';
 import type {
   TaskCreatedPayload,
@@ -15,6 +16,14 @@ import type {
   ColumnReorderedPayload,
   ColumnDeletedPayload,
 } from '@/lib/stores/kanban-store';
+import type { ActiveSession } from '@/lib/stores/task-tracking-store';
+
+interface TaskSessionStartedPayload {
+  sessionId: string; taskId: string; taskTitle: string; taskNumber: number | null;
+  projectId: string; projectName: string; workspaceId: string; workspaceName: string;
+  userId: string; userName: string; userPhotoUrl: string | null;
+  status: 'running'; resumedAt: string; totalSeconds: number;
+}
 
 export type SocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -24,6 +33,7 @@ export function useKanbanSocket(projectId: string, token: string | null) {
   );
   const socketRef = useRef<Socket | null>(null);
   const store = useKanbanStore();
+  const trackingStore = useTaskTrackingStore();
 
   useEffect(() => {
     if (!token) return;
@@ -70,6 +80,39 @@ export function useKanbanSocket(projectId: string, token: string | null) {
     socket.on('column:updated', (p: ColumnUpdatedPayload) => store.applyColumnUpdated(p));
     socket.on('column:reordered', (p: ColumnReorderedPayload) => store.applyColumnReordered(p));
     socket.on('column:deleted', (p: ColumnDeletedPayload) => store.applyColumnDeleted(p));
+
+    // ── Handlers de sessão de task ────────────────────────────────────────────
+    socket.on('taskSession:started', (p: TaskSessionStartedPayload) => {
+      const currentUserId = useKanbanStore.getState().currentUserId;
+      if (p.userId === currentUserId) {
+        const session: ActiveSession = {
+          id: p.sessionId, taskId: p.taskId, taskTitle: p.taskTitle, taskNumber: p.taskNumber,
+          projectId: p.projectId, projectName: p.projectName,
+          workspaceId: p.workspaceId, workspaceName: p.workspaceName,
+          userId: p.userId, userName: p.userName, userPhotoUrl: p.userPhotoUrl,
+          status: 'running', totalSeconds: p.totalSeconds, resumedAt: p.resumedAt,
+        };
+        trackingStore.applySessionStarted(session);
+      }
+    });
+    socket.on('taskSession:paused', (p: { sessionId: string; taskId: string; userId: string; totalSeconds: number }) => {
+      const currentUserId = useKanbanStore.getState().currentUserId;
+      if (p.userId === currentUserId) {
+        trackingStore.applySessionPaused(p.sessionId, p.totalSeconds);
+      }
+    });
+    socket.on('taskSession:resumed', (p: { sessionId: string; taskId: string; userId: string; resumedAt: string }) => {
+      const currentUserId = useKanbanStore.getState().currentUserId;
+      if (p.userId === currentUserId) {
+        trackingStore.applySessionResumed(p.sessionId, p.resumedAt);
+      }
+    });
+    socket.on('taskSession:stopped', (p: { sessionId: string; taskId: string; userId: string }) => {
+      const currentUserId = useKanbanStore.getState().currentUserId;
+      if (p.userId === currentUserId) {
+        trackingStore.applySessionStopped(p.sessionId);
+      }
+    });
 
     return () => {
       socket.off();

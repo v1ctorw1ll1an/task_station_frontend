@@ -10,8 +10,12 @@ import {
   Copy,
   Loader2,
   MessageSquare,
+  Pause,
   Pencil,
+  Play,
   Scissors,
+  Square,
+  Timer,
   Trash2,
   X,
 } from 'lucide-react';
@@ -62,6 +66,12 @@ import { MarkdownEditor, MarkdownDisplay } from './markdown-editor';
 import type { TaskAttachment } from '@/actions/projeto/get-attachments.action';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { DatePicker } from '@/components/ui/date-picker';
+import { useTaskTrackingStore } from '@/lib/stores/task-tracking-store';
+import { startSessionAction } from '@/actions/task-session/start-session.action';
+import { pauseSessionAction } from '@/actions/task-session/pause-session.action';
+import { resumeSessionAction } from '@/actions/task-session/resume-session.action';
+import { stopSessionAction } from '@/actions/task-session/stop-session.action';
+import { rawToActiveSession } from '@/lib/stores/task-tracking-store';
 
 const FIELD_LABELS: Record<string, string> = {
   title: 'Título',
@@ -77,6 +87,14 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 const ATTACHMENT_FIELDS = new Set(['attachment_added', 'attachment_removed']);
+
+function formatTrackingSeconds(totalSecs: number): string {
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = totalSecs % 60;
+  if (h > 0) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
 const PRIORITY_LABELS: Record<string, string> = {
   low: 'Baixa',
@@ -398,7 +416,7 @@ function TaskCommentsSection({
                           <Button
                             type="button"
                             size="sm"
-                            className="h-6 text-xs px-2"
+                            className="h-6 text-xs px-2 cursor-pointer"
                             onClick={() => handleEditSave(c.id)}
                           >
                             Salvar
@@ -407,7 +425,7 @@ function TaskCommentsSection({
                             type="button"
                             size="sm"
                             variant="ghost"
-                            className="h-6 text-xs px-2"
+                            className="h-6 text-xs px-2 cursor-pointer"
                             onClick={() => setEditingId(null)}
                           >
                             Cancelar
@@ -490,7 +508,7 @@ function TaskCommentsSection({
               )}
             </div>
             {commentState.error && <p className="text-xs text-destructive">{commentState.error}</p>}
-            <Button type="submit" size="sm" disabled={isCommentPending} className="h-7 text-xs">
+            <Button type="submit" size="sm" disabled={isCommentPending} className="h-7 text-xs cursor-pointer">
               {isCommentPending ? 'Enviando...' : 'Comentar'}
             </Button>
           </form>
@@ -540,6 +558,21 @@ export function TaskDetailDialog({
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferMode, setTransferMode] = useState<'copy' | 'cut'>('copy');
 
+  // Task session
+  const trackingStore = useTaskTrackingStore();
+  const activeSession = task
+    ? trackingStore.sessions.find((s) => s.taskId === task.id && s.userId === currentUserId)
+    : null;
+  const [sessionPending, startSessionTransition] = useTransition();
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [, forceTimerTick] = useState(0);
+
+  useEffect(() => {
+    if (activeSession?.status !== 'running') return;
+    const id = setInterval(() => forceTimerTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [activeSession?.status]);
+
   // Rastreia o updatedAt do servidor para optimistic locking
   const lastKnownUpdatedAtRef = useRef<string>(task?.updatedAt ?? '');
 
@@ -587,7 +620,8 @@ export function TaskDetailDialog({
     setMemberDropdownOpen(false);
     setSaveStatus('idle');
     setSaveError(null);
-     
+    setSessionError(null);
+
     lastKnownUpdatedAtRef.current = task?.updatedAt ?? '';
     lastSyncedFieldsRef.current = {
       title: task?.title ?? '',
@@ -797,7 +831,7 @@ export function TaskDetailDialog({
       }}
     >
       <DialogContent
-        className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0"
+        className="sm:max-w-3xl max-h-[95vh] flex flex-col p-0 gap-0"
         onPointerDownOutside={(e) => {
           if (isDateFocusedRef.current) e.preventDefault();
         }}
@@ -940,7 +974,7 @@ export function TaskDetailDialog({
           </div>
 
           {/* Right: metadata sidebar */}
-          <div className="w-full md:w-56 shrink-0 border-t md:border-t-0 md:border-l md:overflow-y-auto px-4 py-4 space-y-5">
+          <div className="w-full md:w-56 shrink-0 border-t md:border-t-0 md:border-l md:overflow-y-auto overflow-x-hidden px-4 py-4 space-y-5">
             {/* Priority */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Prioridade</p>
@@ -948,7 +982,7 @@ export function TaskDetailDialog({
                 value={priority}
                 onValueChange={(val) => setPriority(val as 'low' | 'medium' | 'high' | 'urgent')}
               >
-                <SelectTrigger className="h-8 text-sm">
+                <SelectTrigger className="h-8 text-sm cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1110,39 +1144,146 @@ export function TaskDetailDialog({
               />
             </div>
 
+            {/* Time tracking */}
+            <div className="pt-2 border-t space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Timer className="h-3 w-3" />
+                Tempo
+              </p>
+              {activeSession ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between rounded-md border px-3 py-1.5 bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`h-2 w-2 rounded-full shrink-0 ${
+                          activeSession.status === 'running'
+                            ? 'bg-green-500 animate-pulse'
+                            : 'bg-yellow-500'
+                        }`}
+                      />
+                      <span className="font-mono text-sm font-semibold tabular-nums">
+                        {formatTrackingSeconds(trackingStore.getDisplaySeconds(activeSession.id))}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {activeSession.status === 'running' ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 cursor-pointer"
+                          disabled={sessionPending}
+                          title="Pausar"
+                          onClick={() => {
+                            const displaySecs = trackingStore.getDisplaySeconds(activeSession.id);
+                            trackingStore.applySessionPaused(activeSession.id, displaySecs);
+                            startSessionTransition(async () => {
+                              const r = await pauseSessionAction(activeSession.id);
+                              if (r.data) trackingStore.applySessionPaused(activeSession.id, r.data.totalSeconds);
+                              else if (r.error) trackingStore.applySessionResumed(activeSession.id, activeSession.resumedAt ?? new Date().toISOString());
+                            });
+                          }}
+                        >
+                          <Pause className="h-3 w-3" />
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 cursor-pointer"
+                          disabled={sessionPending}
+                          title="Retomar"
+                          onClick={() => {
+                            const now = new Date().toISOString();
+                            trackingStore.applySessionResumed(activeSession.id, now);
+                            startSessionTransition(async () => {
+                              const r = await resumeSessionAction(activeSession.id);
+                              if (r.data) trackingStore.applySessionResumed(activeSession.id, r.data.resumedAt ?? now);
+                              else if (r.error) trackingStore.applySessionPaused(activeSession.id, activeSession.totalSeconds);
+                            });
+                          }}
+                        >
+                          <Play className="h-3 w-3" />
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive cursor-pointer"
+                        disabled={sessionPending}
+                        title="Encerrar"
+                        onClick={() => {
+                          trackingStore.applySessionStopped(activeSession.id);
+                          startSessionTransition(async () => {
+                            const r = await stopSessionAction(activeSession.id);
+                            if (r.error) trackingStore.applySessionStarted(activeSession);
+                          });
+                        }}
+                      >
+                        <Square className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full cursor-pointer"
+                    disabled={sessionPending}
+                    onClick={() => {
+                      if (!task) return;
+                      setSessionError(null);
+                      startSessionTransition(async () => {
+                        const r = await startSessionAction(task.id);
+                        if (r.data) trackingStore.applySessionStarted(rawToActiveSession(r.data));
+                        else if (r.error) setSessionError(r.error);
+                      });
+                    }}
+                  >
+                    <Play className="h-3.5 w-3.5 mr-1.5" />
+                    Iniciar
+                  </Button>
+                  {sessionError && (
+                    <p className="text-xs text-destructive leading-snug">{sessionError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Transfer */}
             <div className="pt-2 border-t space-y-1">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start"
+                className="w-full justify-start truncate cursor-pointer"
                 onClick={() => {
                   setTransferMode('copy');
                   setTransferOpen(true);
                 }}
               >
-                <Copy className="h-3.5 w-3.5 mr-1.5" />
-                Copiar para outro projeto
+                <Copy className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                Copiar
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start"
+                className="w-full justify-start truncate cursor-pointer"
                 onClick={() => {
                   setTransferMode('cut');
                   setTransferOpen(true);
                 }}
               >
-                <Scissors className="h-3.5 w-3.5 mr-1.5" />
-                Mover para outro projeto
+                <Scissors className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                Mover
               </Button>
-            </div>
-
-            {/* Delete */}
-            {isAdmin && (
-              <div className="pt-2 border-t">
+              {isAdmin && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -1150,10 +1291,10 @@ export function TaskDetailDialog({
                       variant="ghost"
                       size="sm"
                       disabled={deletePending}
-                      className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
                     >
-                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                      Excluir task
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                      Excluir
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
@@ -1164,18 +1305,19 @@ export function TaskDetailDialog({
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={handleDelete}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
                       >
                         Excluir
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              </div>
-            )}
+              )}
+            </div>
+
           </div>
         </div>
       </DialogContent>

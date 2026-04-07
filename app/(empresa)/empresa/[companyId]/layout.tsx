@@ -7,6 +7,8 @@ import { SidebarWorkspace } from '@/components/navigation/workspace-nav-item';
 import { NotificationBellClient } from '@/components/notifications/notification-bell-client';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { fetchAndApplySidebarOrder } from '@/lib/sidebar-order';
+import { TrackingWidget } from '@/components/workspace/task-tracking/tracking-widget';
+import { getMyActiveSessionsAction } from '@/actions/task-session/get-my-active-sessions.action';
 
 interface EmpresaLayoutProps {
   children: React.ReactNode;
@@ -79,6 +81,8 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
   const { workspaces: orderedWorkspaces, projectOrders } =
     await fetchAndApplySidebarOrder(session.token, companyId, workspaces);
 
+  const mySessions = await getMyActiveSessionsAction();
+
   return (
     <SidebarShell
       sidebar={
@@ -105,6 +109,7 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
       }
     >
       {children}
+      <TrackingWidget initialSessions={mySessions} />
     </SidebarShell>
   );
 }

@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { NotificationSocketProvider } from '@/components/notifications/notification-socket-provider';
+import { TrackingWidget } from '@/components/workspace/task-tracking/tracking-widget';
+import { getMyActiveSessionsAction } from '@/actions/task-session/get-my-active-sessions.action';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -13,10 +15,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/first-access');
   }
 
+  const mySessions = await getMyActiveSessionsAction();
+
   return (
     <>
       {session.token && <NotificationSocketProvider token={session.token} />}
       {children}
+      <TrackingWidget initialSessions={mySessions} />
     </>
   );
 }

@@ -12,6 +12,8 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { TransferTaskDialog } from './transfer-task-dialog';
+import { useKanbanStore } from '@/lib/stores/kanban-store';
+import { useTaskTrackingStore } from '@/lib/stores/task-tracking-store';
 
 export interface KanbanTaskLabel {
   label: { id: string; name: string; color: string };
@@ -119,6 +121,11 @@ export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false, c
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferMode, setTransferMode] = useState<'copy' | 'cut'>('copy');
 
+  const currentUserId = useKanbanStore((s) => s.currentUserId);
+  const isRunning = useTaskTrackingStore((s) =>
+    s.sessions.some((sess) => sess.taskId === task.id && sess.userId === currentUserId && sess.status === 'running'),
+  );
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { type: 'task', task },
@@ -143,6 +150,7 @@ export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false, c
         'bg-background rounded-md border p-3 cursor-pointer hover:border-primary/50 transition-colors space-y-2',
         isDragging && !isDragOverlay ? 'opacity-40' : '',
         isDragOverlay ? 'shadow-lg rotate-1' : '',
+        isRunning ? 'ring-2 ring-primary/60' : '',
       ]
         .filter(Boolean)
         .join(' ')}

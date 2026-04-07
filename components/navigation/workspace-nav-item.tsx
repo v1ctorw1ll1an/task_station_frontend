@@ -397,6 +397,7 @@ export function WorkspaceNavItem({
               Membros
             </Link>
           )}
+
         </div>
       )}
     </div>
