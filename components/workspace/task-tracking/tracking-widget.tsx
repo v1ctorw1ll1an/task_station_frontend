@@ -15,9 +15,15 @@ interface TrackingWidgetProps {
 
 export function TrackingWidget({ initialSessions }: TrackingWidgetProps) {
   const store = useTaskTrackingStore();
-  const [collapsed, setCollapsed] = useState(
-    () => typeof window !== 'undefined' && localStorage.getItem('tracking-widget-collapsed') === 'true',
-  );
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Sync collapsed state from localStorage after hydration to avoid SSR mismatch
+  useEffect(() => {
+    if (localStorage.getItem('tracking-widget-collapsed') === 'true') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCollapsed(true);
+    }
+  }, []);
 
   // Hydrate store with server-fetched sessions on mount
   useEffect(() => {

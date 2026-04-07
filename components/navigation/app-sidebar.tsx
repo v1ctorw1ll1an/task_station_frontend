@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef, startTransition, useCallback } from "react";
+import { useState, useEffect, useRef, startTransition, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import {
@@ -196,10 +196,11 @@ export function AppSidebar({
         });
     }, [userEmail]);
 
-    // ── Apply localStorage order BEFORE first paint (no flash) ────────────────
-    // useLayoutEffect runs synchronously after DOM commit, before browser paint.
-    // localStorage is synchronous, so this is safe and instant.
-    useLayoutEffect(() => {
+    // ── Apply localStorage order after hydration ─────────────────────────────
+    // useEffect (not useLayoutEffect) to avoid hydration mismatch: the server
+    // already applies the order via fetchAndApplySidebarOrder, so divergence
+    // between localStorage and server order would cause Radix ID mismatches.
+    useEffect(() => {
         const cached = readCache(companyId);
         if (!cached) return;
         setOrderedWorkspaces((prev) =>
