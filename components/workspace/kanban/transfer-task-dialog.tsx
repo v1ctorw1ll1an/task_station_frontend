@@ -320,7 +320,7 @@ function Step1({
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecione um projeto" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper">
               {workspaces.map((ws) => (
                 <SelectGroup key={ws.workspaceId}>
                   <SelectLabel>{ws.workspaceName}</SelectLabel>
@@ -344,7 +344,7 @@ function Step1({
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecione uma coluna" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper">
               {columns.map((col) => (
                 <SelectItem key={col.id} value={col.id}>
                   {col.name}
