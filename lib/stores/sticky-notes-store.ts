@@ -3,6 +3,14 @@ import { persist } from 'zustand/middleware';
 
 export type StickyNoteColor = 'yellow' | 'blue' | 'green' | 'pink' | 'purple' | 'gray';
 
+export interface LinkedTask {
+  id: string;
+  title: string;
+  taskNumber: number;
+  projectId: string;
+  workspaceId: string;
+}
+
 export interface StickyNote {
   id: string;
   content: string;
@@ -10,8 +18,10 @@ export interface StickyNote {
   x: number;
   y: number;
   visible: boolean;
+  minimized?: boolean;
   zIndex: number;
   createdAt: string;
+  linkedTasks?: LinkedTask[];
 }
 
 export const NOTE_COLORS: Record<StickyNoteColor, { bg: string; border: string; header: string }> = {
@@ -31,8 +41,11 @@ interface StickyNotesStore {
   updateColor: (id: string, color: StickyNoteColor) => void;
   updatePosition: (id: string, x: number, y: number) => void;
   toggleVisible: (id: string) => void;
+  toggleMinimized: (id: string) => void;
   deleteNote: (id: string) => void;
   bringToFront: (id: string) => void;
+  addLinkedTask: (noteId: string, task: LinkedTask) => void;
+  removeLinkedTask: (noteId: string, taskId: string) => void;
 }
 
 export const useStickyNotesStore = create<StickyNotesStore>()(
@@ -49,17 +62,17 @@ export const useStickyNotesStore = create<StickyNotesStore>()(
         let y = 72;
 
         if (typeof window !== 'undefined') {
-          const baseX = window.innerWidth - 240;
+          const baseX = window.innerWidth - 260;
           const baseY = 72;
 
           if (notes.length === 0) {
-            x = Math.max(8, Math.min(baseX, window.innerWidth - 232));
+            x = Math.max(8, Math.min(baseX, window.innerWidth - 252));
             y = baseY;
           } else {
             const last = [...notes].sort(
               (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
             )[0];
-            x = Math.max(8, Math.min(last.x + 28, window.innerWidth - 232));
+            x = Math.max(8, Math.min(last.x + 28, window.innerWidth - 252));
             y = Math.max(72, Math.min(last.y + 28, window.innerHeight - 200));
           }
         }
@@ -71,8 +84,10 @@ export const useStickyNotesStore = create<StickyNotesStore>()(
           x,
           y,
           visible: true,
+          minimized: false,
           zIndex: newZIndex,
           createdAt: new Date().toISOString(),
+          linkedTasks: [],
         };
 
         set({ notes: [...notes, note], nextZIndex: newZIndex });
@@ -102,6 +117,12 @@ export const useStickyNotesStore = create<StickyNotesStore>()(
         }));
       },
 
+      toggleMinimized(id) {
+        set((state) => ({
+          notes: state.notes.map((n) => (n.id === id ? { ...n, minimized: !n.minimized } : n)),
+        }));
+      },
+
       deleteNote(id) {
         set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
       },
@@ -111,6 +132,27 @@ export const useStickyNotesStore = create<StickyNotesStore>()(
         set((state) => ({
           nextZIndex: newZIndex,
           notes: state.notes.map((n) => (n.id === id ? { ...n, zIndex: newZIndex } : n)),
+        }));
+      },
+
+      addLinkedTask(noteId, task) {
+        set((state) => ({
+          notes: state.notes.map((n) => {
+            if (n.id !== noteId) return n;
+            const existing = n.linkedTasks ?? [];
+            if (existing.some((t) => t.id === task.id)) return n;
+            return { ...n, linkedTasks: [...existing, task] };
+          }),
+        }));
+      },
+
+      removeLinkedTask(noteId, taskId) {
+        set((state) => ({
+          notes: state.notes.map((n) =>
+            n.id === noteId
+              ? { ...n, linkedTasks: (n.linkedTasks ?? []).filter((t) => t.id !== taskId) }
+              : n,
+          ),
         }));
       },
     }),

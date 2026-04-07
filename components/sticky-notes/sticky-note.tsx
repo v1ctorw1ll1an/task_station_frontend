@@ -1,13 +1,7 @@
 'use client';
 
 import { useRef, useCallback, useState } from 'react';
-import { X, MoreHorizontal, Palette } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { X, Palette, Minus, ChevronUp, Trash2 } from 'lucide-react';
 import {
   useStickyNotesStore,
   type StickyNote as StickyNoteType,
@@ -16,16 +10,25 @@ import {
 } from '@/lib/stores/sticky-notes-store';
 
 const COLOR_KEYS = Object.keys(NOTE_COLORS) as StickyNoteColor[];
+const MAX_CHARS = 255;
 
 interface StickyNoteProps {
   note: StickyNoteType;
 }
 
 export function StickyNote({ note }: StickyNoteProps) {
-  const { updateContent, updateColor, updatePosition, toggleVisible, deleteNote, bringToFront } =
-    useStickyNotesStore();
+  const {
+    updateContent,
+    updateColor,
+    updatePosition,
+    toggleVisible,
+    toggleMinimized,
+    deleteNote,
+    bringToFront,
+  } = useStickyNotesStore();
 
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [charCount, setCharCount] = useState(note.content.length);
 
   // Drag state — kept in refs to avoid re-renders during drag
   const isDragging = useRef(false);
@@ -36,6 +39,7 @@ export function StickyNote({ note }: StickyNoteProps) {
   const handleContentChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const value = e.target.value;
+      setCharCount(value.length);
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
         updateContent(note.id, value);
@@ -46,8 +50,7 @@ export function StickyNote({ note }: StickyNoteProps) {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      // Don't drag if clicking buttons inside header
-      if ((e.target as HTMLElement).closest('button, [role="menuitem"]')) return;
+      if ((e.target as HTMLElement).closest('button, [data-radix-popper-content-wrapper]')) return;
 
       e.preventDefault();
       bringToFront(note.id);
@@ -63,22 +66,18 @@ export function StickyNote({ note }: StickyNoteProps) {
 
       function onMouseMove(ev: MouseEvent) {
         if (!isDragging.current) return;
-        const dx = ev.clientX - dragStart.current.mouseX;
-        const dy = ev.clientY - dragStart.current.mouseY;
-        const newX = Math.max(0, dragStart.current.noteX + dx);
-        const newY = Math.max(0, dragStart.current.noteY + dy);
-        noteEl.style.left = `${newX}px`;
-        noteEl.style.top = `${newY}px`;
+        noteEl.style.left = `${Math.max(0, dragStart.current.noteX + ev.clientX - dragStart.current.mouseX)}px`;
+        noteEl.style.top = `${Math.max(0, dragStart.current.noteY + ev.clientY - dragStart.current.mouseY)}px`;
       }
 
       function onMouseUp(ev: MouseEvent) {
         if (!isDragging.current) return;
         isDragging.current = false;
-        const dx = ev.clientX - dragStart.current.mouseX;
-        const dy = ev.clientY - dragStart.current.mouseY;
-        const newX = Math.max(0, dragStart.current.noteX + dx);
-        const newY = Math.max(0, dragStart.current.noteY + dy);
-        updatePosition(note.id, newX, newY);
+        updatePosition(
+          note.id,
+          Math.max(0, dragStart.current.noteX + ev.clientX - dragStart.current.mouseX),
+          Math.max(0, dragStart.current.noteY + ev.clientY - dragStart.current.mouseY),
+        );
         window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', onMouseUp);
       }
@@ -90,44 +89,44 @@ export function StickyNote({ note }: StickyNoteProps) {
   );
 
   const colors = NOTE_COLORS[note.color];
+  const nearLimit = charCount >= MAX_CHARS - 20;
 
   return (
     <div
-      className="fixed select-none shadow-md rounded-lg overflow-hidden flex flex-col"
+      className="fixed select-none shadow-lg rounded-xl overflow-hidden flex flex-col"
       style={{
         left: note.x,
         top: note.y,
         zIndex: note.zIndex,
-        width: 220,
-        minHeight: 180,
+        width: 264,
+        minHeight: note.minimized ? 'auto' : 200,
         backgroundColor: colors.bg,
         border: `1.5px solid ${colors.border}`,
       }}
-      onMouseDown={() => bringToFront(note.id)}
     >
       {/* Header / Drag handle */}
       <div
-        className="flex items-center gap-1 px-2 py-1.5 cursor-grab active:cursor-grabbing shrink-0"
+        className="flex items-center gap-0.5 px-2 py-2 cursor-grab active:cursor-grabbing shrink-0"
         style={{ backgroundColor: colors.header }}
         onMouseDown={handleMouseDown}
       >
-        {/* Color picker toggle */}
+        {/* Color picker */}
         <div className="relative">
           <button
             type="button"
             title="Cor da nota"
-            className="p-0.5 rounded hover:bg-black/10 transition-colors"
+            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-black/10 transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               setShowColorPicker((v) => !v);
             }}
           >
-            <Palette className="h-3.5 w-3.5 text-gray-600" />
+            <Palette className="h-4 w-4 text-gray-600" />
           </button>
 
           {showColorPicker && (
             <div
-              className="absolute top-6 left-0 z-10 flex gap-1 p-1.5 rounded-md shadow-lg border bg-white"
+              className="absolute top-8 left-0 z-10 flex gap-1.5 p-2 rounded-lg shadow-lg border bg-white"
               onClick={(e) => e.stopPropagation()}
             >
               {COLOR_KEYS.map((c) => (
@@ -135,7 +134,7 @@ export function StickyNote({ note }: StickyNoteProps) {
                   key={c}
                   type="button"
                   title={c}
-                  className="h-5 w-5 rounded-full border-2 transition-transform hover:scale-110"
+                  className="h-5 w-5 rounded-full border-2 transition-transform hover:scale-110 active:scale-95"
                   style={{
                     backgroundColor: NOTE_COLORS[c].bg,
                     borderColor: note.color === c ? NOTE_COLORS[c].border : 'transparent',
@@ -151,53 +150,89 @@ export function StickyNote({ note }: StickyNoteProps) {
           )}
         </div>
 
-        {/* Spacer — takes up drag area */}
+        {/* Drag spacer */}
         <div className="flex-1" />
 
-        {/* 3-dot menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="p-0.5 rounded hover:bg-black/10 transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreHorizontal className="h-3.5 w-3.5 text-gray-600" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-36">
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => deleteNote(note.id)}
-            >
-              Excluir nota
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Close (hide) button */}
+        {/* Minimize */}
         <button
           type="button"
-          title="Fechar"
-          className="p-0.5 rounded hover:bg-black/10 transition-colors"
+          title={note.minimized ? 'Expandir' : 'Minimizar'}
+          className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-black/10 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleMinimized(note.id);
+          }}
+        >
+          {note.minimized ? (
+            <ChevronUp className="h-4 w-4 text-gray-600" />
+          ) : (
+            <Minus className="h-4 w-4 text-gray-600" />
+          )}
+        </button>
+
+        {/* Delete */}
+        <button
+          type="button"
+          title="Excluir nota"
+          className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-red-500/20 transition-colors group"
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteNote(note.id);
+          }}
+        >
+          <Trash2 className="h-4 w-4 text-gray-500 group-hover:text-red-600 transition-colors" />
+        </button>
+
+        {/* Close (hide) */}
+        <button
+          type="button"
+          title="Fechar (ocultar)"
+          className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-black/10 transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             toggleVisible(note.id);
           }}
         >
-          <X className="h-3.5 w-3.5 text-gray-600" />
+          <X className="h-4 w-4 text-gray-600" />
         </button>
       </div>
 
-      {/* Content textarea */}
-      <textarea
-        className="flex-1 w-full resize-none p-2 text-sm leading-relaxed outline-none bg-transparent placeholder:text-gray-400"
-        style={{ color: '#1f2937', minHeight: 140 }}
-        placeholder="Escreva uma nota..."
-        defaultValue={note.content}
-        onChange={handleContentChange}
-        onMouseDown={(e) => e.stopPropagation()}
-      />
+      {/* Content area — hidden when minimized */}
+      {!note.minimized && (
+        <>
+          <textarea
+            className="flex-1 w-full resize-none px-3 py-2 text-sm leading-relaxed outline-none bg-transparent placeholder:text-gray-400"
+            style={{ color: '#1f2937', minHeight: 140 }}
+            placeholder="Escreva uma nota..."
+            defaultValue={note.content}
+            maxLength={MAX_CHARS}
+            onChange={handleContentChange}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              bringToFront(note.id);
+            }}
+          />
+
+          {/* Character counter */}
+          <div
+            className="px-3 pb-2 flex justify-end shrink-0"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <span
+              className="text-[10px] tabular-nums"
+              style={{
+                color: nearLimit
+                  ? charCount >= MAX_CHARS
+                    ? '#dc2626'
+                    : '#d97706'
+                  : '#9ca3af',
+              }}
+            >
+              {charCount}/{MAX_CHARS}
+            </span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

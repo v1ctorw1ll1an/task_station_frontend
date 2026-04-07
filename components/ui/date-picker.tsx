@@ -15,6 +15,7 @@ interface DatePickerProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  side?: 'top' | 'bottom' | 'left' | 'right';
 }
 
 export function DatePicker({
@@ -23,6 +24,7 @@ export function DatePicker({
   placeholder = 'Selecionar data',
   className,
   disabled,
+  side,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
 
@@ -79,7 +81,7 @@ export function DatePicker({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0" align="start" side={side}>
         <Calendar
           mode="single"
           selected={selected}

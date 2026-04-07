@@ -72,6 +72,7 @@ import { pauseSessionAction } from '@/actions/task-session/pause-session.action'
 import { resumeSessionAction } from '@/actions/task-session/resume-session.action';
 import { stopSessionAction } from '@/actions/task-session/stop-session.action';
 import { rawToActiveSession } from '@/lib/stores/task-tracking-store';
+import { TaskLinkedNotes } from '@/components/sticky-notes/task-linked-notes';
 
 const FIELD_LABELS: Record<string, string> = {
   title: 'Título',
@@ -971,6 +972,17 @@ export function TaskDetailDialog({
             <div className="border-t pt-4">
               <TaskHistorySection projectId={projectId} taskId={task.id} />
             </div>
+
+            {/* Linked sticky notes */}
+            <div className="border-t pt-4 pb-2">
+              <TaskLinkedNotes
+                taskId={task.id}
+                taskNumber={task.taskNumber}
+                taskTitle={task.title}
+                projectId={projectId}
+                workspaceId={workspaceId}
+              />
+            </div>
           </div>
 
           {/* Right: metadata sidebar */}
@@ -1132,6 +1144,7 @@ export function TaskDetailDialog({
                 value={startDate}
                 onChange={setStartDate}
                 placeholder="Sem data de início"
+                side="top"
               />
             </div>
 
@@ -1141,6 +1154,7 @@ export function TaskDetailDialog({
                 value={dueDate}
                 onChange={setDueDate}
                 placeholder="Sem prazo"
+                side="top"
               />
             </div>
 
