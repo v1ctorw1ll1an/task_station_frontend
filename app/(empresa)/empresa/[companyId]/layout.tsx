@@ -97,13 +97,13 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
         />
       }
       headerLeft={
-        <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+        <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium truncate block">
           Painel da Empresa
         </span>
       }
       headerRight={
         <>
-          <ThemeToggle />
+          <div className="hidden sm:flex"><ThemeToggle /></div>
           <StickyNotesButtonClient />
           <NotificationBellClient token={session.token} />
           <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />

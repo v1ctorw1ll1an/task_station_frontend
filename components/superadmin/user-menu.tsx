@@ -24,11 +24,19 @@ export function UserMenu({ email, hasCompanies = false }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2 text-sm">
-          <span className="text-muted-foreground">
-            <span className="text-foreground font-medium">{email}</span>
+        <Button variant="ghost" size="sm" className="gap-1.5 text-sm shrink-0">
+          {/* Mobile: initial circle */}
+          <span
+            className="md:hidden h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0"
+            aria-hidden
+          >
+            {email[0]?.toUpperCase()}
           </span>
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          {/* Desktop: email with truncation */}
+          <span className="hidden md:block text-foreground font-medium truncate max-w-[160px]">
+            {email}
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">

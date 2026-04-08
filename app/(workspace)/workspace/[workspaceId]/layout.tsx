@@ -114,13 +114,13 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
         />
       }
       headerLeft={
-        <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+        <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium truncate block">
           Painel do Workspace
         </span>
       }
       headerRight={
         <>
-          <ThemeToggle />
+          <div className="hidden sm:flex"><ThemeToggle /></div>
           <StickyNotesButtonClient />
           <NotificationBellClient token={session.token} />
           <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />

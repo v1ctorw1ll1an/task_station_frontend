@@ -31,13 +31,13 @@ export default async function SuperadminLayout({ children }: { children: React.R
       <SidebarShell
         sidebar={<SuperadminSidebar />}
         headerLeft={
-          <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+          <span className="text-xs text-muted-foreground uppercase tracking-wide font-medium truncate block">
             Painel do Superusuário
           </span>
         }
         headerRight={
           <>
-            <ThemeToggle />
+            <div className="hidden sm:flex"><ThemeToggle /></div>
             <StickyNotesButtonClient />
             <UserMenu email={session.user.email} hasCompanies={companies.length > 0} />
           </>
