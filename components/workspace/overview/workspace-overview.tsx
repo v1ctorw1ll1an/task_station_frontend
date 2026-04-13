@@ -44,7 +44,9 @@ export function WorkspaceOverview({ projects, workspaceId }: WorkspaceOverviewPr
             ...col,
             tasks: col.tasks.filter((task) => {
               const matchesSearch =
-                !searchLower || task.title.toLowerCase().includes(searchLower);
+                !searchLower ||
+                task.title.toLowerCase().includes(searchLower) ||
+                (task.taskRef != null && task.taskRef.toLowerCase().includes(searchLower));
               const matchesAssignee =
                 filters.selectedAssignees.length === 0 ||
                 task.assignees.some((a) => filters.selectedAssignees.includes(a.id));

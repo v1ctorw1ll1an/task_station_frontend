@@ -116,7 +116,13 @@ export function KanbanColumnComponent({
     // Global: search
     if (boardFilter.search) {
       const q = boardFilter.search.toLowerCase();
-      tasks = tasks.filter((task) => task.title.toLowerCase().includes(q));
+      tasks = tasks.filter((task) => {
+        if (task.title.toLowerCase().includes(q)) return true;
+        if (task.taskNumber != null) {
+          return `${taskPrefix}-${task.taskNumber}`.toLowerCase().includes(q);
+        }
+        return false;
+      });
     }
 
     // Global: date filter
@@ -140,7 +146,7 @@ export function KanbanColumnComponent({
     tasks = applySort(tasks, effectiveSort);
 
     return tasks;
-  }, [column.tasks, localSort, filterLabelIds, boardFilter]);
+  }, [column.tasks, localSort, filterLabelIds, boardFilter, taskPrefix]);
 
   const hasActiveLocalFilters = localSort.dueDate !== null || localSort.priority !== null || filterLabelIds.length > 0;
 

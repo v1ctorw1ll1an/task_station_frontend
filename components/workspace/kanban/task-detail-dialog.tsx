@@ -4,6 +4,7 @@ import { useEffect, useTransition, useState, useRef, useCallback } from 'react';
 import { TaskAttachmentsSection, IMAGE_MAX_MB, IMAGE_MAX_COUNT } from './task-attachments-section';
 import {
   Check,
+  CheckSquare,
   ChevronDown,
   ChevronUp,
   Clock,
@@ -67,6 +68,13 @@ import type { TaskAttachment } from '@/actions/projeto/get-attachments.action';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useTaskTrackingStore } from '@/lib/stores/task-tracking-store';
+import {
+  getChecklistsAction,
+  type ChecklistItem,
+} from '@/actions/projeto/get-checklists.action';
+import { createChecklistItemAction } from '@/actions/projeto/create-checklist-item.action';
+import { updateChecklistItemAction } from '@/actions/projeto/update-checklist-item.action';
+import { deleteChecklistItemAction } from '@/actions/projeto/delete-checklist-item.action';
 import { startSessionAction } from '@/actions/task-session/start-session.action';
 import { pauseSessionAction } from '@/actions/task-session/pause-session.action';
 import { resumeSessionAction } from '@/actions/task-session/resume-session.action';
@@ -135,6 +143,180 @@ interface TaskDetailDialogProps {
   labels: ProjectLabel[];
   currentUserId: string;
   onClose: () => void;
+}
+
+function TaskChecklistSection({
+  projectId,
+  taskId,
+}: {
+  projectId: string;
+  taskId: string;
+}) {
+  const [items, setItems] = useState<ChecklistItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newTitle, setNewTitle] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const addInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    getChecklistsAction(projectId, taskId).then((data) => {
+      setItems(data);
+      setLoading(false);
+    });
+  }, [projectId, taskId]);
+
+  const total = items.length;
+  const completedCount = items.filter((i) => i.completed).length;
+  const pct = total === 0 ? 0 : Math.round((completedCount / total) * 100);
+
+  function handleToggle(item: ChecklistItem) {
+    const next = !item.completed;
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, completed: next } : i)));
+    void updateChecklistItemAction(projectId, taskId, item.id, { completed: next });
+  }
+
+  function handleDelete(itemId: string) {
+    setItems((prev) => prev.filter((i) => i.id !== itemId));
+    void deleteChecklistItemAction(projectId, taskId, itemId);
+  }
+
+  async function handleAdd() {
+    const title = newTitle.trim();
+    if (!title) return;
+    setIsAdding(true);
+    const result = await createChecklistItemAction(projectId, taskId, title);
+    if (result.item) {
+      setItems((prev) => [...prev, result.item!]);
+      setNewTitle('');
+    }
+    setIsAdding(false);
+    addInputRef.current?.focus();
+  }
+
+  function startEdit(item: ChecklistItem) {
+    setEditingId(item.id);
+    setEditingTitle(item.title);
+  }
+
+  async function commitEdit(item: ChecklistItem) {
+    const title = editingTitle.trim();
+    setEditingId(null);
+    if (!title || title === item.title) return;
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, title } : i)));
+    void updateChecklistItemAction(projectId, taskId, item.id, { title });
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-sm font-medium">
+          <CheckSquare className="h-4 w-4 text-muted-foreground" />
+          Checklist
+          {total > 0 && (
+            <span className="text-xs text-muted-foreground font-normal">
+              {completedCount}/{total}
+            </span>
+          )}
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      {total > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground w-7 text-right shrink-0">{pct}%</span>
+          <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Items */}
+      {loading ? (
+        <p className="text-xs text-muted-foreground">Carregando...</p>
+      ) : (
+        <div className="space-y-0.5">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="group flex items-center gap-2 rounded px-1 py-1 hover:bg-muted/40 transition-colors"
+            >
+              <button
+                type="button"
+                onClick={() => handleToggle(item)}
+                className={`shrink-0 h-4 w-4 rounded border flex items-center justify-center transition-colors cursor-pointer ${
+                  item.completed
+                    ? 'bg-primary border-primary text-primary-foreground'
+                    : 'border-muted-foreground/40 hover:border-primary'
+                }`}
+              >
+                {item.completed && <Check className="h-2.5 w-2.5" />}
+              </button>
+
+              {editingId === item.id ? (
+                <input
+                  autoFocus
+                  type="text"
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onBlur={() => commitEdit(item)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitEdit(item);
+                    if (e.key === 'Escape') setEditingId(null);
+                  }}
+                  className="flex-1 text-sm bg-transparent border-b border-input focus:outline-none focus:border-primary"
+                />
+              ) : (
+                <span
+                  onDoubleClick={() => startEdit(item)}
+                  className={`flex-1 text-sm cursor-default select-none ${
+                    item.completed ? 'line-through text-muted-foreground' : ''
+                  }`}
+                >
+                  {item.title}
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={() => handleDelete(item.id)}
+                className="shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add item input */}
+      <div className="flex items-center gap-2 mt-1">
+        <input
+          ref={addInputRef}
+          type="text"
+          placeholder="Adicionar item..."
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void handleAdd();
+          }}
+          className="flex-1 rounded-md border bg-background px-2.5 py-1 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        <button
+          type="button"
+          onClick={() => void handleAdd()}
+          disabled={!newTitle.trim() || isAdding}
+          className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+        >
+          {isAdding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Adicionar'}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function TaskHistorySection({
@@ -955,6 +1137,11 @@ export function TaskDetailDialog({
                 pendingAttachment={pendingAttachment}
                 onPendingAttachmentConsumed={() => setPendingAttachment(null)}
               />
+            </div>
+
+            {/* Checklist */}
+            <div className="border-t pt-4">
+              <TaskChecklistSection projectId={projectId} taskId={task.id} />
             </div>
 
             {/* Comments */}
