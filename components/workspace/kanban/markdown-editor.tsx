@@ -280,9 +280,9 @@ export function MarkdownEditor({
             <div
               role="button"
               tabIndex={0}
-              onClick={enterEdit}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); enterEdit(); } }}
-              className={`cursor-text rounded-md px-3 py-2 hover:bg-muted/30 transition-colors overflow-hidden${previewExpanded ? '' : ' max-h-[7.5rem]'}`}
+              onDoubleClick={enterEdit}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); enterEdit(); } }}
+              className={`cursor-default select-text rounded-md px-3 py-2 hover:bg-muted/30 transition-colors overflow-hidden${previewExpanded ? '' : ' max-h-[7.5rem]'}`}
             >
               <MarkdownDisplay content={value} />
             </div>
@@ -305,14 +305,15 @@ export function MarkdownEditor({
       <div
         role="button"
         tabIndex={0}
-        onClick={enterEdit}
+        onClick={value ? undefined : enterEdit}
+        onDoubleClick={value ? enterEdit : undefined}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === 'Enter') {
             e.preventDefault();
             enterEdit();
           }
         }}
-        className="cursor-text min-h-[5rem] rounded-md px-3 py-2 hover:bg-muted/30 transition-colors"
+        className={`min-h-[5rem] rounded-md px-3 py-2 hover:bg-muted/30 transition-colors${value ? ' cursor-default select-text' : ' cursor-text'}`}
       >
         {value ? (
           <MarkdownDisplay content={value} />
