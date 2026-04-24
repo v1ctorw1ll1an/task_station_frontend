@@ -6,6 +6,7 @@ import { UserMenu } from '@/components/superadmin/user-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationSocketProvider } from '@/components/notifications/notification-socket-provider';
 import { StickyNotesButtonClient, StickyNotesManagerClient } from '@/components/sticky-notes/sticky-notes-client';
+import { fetchStickyNotesAction } from '@/actions/sticky-notes/fetch-sticky-notes.action';
 
 export default async function SuperadminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -24,6 +25,7 @@ export default async function SuperadminLayout({ children }: { children: React.R
     cache: 'no-store',
   });
   const companies: unknown[] = res.ok ? await res.json() : [];
+  const initialNotes = await fetchStickyNotesAction();
 
   return (
     <>
@@ -44,7 +46,7 @@ export default async function SuperadminLayout({ children }: { children: React.R
         }
       >
         {children}
-        <StickyNotesManagerClient />
+        <StickyNotesManagerClient initialNotes={initialNotes} />
       </SidebarShell>
     </>
   );
