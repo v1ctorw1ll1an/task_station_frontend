@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   description: "Plataforma de gestão de projetos Kanban com hierarquia multi-tenant.",
   icons: {
     icon: [
-      { url: '/taskDY/icon-only-32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/taskDY/icon-only-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/taskDY/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/taskDY/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
     ],
     apple: '/taskDY/apple-touch-icon.png',
   },
