@@ -6,8 +6,8 @@ import { usePathname, useParams } from "next/navigation";
 import {
     Activity,
     Home,
-    LayoutGrid,
     Megaphone,
+    Settings,
     Users,
     PanelLeftClose,
     PanelLeftOpen,
@@ -576,21 +576,6 @@ export function AppSidebar({
                     {!collapsed && <span>Atividades</span>}
                 </Link>
 
-                <Link
-                    href={`/empresa/${companyId}/workspaces`}
-                    onClick={handleNavigate}
-                    className={cn(
-                        "flex items-center py-1.5 rounded-md text-sm transition-colors",
-                        collapsed ? "justify-center px-0 mx-1" : "gap-2.5 px-2",
-                        pathname === `/empresa/${companyId}/workspaces`
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                    )}
-                >
-                    <LayoutGrid className="h-4 w-4 shrink-0" />
-                    {!collapsed && <span>Workspaces</span>}
-                </Link>
-
                 {isCompanyAdmin && (
                     <Link
                         href={`/empresa/${companyId}/membros`}
@@ -659,11 +644,26 @@ export function AppSidebar({
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                                 Workspaces
                             </span>
-                            {isCompanyAdmin && (
-                                <CreateWorkspaceInlineTrigger
-                                    companyId={companyId}
-                                />
-                            )}
+                            <div className="flex items-center gap-0.5">
+                                {isCompanyAdmin && (
+                                    <CreateWorkspaceInlineTrigger
+                                        companyId={companyId}
+                                    />
+                                )}
+                                <Link
+                                    href={`/empresa/${companyId}/workspaces`}
+                                    onClick={handleNavigate}
+                                    title="Gerenciar workspaces"
+                                    className={cn(
+                                        "p-0.5 rounded transition-colors",
+                                        pathname === `/empresa/${companyId}/workspaces`
+                                            ? "bg-accent text-foreground"
+                                            : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                                    )}
+                                >
+                                    <Settings className="h-3.5 w-3.5" />
+                                </Link>
+                            </div>
                         </div>
 
                         {orderedWorkspaces.length === 0 ? (
