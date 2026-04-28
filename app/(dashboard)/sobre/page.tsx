@@ -3,7 +3,7 @@ import { ArrowLeft, Sparkles, Wrench, FileText, Tag } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-const APP_VERSION = "0.1.0-alpha.8";
+const APP_VERSION = "0.1.0-alpha.9";
 
 type ChangeType = "feat" | "fix" | "chore";
 
@@ -19,6 +19,48 @@ interface Release {
 }
 
 const releases: Release[] = [
+    {
+        version: "0.1.0-alpha.9",
+        date: "2026-04-28",
+        changes: [
+            {
+                type: "feat",
+                text: "Sticky notes — criar, editar, colorir e excluir notas adesivas no workspace; seção de notas vinculadas a tasks no dialog de detalhes",
+            },
+            {
+                type: "feat",
+                text: "Checklists em tasks — criar, editar, reordenar e excluir itens de checklist com barra de progresso no dialog de detalhes",
+            },
+            {
+                type: "feat",
+                text: "Markdown editor — entrar em modo de edição com duplo clique ou pressionar qualquer tecla; sair com Escape",
+            },
+            {
+                type: "feat",
+                text: "Agenda estilo Google Calendar — aba \"Atividades\" renomeada para \"Agenda\" com views Hoje, Esta Semana, Este Mês e Este Ano; destaque visual no dia atual (círculo azul); popover de tarefas ao clicar em um dia nas views de mês e ano; navegação temporal com setas e botão \"Hoje\"",
+            },
+            {
+                type: "feat",
+                text: "DatePicker personalizado — campo de data nativo substituído por picker consistente com o design system em todas as telas",
+            },
+            {
+                type: "fix",
+                text: "Hydration mismatch eliminado no sidebar e widget de rastreamento de tempo — componentes SSR/client alinhados corretamente",
+            },
+            {
+                type: "fix",
+                text: "Favicon corrigido — arquivo multi-tamanho (16×16, 32×32, ICO) exibido corretamente na aba do navegador",
+            },
+            {
+                type: "chore",
+                text: "Tabela de workspaces — ações condensadas em menu dropdown de 3 pontos no mobile; descrições longas truncadas com tooltip no desktop",
+            },
+            {
+                type: "chore",
+                text: "Sidebar — link duplicado \"Workspaces\" removido; acesso à lista de workspaces movido para ícone de engrenagem no cabeçalho da seção",
+            },
+        ],
+    },
     {
         version: "0.1.0-alpha.8",
         date: "2026-04-07",
