@@ -1,11 +1,8 @@
 import { redirect } from 'next/navigation';
+import { format } from 'date-fns';
 import { getSession } from '@/lib/auth';
 import { getMyTasksAction } from '@/actions/me/get-my-tasks.action';
-import { getNotificationsAction } from '@/actions/notificacao/get-notifications.action';
-import { getProfileAction } from '@/actions/perfil/get-profile.action';
-import { HomeGreeting } from '@/components/home/home-greeting';
-import { TasksDueSoon } from '@/components/home/tasks-due-soon';
-import { NotificationFeed } from '@/components/home/notification-feed';
+import { Agenda } from '@/components/home/agenda/agenda';
 
 interface PageProps {
   params: Promise<{ companyId: string }>;
@@ -16,30 +13,8 @@ export default async function InicioPage({ params }: PageProps) {
   const session = await getSession();
   if (!session) redirect('/login');
 
-  const [tasksResult, notificationsResult, profileResult] = await Promise.all([
-    getMyTasksAction(companyId, 1, 10, 'today'),
-    getNotificationsAction(1, 10),
-    getProfileAction(),
-  ]);
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const tasksResult = await getMyTasksAction(companyId, 1, 50, 'custom', today, today);
 
-  const userName = profileResult.data?.name ?? 'Usuário';
-
-  return (
-    <div className="space-y-6">
-      <HomeGreeting userName={userName} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <TasksDueSoon
-            companyId={companyId}
-            initialData={tasksResult.data}
-            initialTotal={tasksResult.total}
-          />
-        </div>
-        <div>
-          <NotificationFeed initialData={notificationsResult.data ?? []} />
-        </div>
-      </div>
-    </div>
-  );
+  return <Agenda companyId={companyId} initialTasks={tasksResult.data} />;
 }

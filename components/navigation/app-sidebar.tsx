@@ -573,7 +573,7 @@ export function AppSidebar({
                     )}
                 >
                     <Home className="h-4 w-4 shrink-0" />
-                    {!collapsed && <span>Atividades</span>}
+                    {!collapsed && <span>Agenda</span>}
                 </Link>
 
                 {isCompanyAdmin && (
