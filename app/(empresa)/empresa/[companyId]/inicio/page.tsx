@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { format } from 'date-fns';
 import { getSession } from '@/lib/auth';
 import { getMyTasksAction } from '@/actions/me/get-my-tasks.action';
+import { listMyEventsAction } from '@/actions/eventos/list-my-events.action';
 import { Agenda } from '@/components/home/agenda/agenda';
 
 interface PageProps {
@@ -14,7 +15,16 @@ export default async function InicioPage({ params }: PageProps) {
   if (!session) redirect('/login');
 
   const today = format(new Date(), 'yyyy-MM-dd');
-  const tasksResult = await getMyTasksAction(companyId, 1, 50, 'custom', today, today);
+  const [tasksResult, eventsResult] = await Promise.all([
+    getMyTasksAction(companyId, 1, 50, 'custom', today, today),
+    listMyEventsAction(today, today, companyId),
+  ]);
 
-  return <Agenda companyId={companyId} initialTasks={tasksResult.data} />;
+  return (
+    <Agenda
+      companyId={companyId}
+      initialTasks={tasksResult.data}
+      initialEvents={eventsResult.data}
+    />
+  );
 }

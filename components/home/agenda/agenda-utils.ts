@@ -6,7 +6,9 @@ import {
   startOfYear,
   endOfYear,
 } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import type { TaskDueCardData } from '../task-due-card';
+import type { CalendarEventOccurrence } from '@/lib/event-types';
 
 export type AgendaView = 'day' | 'week' | 'month' | 'year';
 
@@ -55,6 +57,27 @@ export function groupTasksByDay(tasks: TaskDueCardData[]): Map<string, TaskDueCa
     const key = t.dueDate.split('T')[0];
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(t);
+  }
+  return map;
+}
+
+export function groupEventsByDay(
+  events: CalendarEventOccurrence[],
+): Map<string, CalendarEventOccurrence[]> {
+  const map = new Map<string, CalendarEventOccurrence[]>();
+  for (const ev of events) {
+    // Agrupa pelo dia no TZ do evento — assim um evento agendado às 23h BRT
+    // aparece no dia correto na UI mesmo para usuários em outro timezone.
+    const key = formatInTimeZone(new Date(ev.startsAt), ev.timezone, 'yyyy-MM-dd');
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(ev);
+  }
+  // Ordena por horário dentro de cada dia (all-day primeiro, depois timed)
+  for (const list of map.values()) {
+    list.sort((a, b) => {
+      if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+      return a.startsAt.localeCompare(b.startsAt);
+    });
   }
   return map;
 }

@@ -13,7 +13,8 @@ import {
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { TaskDueCardData } from '../task-due-card';
-import { dayKey, groupTasksByDay } from './agenda-utils';
+import type { CalendarEventOccurrence } from '@/lib/event-types';
+import { dayKey, groupEventsByDay, groupTasksByDay } from './agenda-utils';
 import { DayTasksPopover } from './day-tasks-popover';
 
 const WEEK_OPTS = { weekStartsOn: 0 as const };
@@ -22,10 +23,14 @@ const WEEKDAY_INITIALS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 interface AgendaYearProps {
   anchor: Date;
   tasks: TaskDueCardData[];
+  events: CalendarEventOccurrence[];
+  companyId: string;
+  onCreateAt?: (date: Date) => void;
 }
 
-export function AgendaYear({ anchor, tasks }: AgendaYearProps) {
-  const grouped = groupTasksByDay(tasks);
+export function AgendaYear({ anchor, tasks, events, companyId, onCreateAt }: AgendaYearProps) {
+  const groupedTasks = groupTasksByDay(tasks);
+  const groupedEvents = groupEventsByDay(events);
   const year = anchor.getFullYear();
 
   const months = Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
@@ -52,23 +57,49 @@ export function AgendaYear({ anchor, tasks }: AgendaYearProps) {
               {days.map((day) => {
                 const inMonth = isSameMonth(day, month);
                 const today = isToday(day);
-                const tasksOfDay = grouped.get(dayKey(day)) ?? [];
+                const k = dayKey(day);
+                const tasksOfDay = groupedTasks.get(k) ?? [];
+                const eventsOfDay = groupedEvents.get(k) ?? [];
                 const hasTasks = tasksOfDay.length > 0;
+                const hasEvents = eventsOfDay.length > 0;
+                const hasItems = hasTasks || hasEvents;
+                const eventColor = hasEvents ? eventsOfDay[0].color ?? '#6366f1' : null;
 
                 return (
-                  <DayTasksPopover key={day.toISOString()} date={day} tasks={tasksOfDay}>
+                  <DayTasksPopover
+                    key={day.toISOString()}
+                    date={day}
+                    tasks={tasksOfDay}
+                    events={eventsOfDay}
+                    companyId={companyId}
+                  >
                     <button
                       type="button"
+                      onDoubleClick={() => onCreateAt?.(day)}
                       className={cn(
                         'relative aspect-square text-[11px] rounded-full flex items-center justify-center hover:bg-accent transition-colors',
                         !inMonth && 'text-muted-foreground/40',
-                        inMonth && hasTasks && 'font-semibold',
+                        inMonth && hasItems && 'font-semibold',
                         today && 'bg-primary text-primary-foreground hover:bg-primary/90',
                       )}
                     >
                       {format(day, 'd')}
-                      {inMonth && hasTasks && !today && (
-                        <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary" />
+                      {inMonth && hasItems && !today && (
+                        <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex items-center gap-0.5">
+                          {hasTasks && (
+                            <span
+                              className="h-1 w-1 rounded-full bg-primary"
+                              title="Task"
+                            />
+                          )}
+                          {hasEvents && (
+                            <span
+                              className="h-1 w-1 rounded-full"
+                              style={{ backgroundColor: eventColor ?? '#6366f1' }}
+                              title="Evento"
+                            />
+                          )}
+                        </span>
                       )}
                     </button>
                   </DayTasksPopover>
