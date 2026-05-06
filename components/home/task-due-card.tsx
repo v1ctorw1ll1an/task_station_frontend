@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ICON_MAP } from '@/lib/icons/project-icons';
+import { usePrivacyStore } from '@/lib/stores/privacy-store';
 
 const PRIORITY_BORDER: Record<string, string> = {
   urgent: 'border-l-red-500',
@@ -57,20 +58,21 @@ export interface TaskDueCardData {
 
 interface TaskDueCardProps {
   task: TaskDueCardData;
+  onTaskClick?: (task: TaskDueCardData) => void;
 }
 
-export function TaskDueCard({ task }: TaskDueCardProps) {
+export function TaskDueCard({ task, onTaskClick }: TaskDueCardProps) {
+  const isPrivacyMode = usePrivacyStore((s) => s.isPrivacyMode);
   const IconComponent = task.project.icon
     ? (ICON_MAP as Record<string, React.ComponentType<{ className?: string }>>)[task.project.icon]
     : null;
   const taskUrl = `/workspace/${task.project.workspace.id}/projetos/${task.project.id}?task=${task.id}`;
   const due = task.dueDate ? relativeDueDate(task.dueDate) : null;
 
-  return (
-    <Link
-      href={taskUrl}
-      className={`block rounded-lg border border-l-4 ${PRIORITY_BORDER[task.priority] ?? 'border-l-slate-300'} bg-card p-3 hover:bg-accent/50 transition-colors`}
-    >
+  const cardClass = `block rounded-lg border border-l-4 ${PRIORITY_BORDER[task.priority] ?? 'border-l-slate-300'} bg-card p-3 hover:bg-accent/50 transition-colors`;
+
+  const content = (
+    <>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -85,7 +87,7 @@ export function TaskDueCard({ task }: TaskDueCardProps) {
               {PRIORITY_LABELS[task.priority] ?? task.priority}
             </span>
           </div>
-          <p className="text-sm font-medium truncate">{task.title}</p>
+          <p className={`text-sm font-medium truncate${isPrivacyMode ? ' blur-sm select-none' : ''}`}>{task.title}</p>
         </div>
         {due && (
           <span
@@ -97,7 +99,6 @@ export function TaskDueCard({ task }: TaskDueCardProps) {
       </div>
 
       <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-        {/* Column badge */}
         <span
           className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 border text-[11px]"
           style={
@@ -119,17 +120,27 @@ export function TaskDueCard({ task }: TaskDueCardProps) {
           {task.column.name}
         </span>
 
-        {/* Project */}
         <span className="inline-flex items-center gap-1 truncate">
-          {IconComponent && (
-            <IconComponent className="h-3 w-3 shrink-0" />
-          )}
+          {IconComponent && <IconComponent className="h-3 w-3 shrink-0" />}
           {task.project.name}
         </span>
 
-        {/* Workspace */}
         <span className="hidden sm:inline truncate">{task.project.workspace.name}</span>
       </div>
+    </>
+  );
+
+  if (onTaskClick) {
+    return (
+      <button type="button" onClick={() => onTaskClick(task)} className={`${cardClass} w-full text-left`}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link href={taskUrl} className={cardClass}>
+      {content}
     </Link>
   );
 }

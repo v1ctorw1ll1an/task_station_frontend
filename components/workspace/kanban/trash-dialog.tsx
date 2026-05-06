@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { getDeletedTasksAction, type DeletedTask } from '@/actions/projeto/get-deleted-tasks.action';
 import { restoreTaskAction } from '@/actions/projeto/restore-task.action';
 import { useRouter } from 'next/navigation';
+import { usePrivacyStore } from '@/lib/stores/privacy-store';
 
 const PRIORITY_LABELS: Record<DeletedTask['priority'], string> = {
   low: 'Baixa',
@@ -36,6 +37,7 @@ interface TrashDialogProps {
 
 export function TrashDialog({ projectId, workspaceId }: TrashDialogProps) {
   const router = useRouter();
+  const isPrivacyMode = usePrivacyStore((s) => s.isPrivacyMode);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<DeletedTask[]>([]);
@@ -132,7 +134,7 @@ export function TrashDialog({ projectId, workspaceId }: TrashDialogProps) {
                 <li key={task.id} className="py-3 px-1 flex items-start gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium truncate">{task.title}</span>
+                      <span className={`text-sm font-medium truncate${isPrivacyMode ? ' blur-sm select-none' : ''}`}>{task.title}</span>
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0 ${PRIORITY_CLASSES[task.priority]}`}
                       >

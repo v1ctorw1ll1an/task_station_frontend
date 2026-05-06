@@ -16,7 +16,7 @@ export default async function InicioPage({ params }: PageProps) {
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const [tasksResult, eventsResult] = await Promise.all([
-    getMyTasksAction(companyId, 1, 50, 'custom', today, today),
+    getMyTasksAction(companyId, 1, 50, 'custom', undefined, undefined, today, today),
     listMyEventsAction(today, today, companyId),
   ]);
 
@@ -25,6 +25,7 @@ export default async function InicioPage({ params }: PageProps) {
       companyId={companyId}
       initialTasks={tasksResult.data}
       initialEvents={eventsResult.data}
+      currentUserId={session.user.id}
     />
   );
 }

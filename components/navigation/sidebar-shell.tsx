@@ -1,8 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState } from 'react';
-import { Menu } from 'lucide-react';
+import { Eye, EyeOff, Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { usePrivacyStore } from '@/lib/stores/privacy-store';
 
 const MobileNavContext = createContext<{ close: () => void; isDrawer: boolean } | null>(null);
 
@@ -27,6 +28,7 @@ export function SidebarShell({
   variant = 'min-height',
 }: SidebarShellProps) {
   const [open, setOpen] = useState(false);
+  const { isPrivacyMode, togglePrivacyMode } = usePrivacyStore();
 
   const isFullHeight = variant === 'full-height';
 
@@ -68,6 +70,14 @@ export function SidebarShell({
             <div className="min-w-0 truncate">{headerLeft}</div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <button
+              onClick={togglePrivacyMode}
+              className="h-8 w-8 flex shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              aria-label={isPrivacyMode ? 'Mostrar títulos' : 'Ocultar títulos'}
+              title={isPrivacyMode ? 'Mostrar títulos das tasks' : 'Ocultar títulos das tasks'}
+            >
+              {isPrivacyMode ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
             {headerRight}
           </div>
         </header>

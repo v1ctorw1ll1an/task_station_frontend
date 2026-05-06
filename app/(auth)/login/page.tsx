@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import { getSession } from "@/lib/auth";
 import {
     Card,
@@ -25,7 +26,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <Card className="w-full max-w-sm">
             <CardHeader>
                 <CardTitle className="flex items-center gap-3">
-                    <img
+                    <Image
                         src="/taskDY/taskDY.png"
                         alt="TaskDY"
                         width={28}

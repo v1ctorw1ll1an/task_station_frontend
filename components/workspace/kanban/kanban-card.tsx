@@ -14,6 +14,7 @@ import {
 import { TransferTaskDialog } from './transfer-task-dialog';
 import { useKanbanStore } from '@/lib/stores/kanban-store';
 import { useTaskTrackingStore } from '@/lib/stores/task-tracking-store';
+import { usePrivacyStore } from '@/lib/stores/privacy-store';
 
 export interface KanbanTaskLabel {
   label: { id: string; name: string; color: string };
@@ -125,6 +126,7 @@ export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false, c
   const isRunning = useTaskTrackingStore((s) =>
     s.sessions.some((sess) => sess.taskId === task.id && sess.userId === currentUserId && sess.status === 'running'),
   );
+  const isPrivacyMode = usePrivacyStore((s) => s.isPrivacyMode);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -160,7 +162,7 @@ export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false, c
           {taskPrefix}-{task.taskNumber}
         </span>
       )}
-      <p className={`text-sm font-medium leading-snug ${columnIsDone ? 'line-through text-muted-foreground' : ''}`}>{task.title}</p>
+      <p className={`text-sm font-medium leading-snug ${columnIsDone ? 'line-through text-muted-foreground' : ''} ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{task.title}</p>
 
       {task.taskLabels.length > 0 && (
         <div className="flex flex-wrap gap-1">

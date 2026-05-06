@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft, Sparkles, Wrench, FileText, Tag } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -350,9 +351,11 @@ export default function SobrePage() {
             <div className="max-w-2xl mx-auto px-4 py-10 space-y-10">
                 {/* Hero */}
                 <div className="flex flex-col items-center text-center gap-4">
-                    <img
+                    <Image
                         src="/taskDY/taskDY.png"
                         alt="TaskDY"
+                        width={80}
+                        height={80}
                         className="h-20 w-auto"
                     />
                     <div className="space-y-1">

@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { TaskDueCardData } from '../task-due-card';
 import type { CalendarEventOccurrence } from '@/lib/event-types';
-import { dayKey, groupEventsByDay, groupTasksByDay } from './agenda-utils';
+import { dayKey, groupEventsByDay, groupTasksByDay, type TaskDateField } from './agenda-utils';
 import { EventCard } from './event-card';
 import { EditEventDialog } from './edit-event-dialog';
 
@@ -24,15 +24,17 @@ interface AgendaWeekProps {
   events: CalendarEventOccurrence[];
   companyId: string;
   onCreateAt?: (date: Date) => void;
+  dateField?: TaskDateField;
+  onTaskClick?: (task: TaskDueCardData) => void;
 }
 
-export function AgendaWeek({ anchor, tasks, events, companyId, onCreateAt }: AgendaWeekProps) {
+export function AgendaWeek({ anchor, tasks, events, companyId, onCreateAt, dateField = 'dueDate', onTaskClick }: AgendaWeekProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventOccurrence | null>(null);
   const days = eachDayOfInterval({
     start: startOfWeek(anchor, { weekStartsOn: 0 }),
     end: endOfWeek(anchor, { weekStartsOn: 0 }),
   });
-  const groupedTasks = groupTasksByDay(tasks);
+  const groupedTasks = groupTasksByDay(tasks, dateField);
   const groupedEvents = groupEventsByDay(events);
 
   return (
@@ -73,19 +75,32 @@ export function AgendaWeek({ anchor, tasks, events, companyId, onCreateAt }: Age
                     onClick={() => setSelectedEvent(ev)}
                   />
                 ))}
-                {tasksOfDay.map((t) => (
-                  <Link
-                    key={t.id}
-                    href={`/workspace/${t.project.workspace.id}/projetos/${t.project.id}?task=${t.id}`}
-                    title={t.title}
-                    className={cn(
-                      'block rounded border-l-2 bg-muted/40 hover:bg-accent/60 transition-colors px-1.5 py-1 text-xs truncate',
-                      PRIORITY_BORDER[t.priority] ?? 'border-l-slate-300',
-                    )}
-                  >
-                    {t.title}
-                  </Link>
-                ))}
+                {tasksOfDay.map((t) => {
+                  const cls = cn(
+                    'block w-full text-left rounded border-l-2 bg-muted/40 hover:bg-accent/60 transition-colors px-1.5 py-1 text-xs truncate',
+                    PRIORITY_BORDER[t.priority] ?? 'border-l-slate-300',
+                  );
+                  return onTaskClick ? (
+                    <button
+                      key={t.id}
+                      type="button"
+                      title={t.title}
+                      onClick={() => onTaskClick(t)}
+                      className={cls}
+                    >
+                      {t.title}
+                    </button>
+                  ) : (
+                    <Link
+                      key={t.id}
+                      href={`/workspace/${t.project.workspace.id}/projetos/${t.project.id}?task=${t.id}`}
+                      title={t.title}
+                      className={cls}
+                    >
+                      {t.title}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           );

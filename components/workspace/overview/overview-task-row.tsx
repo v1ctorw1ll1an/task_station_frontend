@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { OverviewTask, OverviewColumn } from '@/actions/workspace/get-workspace-overview.action';
+import { usePrivacyStore } from '@/lib/stores/privacy-store';
 
 const PRIORITY_CLASSES = {
   low: 'text-slate-500 bg-slate-100 border border-slate-200 dark:text-slate-400 dark:bg-slate-800 dark:border-slate-700',
@@ -78,6 +79,7 @@ interface OverviewTaskRowProps {
 }
 
 export function OverviewTaskRow({ task, column, projectId, workspaceId }: OverviewTaskRowProps) {
+  const isPrivacyMode = usePrivacyStore((s) => s.isPrivacyMode);
   const dueDateLabel = task.dueDate ? relativeDueDate(task.dueDate) : null;
   const activityLabel = !task.dueDate ? relativeActivity(task.updatedAt) : null;
   const taskUrl = `/workspace/${workspaceId}/projetos/${projectId}?task=${task.id}`;
@@ -96,7 +98,7 @@ export function OverviewTaskRow({ task, column, projectId, workspaceId }: Overvi
       {/* Título */}
       <Link
         href={taskUrl}
-        className="flex-1 min-w-0 truncate text-foreground hover:text-primary transition-colors"
+        className={`flex-1 min-w-0 truncate text-foreground hover:text-primary transition-colors${isPrivacyMode ? ' blur-sm select-none' : ''}`}
         title={task.title}
       >
         {task.title}

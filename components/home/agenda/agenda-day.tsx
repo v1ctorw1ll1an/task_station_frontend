@@ -10,9 +10,10 @@ interface AgendaDayProps {
   tasks: TaskDueCardData[];
   events: CalendarEventOccurrence[];
   companyId: string;
+  onTaskClick?: (task: TaskDueCardData) => void;
 }
 
-export function AgendaDay({ tasks, events, companyId }: AgendaDayProps) {
+export function AgendaDay({ tasks, events, companyId, onTaskClick }: AgendaDayProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventOccurrence | null>(null);
 
   if (tasks.length === 0 && events.length === 0) {
@@ -36,7 +37,7 @@ export function AgendaDay({ tasks, events, companyId }: AgendaDayProps) {
           <EventCard key={ev.occurrenceKey} event={ev} onClick={() => setSelectedEvent(ev)} />
         ))}
         {tasks.map((t) => (
-          <TaskDueCard key={t.id} task={t} />
+          <TaskDueCard key={t.id} task={t} onTaskClick={onTaskClick} />
         ))}
       </div>
 

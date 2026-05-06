@@ -7,6 +7,7 @@ import { Bell, AtSign, UserCheck, MessageSquare, Pencil, Megaphone, X, ChevronRi
 import type { AppNotification } from '@/lib/stores/notification-store';
 import { cn } from '@/lib/utils';
 import { ICON_MAP, DEFAULT_ICON } from '@/lib/icons/project-icons';
+import { usePrivacyStore } from '@/lib/stores/privacy-store';
 
 const TYPE_CONFIG: Record<string, { icon: React.ElementType; bg: string; color: string }> = {
   ADMIN_BROADCAST: { icon: Megaphone,     bg: 'bg-blue-100 dark:bg-blue-900/40',     color: 'text-blue-600 dark:text-blue-400' },
@@ -31,6 +32,7 @@ interface NotificationItemProps {
 
 export function NotificationItem({ notification: n, onRead, onDelete, onClose, onOpenBroadcast }: NotificationItemProps) {
   const router = useRouter();
+  const isPrivacyMode = usePrivacyStore((s) => s.isPrivacyMode);
   const config = TYPE_CONFIG[n.type] ?? { icon: Bell, bg: 'bg-muted', color: 'text-muted-foreground' };
   const Icon = config.icon;
 
@@ -93,7 +95,7 @@ export function NotificationItem({ notification: n, onRead, onDelete, onClose, o
               </>
             )}
             {n.task && (
-              <span className="truncate max-w-[120px]">{n.task.title}</span>
+              <span className={`truncate max-w-[120px]${isPrivacyMode ? ' blur-sm select-none' : ''}`}>{n.task.title}</span>
             )}
           </div>
         )}

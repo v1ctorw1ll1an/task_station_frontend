@@ -9,6 +9,9 @@ export async function getMyTasksAction(
   filter?: string,
   dueDateFrom?: string,
   dueDateTo?: string,
+  createdAtFrom?: string,
+  createdAtTo?: string,
+  dateMode?: string,
 ) {
   const session = await getSession();
   if (!session) return { data: [], total: 0, page, limit };
@@ -21,6 +24,9 @@ export async function getMyTasksAction(
   if (filter) params.set('filter', filter);
   if (dueDateFrom) params.set('dueDateFrom', dueDateFrom);
   if (dueDateTo) params.set('dueDateTo', dueDateTo);
+  if (createdAtFrom) params.set('createdAtFrom', createdAtFrom);
+  if (createdAtTo) params.set('createdAtTo', createdAtTo);
+  if (dateMode) params.set('dateMode', dateMode);
 
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/api/v1/me/tasks?${params}`,

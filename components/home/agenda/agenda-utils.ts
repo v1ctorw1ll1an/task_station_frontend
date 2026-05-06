@@ -50,11 +50,22 @@ export function dayKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function groupTasksByDay(tasks: TaskDueCardData[]): Map<string, TaskDueCardData[]> {
+export type TaskDateField = 'dueDate' | 'createdAt' | 'both';
+
+export function groupTasksByDay(
+  tasks: TaskDueCardData[],
+  dateField: TaskDateField = 'createdAt',
+): Map<string, TaskDueCardData[]> {
   const map = new Map<string, TaskDueCardData[]>();
   for (const t of tasks) {
-    if (!t.dueDate) continue;
-    const key = t.dueDate.split('T')[0];
+    const raw =
+      dateField === 'createdAt'
+        ? t.createdAt
+        : dateField === 'dueDate'
+          ? t.dueDate
+          : (t.dueDate ?? t.createdAt);
+    if (!raw) continue;
+    const key = raw.split('T')[0];
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(t);
   }

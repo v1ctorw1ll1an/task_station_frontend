@@ -5,12 +5,12 @@ import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import {
     Activity,
-    Home,
     Megaphone,
     Settings,
     Users,
     PanelLeftClose,
     PanelLeftOpen,
+    CalendarDays,
 } from "lucide-react";
 import {
     DndContext,
@@ -572,7 +572,7 @@ export function AppSidebar({
                             : "text-muted-foreground hover:bg-accent hover:text-foreground",
                     )}
                 >
-                    <Home className="h-4 w-4 shrink-0" />
+                    <CalendarDays className="h-4 w-4 shrink-0" />
                     {!collapsed && <span>Agenda</span>}
                 </Link>
 

@@ -15,6 +15,7 @@ interface DayTasksPopoverProps {
   events?: CalendarEventOccurrence[];
   companyId?: string;
   children: React.ReactNode;
+  onTaskClick?: (task: TaskDueCardData) => void;
 }
 
 export function DayTasksPopover({
@@ -23,6 +24,7 @@ export function DayTasksPopover({
   events = [],
   companyId,
   children,
+  onTaskClick,
 }: DayTasksPopoverProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventOccurrence | null>(null);
 
@@ -57,7 +59,7 @@ export function DayTasksPopover({
                   />
                 ))}
                 {tasks.map((t) => (
-                  <TaskDueCard key={t.id} task={t} />
+                  <TaskDueCard key={t.id} task={t} onTaskClick={onTaskClick} />
                 ))}
               </>
             )}

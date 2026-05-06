@@ -14,7 +14,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { TaskDueCardData } from '../task-due-card';
 import type { CalendarEventOccurrence } from '@/lib/event-types';
-import { dayKey, groupEventsByDay, groupTasksByDay } from './agenda-utils';
+import { dayKey, groupEventsByDay, groupTasksByDay, type TaskDateField } from './agenda-utils';
 import { DayTasksPopover } from './day-tasks-popover';
 
 const WEEK_OPTS = { weekStartsOn: 0 as const };
@@ -26,10 +26,12 @@ interface AgendaYearProps {
   events: CalendarEventOccurrence[];
   companyId: string;
   onCreateAt?: (date: Date) => void;
+  dateField?: TaskDateField;
+  onTaskClick?: (task: TaskDueCardData) => void;
 }
 
-export function AgendaYear({ anchor, tasks, events, companyId, onCreateAt }: AgendaYearProps) {
-  const groupedTasks = groupTasksByDay(tasks);
+export function AgendaYear({ anchor, tasks, events, companyId, onCreateAt, dateField = 'dueDate', onTaskClick }: AgendaYearProps) {
+  const groupedTasks = groupTasksByDay(tasks, dateField);
   const groupedEvents = groupEventsByDay(events);
   const year = anchor.getFullYear();
 
@@ -72,6 +74,7 @@ export function AgendaYear({ anchor, tasks, events, companyId, onCreateAt }: Age
                     tasks={tasksOfDay}
                     events={eventsOfDay}
                     companyId={companyId}
+                    onTaskClick={onTaskClick}
                   >
                     <button
                       type="button"

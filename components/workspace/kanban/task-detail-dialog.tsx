@@ -68,6 +68,7 @@ import type { TaskAttachment } from '@/actions/projeto/get-attachments.action';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useTaskTrackingStore } from '@/lib/stores/task-tracking-store';
+import { usePrivacyStore } from '@/lib/stores/privacy-store';
 import {
   getChecklistsAction,
   type ChecklistItem,
@@ -75,6 +76,23 @@ import {
 import { createChecklistItemAction } from '@/actions/projeto/create-checklist-item.action';
 import { updateChecklistItemAction } from '@/actions/projeto/update-checklist-item.action';
 import { deleteChecklistItemAction } from '@/actions/projeto/delete-checklist-item.action';
+import { reorderChecklistAction } from '@/actions/projeto/reorder-checklist.action';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react';
 import { startSessionAction } from '@/actions/task-session/start-session.action';
 import { pauseSessionAction } from '@/actions/task-session/pause-session.action';
 import { resumeSessionAction } from '@/actions/task-session/resume-session.action';
@@ -145,6 +163,94 @@ interface TaskDetailDialogProps {
   onClose: () => void;
 }
 
+function SortableChecklistItem({
+  item,
+  editingId,
+  editingTitle,
+  onToggle,
+  onDelete,
+  onStartEdit,
+  onCommitEdit,
+  onEditingTitleChange,
+  onCancelEdit,
+}: {
+  item: ChecklistItem;
+  editingId: string | null;
+  editingTitle: string;
+  onToggle: (item: ChecklistItem) => void;
+  onDelete: (id: string) => void;
+  onStartEdit: (item: ChecklistItem) => void;
+  onCommitEdit: (item: ChecklistItem) => void;
+  onEditingTitleChange: (v: string) => void;
+  onCancelEdit: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`group flex items-center gap-2 rounded px-1 py-1 hover:bg-muted/40 transition-colors ${isDragging ? 'opacity-50 bg-muted/40' : ''}`}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+        tabIndex={-1}
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onToggle(item)}
+        className={`shrink-0 h-4 w-4 rounded border flex items-center justify-center transition-colors cursor-pointer ${
+          item.completed
+            ? 'bg-primary border-primary text-primary-foreground'
+            : 'border-muted-foreground/40 hover:border-primary'
+        }`}
+      >
+        {item.completed && <Check className="h-2.5 w-2.5" />}
+      </button>
+
+      {editingId === item.id ? (
+        <input
+          autoFocus
+          type="text"
+          value={editingTitle}
+          onChange={(e) => onEditingTitleChange(e.target.value)}
+          onBlur={() => onCommitEdit(item)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onCommitEdit(item);
+            if (e.key === 'Escape') onCancelEdit();
+          }}
+          className="flex-1 text-sm bg-transparent border-b border-input focus:outline-none focus:border-primary"
+        />
+      ) : (
+        <span
+          onDoubleClick={() => onStartEdit(item)}
+          className={`flex-1 text-sm cursor-default select-none ${
+            item.completed ? 'line-through text-muted-foreground' : ''
+          }`}
+        >
+          {item.title}
+        </span>
+      )}
+
+      <button
+        type="button"
+        onClick={() => onDelete(item.id)}
+        className="shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all cursor-pointer"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
 function TaskChecklistSection({
   projectId,
   taskId,
@@ -159,6 +265,10 @@ function TaskChecklistSection({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const addInputRef = useRef<HTMLInputElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
 
   useEffect(() => {
     getChecklistsAction(projectId, taskId).then((data) => {
@@ -208,6 +318,21 @@ function TaskChecklistSection({
     void updateChecklistItemAction(projectId, taskId, item.id, { title });
   }
 
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+    const next = arrayMove(items, oldIndex, newIndex);
+    setItems(next);
+    void reorderChecklistAction(
+      projectId,
+      taskId,
+      next.map((item, idx) => ({ id: item.id, order: idx + 1 })),
+    );
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -239,58 +364,26 @@ function TaskChecklistSection({
       {loading ? (
         <p className="text-xs text-muted-foreground">Carregando...</p>
       ) : (
-        <div className="space-y-0.5">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="group flex items-center gap-2 rounded px-1 py-1 hover:bg-muted/40 transition-colors"
-            >
-              <button
-                type="button"
-                onClick={() => handleToggle(item)}
-                className={`shrink-0 h-4 w-4 rounded border flex items-center justify-center transition-colors cursor-pointer ${
-                  item.completed
-                    ? 'bg-primary border-primary text-primary-foreground'
-                    : 'border-muted-foreground/40 hover:border-primary'
-                }`}
-              >
-                {item.completed && <Check className="h-2.5 w-2.5" />}
-              </button>
-
-              {editingId === item.id ? (
-                <input
-                  autoFocus
-                  type="text"
-                  value={editingTitle}
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  onBlur={() => commitEdit(item)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') commitEdit(item);
-                    if (e.key === 'Escape') setEditingId(null);
-                  }}
-                  className="flex-1 text-sm bg-transparent border-b border-input focus:outline-none focus:border-primary"
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-0.5">
+              {items.map((item) => (
+                <SortableChecklistItem
+                  key={item.id}
+                  item={item}
+                  editingId={editingId}
+                  editingTitle={editingTitle}
+                  onToggle={handleToggle}
+                  onDelete={handleDelete}
+                  onStartEdit={startEdit}
+                  onCommitEdit={commitEdit}
+                  onEditingTitleChange={setEditingTitle}
+                  onCancelEdit={() => setEditingId(null)}
                 />
-              ) : (
-                <span
-                  onDoubleClick={() => startEdit(item)}
-                  className={`flex-1 text-sm cursor-default select-none ${
-                    item.completed ? 'line-through text-muted-foreground' : ''
-                  }`}
-                >
-                  {item.title}
-                </span>
-              )}
-
-              <button
-                type="button"
-                onClick={() => handleDelete(item.id)}
-                className="shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all cursor-pointer"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Add item input */}
@@ -723,6 +816,7 @@ export function TaskDetailDialog({
   currentUserId,
   onClose,
 }: TaskDetailDialogProps) {
+  const isPrivacyMode = usePrivacyStore((s) => s.isPrivacyMode);
   const [savePending, startSave] = useTransition();
   const [deletePending, startDelete] = useTransition();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -1105,7 +1199,7 @@ export function TaskDetailDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Título da task"
-              className="w-full text-lg font-semibold bg-transparent border-0 border-b border-transparent focus:border-input focus:outline-none focus:ring-0 pb-1 placeholder:text-muted-foreground/50 transition-colors"
+              className={`w-full text-lg font-semibold bg-transparent border-0 border-b border-transparent focus:border-input focus:outline-none focus:ring-0 pb-1 placeholder:text-muted-foreground/50 transition-colors${isPrivacyMode ? ' blur-sm select-none' : ''}`}
             />
 
             {/* Description */}

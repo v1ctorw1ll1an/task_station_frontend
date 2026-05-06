@@ -8,7 +8,7 @@ import { CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TaskDueCardData } from '../task-due-card';
 import type { CalendarEventOccurrence } from '@/lib/event-types';
-import { dayKey, groupEventsByDay, groupTasksByDay, monthGridRange } from './agenda-utils';
+import { dayKey, groupEventsByDay, groupTasksByDay, monthGridRange, type TaskDateField } from './agenda-utils';
 import { DayTasksPopover } from './day-tasks-popover';
 import { EditEventDialog } from './edit-event-dialog';
 
@@ -27,13 +27,15 @@ interface AgendaMonthProps {
   events: CalendarEventOccurrence[];
   companyId: string;
   onCreateAt?: (date: Date) => void;
+  dateField?: TaskDateField;
+  onTaskClick?: (task: TaskDueCardData) => void;
 }
 
-export function AgendaMonth({ anchor, tasks, events, companyId, onCreateAt }: AgendaMonthProps) {
+export function AgendaMonth({ anchor, tasks, events, companyId, onCreateAt, dateField = 'dueDate', onTaskClick }: AgendaMonthProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventOccurrence | null>(null);
   const range = monthGridRange(anchor);
   const days = eachDayOfInterval({ start: range.from, end: range.to });
-  const groupedTasks = groupTasksByDay(tasks);
+  const groupedTasks = groupTasksByDay(tasks, dateField);
   const groupedEvents = groupEventsByDay(events);
 
   return (
@@ -79,6 +81,7 @@ export function AgendaMonth({ anchor, tasks, events, companyId, onCreateAt }: Ag
                     tasks={tasksOfDay}
                     events={eventsOfDay}
                     companyId={companyId}
+                    onTaskClick={onTaskClick}
                   >
                     <button
                       type="button"
@@ -118,19 +121,32 @@ export function AgendaMonth({ anchor, tasks, events, companyId, onCreateAt }: Ag
                       </button>
                     );
                   })}
-                  {visibleTasks.map((t) => (
-                    <Link
-                      key={t.id}
-                      href={`/workspace/${t.project.workspace.id}/projetos/${t.project.id}?task=${t.id}`}
-                      title={t.title}
-                      className={cn(
-                        'block rounded border-l-2 bg-muted/40 hover:bg-accent/60 transition-colors px-1.5 py-0.5 text-[11px] truncate',
-                        PRIORITY_BORDER[t.priority] ?? 'border-l-slate-300',
-                      )}
-                    >
-                      {t.title}
-                    </Link>
-                  ))}
+                  {visibleTasks.map((t) => {
+                    const cls = cn(
+                      'block rounded border-l-2 bg-muted/40 hover:bg-accent/60 transition-colors px-1.5 py-0.5 text-[11px] truncate',
+                      PRIORITY_BORDER[t.priority] ?? 'border-l-slate-300',
+                    );
+                    return onTaskClick ? (
+                      <button
+                        key={t.id}
+                        type="button"
+                        title={t.title}
+                        onClick={() => onTaskClick(t)}
+                        className={`${cls} w-full text-left`}
+                      >
+                        {t.title}
+                      </button>
+                    ) : (
+                      <Link
+                        key={t.id}
+                        href={`/workspace/${t.project.workspace.id}/projetos/${t.project.id}?task=${t.id}`}
+                        title={t.title}
+                        className={cls}
+                      >
+                        {t.title}
+                      </Link>
+                    );
+                  })}
                   {overflow > 0 && (
                     <DayTasksPopover
                       date={day}

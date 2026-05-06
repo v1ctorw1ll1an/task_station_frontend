@@ -83,7 +83,7 @@ interface KanbanBoardProps {
 
 const initialCreateColunaState: CreateColunaActionState = {};
 
-function computeTaskPrefix(name: string): string {
+export function computeTaskPrefix(name: string): string {
     const words = name.trim().split(/\s+/).filter(Boolean);
     if (words.length >= 2) return words.map((w) => w[0].toUpperCase()).join('');
     return words[0]?.slice(0, 3).toUpperCase() ?? 'TSK';
