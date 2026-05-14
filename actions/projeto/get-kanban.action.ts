@@ -3,9 +3,18 @@
 import { getSession } from '@/lib/auth';
 import type { KanbanColumn } from '@/components/workspace/kanban/kanban-board';
 
+interface RawKanbanColumn extends Omit<KanbanColumn, 'totalTasks'> {
+  _count?: { tasks: number };
+}
+
+interface RawKanbanResponse {
+  columns: RawKanbanColumn[];
+  projectName?: string;
+}
+
 export async function getKanbanDataAction(
   projectId: string,
-): Promise<{ columns: KanbanColumn[] } | null> {
+): Promise<{ columns: KanbanColumn[]; projectName?: string } | null> {
   const session = await getSession();
   if (!session) return null;
 
@@ -16,7 +25,14 @@ export async function getKanbanDataAction(
       cache: 'no-store',
     });
     if (!res.ok) return null;
-    return res.json();
+    const data = (await res.json()) as RawKanbanResponse;
+
+    const columns: KanbanColumn[] = data.columns.map((c) => {
+      const { _count, ...rest } = c;
+      return { ...rest, totalTasks: _count?.tasks ?? rest.tasks.length };
+    });
+
+    return { columns, projectName: data.projectName };
   } catch {
     return null;
   }

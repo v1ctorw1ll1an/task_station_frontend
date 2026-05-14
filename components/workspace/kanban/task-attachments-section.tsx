@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import {
+  Download,
+  FileText,
   FileVideo,
   Loader2,
   Paperclip,
@@ -23,15 +25,22 @@ import { deleteAttachmentAction } from '@/actions/projeto/delete-attachment.acti
 
 export const IMAGE_MAX_MB = 16;
 export const VIDEO_MAX_MB = 64;
+export const PDF_MAX_MB = 32;
 export const IMAGE_MAX_COUNT = 3;
 export const VIDEO_MAX_COUNT = 1;
+export const PDF_MAX_COUNT = 1;
 const ACCEPTED_IMAGES = 'image/jpeg,image/png,image/gif,image/webp,image/avif';
 const ACCEPTED_VIDEOS = 'video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska';
+const ACCEPTED_PDFS = 'application/pdf';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function isVideo(mimeType: string) {
   return mimeType.startsWith('video/');
+}
+
+function isPdf(mimeType: string) {
+  return mimeType === 'application/pdf';
 }
 
 function formatBytes(bytes: number) {
@@ -67,6 +76,7 @@ function AttachmentThumb({
 }) {
   const [deleting, startDelete] = useTransition();
   const video = isVideo(att.mimeType);
+  const pdf = isPdf(att.mimeType);
 
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
@@ -94,7 +104,11 @@ function AttachmentThumb({
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-          <FileVideo className="h-7 w-7 opacity-50" />
+          {pdf ? (
+            <FileText className="h-7 w-7 opacity-50" />
+          ) : (
+            <FileVideo className="h-7 w-7 opacity-50" />
+          )}
         </div>
       )}
 
@@ -102,15 +116,22 @@ function AttachmentThumb({
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
         {video ? (
           <PlayCircle className="h-7 w-7 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+        ) : pdf ? (
+          <FileText className="h-7 w-7 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
         ) : (
           <ZoomIn className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
         )}
       </div>
 
-      {/* Video badge */}
+      {/* Type badge */}
       {video && (
         <span className="absolute bottom-1 left-1 text-[9px] font-semibold bg-black/60 text-white rounded px-1 leading-4">
           VID
+        </span>
+      )}
+      {pdf && (
+        <span className="absolute bottom-1 left-1 text-[9px] font-semibold bg-red-600/80 text-white rounded px-1 leading-4">
+          PDF
         </span>
       )}
 
@@ -150,6 +171,7 @@ function AttachmentViewerModal({
   if (!att) return null;
 
   const video = isVideo(att.mimeType);
+  const pdf = isPdf(att.mimeType);
   const src = fileUrl(projectId, taskId, att.id);
 
   return (
@@ -157,14 +179,21 @@ function AttachmentViewerModal({
       <DialogContent className="sm:max-w-3xl p-2 gap-0">
         <DialogTitle className="sr-only">{att.originalName}</DialogTitle>
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between px-2 pt-1">
+          <div className="flex items-center justify-between pl-2 pr-10 pt-1 gap-2">
             <span className="text-sm font-medium truncate max-w-xs">{att.originalName}</span>
-            <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-              {formatBytes(att.size)}
-            </span>
+            {pdf && (
+              <a
+                href={src}
+                download={att.originalName}
+                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-background hover:bg-muted transition-colors flex-shrink-0"
+              >
+                <Download className="h-3 w-3" />
+                Download
+              </a>
+            )}
           </div>
 
-          <div className="rounded overflow-hidden bg-black flex items-center justify-center max-h-[70vh]">
+          <div className={`rounded overflow-hidden ${pdf ? 'bg-white' : 'bg-black'} flex items-center justify-center max-h-[70vh]`}>
             {video ? (
               <video
                 src={src}
@@ -172,6 +201,13 @@ function AttachmentViewerModal({
                 autoPlay={false}
                 className="max-h-[70vh] max-w-full"
                 preload="metadata"
+              />
+            ) : pdf ? (
+              <iframe
+                src={src}
+                title={att.originalName}
+                className="w-full bg-white"
+                style={{ height: '70vh' }}
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
@@ -184,9 +220,9 @@ function AttachmentViewerModal({
             )}
           </div>
 
-          <div className="flex items-center justify-between px-2 pb-1 text-xs text-muted-foreground">
-            <span>Por {att.uploadedBy.name}</span>
-            <span>{new Date(att.createdAt).toLocaleDateString('pt-BR', {
+          <div className="flex items-center justify-between px-2 pb-1 text-xs text-muted-foreground gap-2">
+            <span className="truncate">Por {att.uploadedBy.name} · {formatBytes(att.size)}</span>
+            <span className="flex-shrink-0">{new Date(att.createdAt).toLocaleDateString('pt-BR', {
               day: '2-digit', month: '2-digit', year: '2-digit',
               hour: '2-digit', minute: '2-digit',
             })}</span>
@@ -218,9 +254,11 @@ export function TaskAttachmentsSection({ projectId, taskId, isAdmin, onImageCoun
 
   const imageCount = attachments.filter((a) => a.mimeType.startsWith('image/')).length;
   const videoCount = attachments.filter((a) => a.mimeType.startsWith('video/')).length;
+  const pdfCount = attachments.filter((a) => isPdf(a.mimeType)).length;
   const imagesFull = imageCount >= IMAGE_MAX_COUNT;
   const videosFull = videoCount >= VIDEO_MAX_COUNT;
-  const allFull = imagesFull && videosFull;
+  const pdfsFull = pdfCount >= PDF_MAX_COUNT;
+  const allFull = imagesFull && videosFull && pdfsFull;
 
   // Notify parent when image count changes (for paste limit check in MarkdownEditor)
   useEffect(() => {
@@ -241,6 +279,7 @@ export function TaskAttachmentsSection({ projectId, taskId, isAdmin, onImageCoun
   const acceptedTypes = [
     !imagesFull ? ACCEPTED_IMAGES : '',
     !videosFull ? ACCEPTED_VIDEOS : '',
+    !pdfsFull ? ACCEPTED_PDFS : '',
   ].filter(Boolean).join(',');
 
   useEffect(() => {
@@ -262,17 +301,22 @@ export function TaskAttachmentsSection({ projectId, taskId, isAdmin, onImageCoun
 
     // Client-side validation
     const isVid = file.type.startsWith('video/');
+    const isPdfFile = isPdf(file.type);
     if (isVid && videoCount >= VIDEO_MAX_COUNT) {
       setUploadError(`Limite de ${VIDEO_MAX_COUNT} vídeo por task atingido.`);
       return;
     }
-    if (!isVid && imageCount >= IMAGE_MAX_COUNT) {
+    if (isPdfFile && pdfCount >= PDF_MAX_COUNT) {
+      setUploadError(`Limite de ${PDF_MAX_COUNT} PDF por task atingido.`);
+      return;
+    }
+    if (!isVid && !isPdfFile && imageCount >= IMAGE_MAX_COUNT) {
       setUploadError(`Limite de ${IMAGE_MAX_COUNT} imagens por task atingido.`);
       return;
     }
-    const maxBytes = isVid ? VIDEO_MAX_MB * 1024 * 1024 : IMAGE_MAX_MB * 1024 * 1024;
-    if (file.size > maxBytes) {
-      setUploadError(`Arquivo excede o limite de ${isVid ? VIDEO_MAX_MB : IMAGE_MAX_MB} MB.`);
+    const maxMb = isVid ? VIDEO_MAX_MB : isPdfFile ? PDF_MAX_MB : IMAGE_MAX_MB;
+    if (file.size > maxMb * 1024 * 1024) {
+      setUploadError(`Arquivo excede o limite de ${maxMb} MB.`);
       return;
     }
 
@@ -318,14 +362,14 @@ export function TaskAttachmentsSection({ projectId, taskId, isAdmin, onImageCoun
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wide">
+        <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wide flex-wrap">
           <Paperclip className="h-3.5 w-3.5" />
           Anexos
           <span className="font-normal normal-case tracking-normal">
-            {imageCount}/{IMAGE_MAX_COUNT} foto{(IMAGE_MAX_COUNT as number) !== 1 ? 's' : ''} · {videoCount}/{VIDEO_MAX_COUNT} vídeo
+            {imageCount}/{IMAGE_MAX_COUNT} foto{(IMAGE_MAX_COUNT as number) !== 1 ? 's' : ''} · {videoCount}/{VIDEO_MAX_COUNT} vídeo · {pdfCount}/{PDF_MAX_COUNT} PDF
           </span>
           <span className="font-normal normal-case tracking-normal text-muted-foreground/60">
-            · fotos até {IMAGE_MAX_MB} MB, vídeo até {VIDEO_MAX_MB} MB
+            · fotos até {IMAGE_MAX_MB} MB, vídeo até {VIDEO_MAX_MB} MB, PDF até {PDF_MAX_MB} MB
           </span>
         </h4>
         {isAdmin && (
@@ -337,7 +381,7 @@ export function TaskAttachmentsSection({ projectId, taskId, isAdmin, onImageCoun
               className="h-6 px-2 text-xs gap-1"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading || allFull}
-              title={allFull ? `Limite atingido (${IMAGE_MAX_COUNT} fotos e ${VIDEO_MAX_COUNT} vídeo)` : undefined}
+              title={allFull ? `Limite atingido (${IMAGE_MAX_COUNT} fotos, ${VIDEO_MAX_COUNT} vídeo e ${PDF_MAX_COUNT} PDF)` : undefined}
             >
               {uploading ? (
                 <Loader2 className="h-3 w-3 animate-spin" />

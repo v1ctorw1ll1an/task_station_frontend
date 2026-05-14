@@ -56,6 +56,7 @@ export interface KanbanColumn {
     order: number;
     isDone: boolean;
     tasks: KanbanTask[];
+    totalTasks?: number;
 }
 
 interface KanbanData {

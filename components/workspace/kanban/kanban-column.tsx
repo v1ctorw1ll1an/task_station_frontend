@@ -3,16 +3,20 @@
 import { useState, useTransition, useMemo } from 'react';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CheckCircle2, Plus } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { KanbanCard, type KanbanTask } from './kanban-card';
 import { ColumnOptionsMenu } from './column-options-menu';
 import { createTaskAction } from '@/actions/projeto/create-task.action';
 import { moveTaskAction } from '@/actions/projeto/move-task.action';
+import { getColumnTasksAction } from '@/actions/projeto/get-column-tasks.action';
+import { useKanbanStore } from '@/lib/stores/kanban-store';
 import type { KanbanColumn } from './kanban-board';
 import type { ProjectLabel } from '@/actions/projeto/get-labels.action';
 import type { KanbanBoardFilterState } from './kanban-board-filter';
+
+const LOAD_MORE_LIMIT = 50;
 
 export interface KanbanSortState {
   dueDate: 'asc' | 'desc' | null;
@@ -76,6 +80,8 @@ export function KanbanColumnComponent({
   const [localSort, setLocalSort] = useState<KanbanSortState>(DEFAULT_SORT_STATE);
   const [filterLabelIds, setFilterLabelIds] = useState<string[]>([]);
   const [menuDialogOpen, setMenuDialogOpen] = useState(false);
+  const [loadMorePending, startLoadMore] = useTransition();
+  const appendColumnTasks = useKanbanStore((s) => s.appendColumnTasks);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column.id,
@@ -189,6 +195,20 @@ export function KanbanColumnComponent({
     setFilterLabelIds([]);
   }
 
+  const totalTasks = column.totalTasks ?? column.tasks.length;
+  const remainingTasks = Math.max(0, totalTasks - column.tasks.length);
+
+  function handleLoadMore() {
+    if (remainingTasks === 0 || loadMorePending) return;
+    const nextPage = Math.floor(column.tasks.length / LOAD_MORE_LIMIT) + 1;
+    startLoadMore(async () => {
+      const page = await getColumnTasksAction(projectId, column.id, nextPage, LOAD_MORE_LIMIT);
+      if (page) {
+        appendColumnTasks(column.id, page.tasks);
+      }
+    });
+  }
+
   const headerStyle = column.color
     ? { backgroundColor: `${column.color}1A`, borderLeft: `4px solid ${column.color}` }
     : {};
@@ -217,7 +237,9 @@ export function KanbanColumnComponent({
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
           )}
           <span className="text-xs text-muted-foreground">
-            ({displayedTasks.length < column.tasks.length ? `${displayedTasks.length}/` : ''}{column.tasks.length})
+            ({displayedTasks.length < column.tasks.length ? `${displayedTasks.length}/` : ''}
+            {column.tasks.length}
+            {remainingTasks > 0 ? ` de ${totalTasks}` : ''})
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -285,6 +307,18 @@ export function KanbanColumnComponent({
             <KanbanCard key={task.id} task={task} taskPrefix={taskPrefix} onClick={(t) => onTaskClick(t.id)} columnIsDone={column.isDone} />
           ))}
         </SortableContext>
+        {remainingTasks > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-center text-muted-foreground text-xs"
+            onClick={handleLoadMore}
+            disabled={loadMorePending}
+          >
+            <ChevronDown className="h-3.5 w-3.5 mr-1" />
+            {loadMorePending ? 'Carregando...' : `Carregar mais (${remainingTasks})`}
+          </Button>
+        )}
       </div>
 
       {/* Footer — adicionar task */}

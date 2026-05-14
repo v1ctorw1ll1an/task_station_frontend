@@ -81,6 +81,9 @@ interface KanbanState {
   ) => void;
   optimisticReorderColumns: (orderedIds: string[]) => void;
 
+  // Pagination: append more tasks to a column (load-more)
+  appendColumnTasks: (columnId: string, tasks: KanbanTask[]) => void;
+
   // Handlers para eventos do socket
   applyTaskCreated: (payload: TaskCreatedPayload) => void;
   applyTaskUpdated: (payload: TaskUpdatedPayload) => void;
@@ -149,6 +152,16 @@ export const useKanbanStore = create<KanbanState>((set, get) => ({
       const colMap = new Map(state.columns.map((c) => [c.id, c]));
       return { columns: orderedIds.map((id) => colMap.get(id)!).filter(Boolean) };
     }),
+
+  appendColumnTasks: (columnId, tasks) =>
+    set((state) => ({
+      columns: state.columns.map((col) => {
+        if (col.id !== columnId) return col;
+        const existingIds = new Set(col.tasks.map((t) => t.id));
+        const fresh = tasks.filter((t) => !existingIds.has(t.id));
+        return { ...col, tasks: [...col.tasks, ...fresh] };
+      }),
+    })),
 
   // ── Socket handlers ──────────────────────────────────────────────────────────
 

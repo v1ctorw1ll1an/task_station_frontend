@@ -72,10 +72,7 @@ function rangeLabel(view: AgendaView, anchor: Date): string {
 export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }: AgendaProps) {
   const [view, setView] = useState<AgendaView>('day');
   const [anchor, setAnchor] = useState<Date>(() => new Date());
-  const [filterCreatedAt, setFilterCreatedAt] = useState(true);
-  const [filterDueDate, setFilterDueDate] = useState(false);
-  const dateField: TaskDateField =
-    filterCreatedAt && filterDueDate ? 'both' : filterDueDate ? 'dueDate' : 'createdAt';
+  const [dateField, setDateField] = useState<TaskDateField>('startDate');
   const [tasks, setTasks] = useState<TaskDueCardData[]>(initialTasks);
   const [events, setEvents] = useState<CalendarEventOccurrence[]>(initialEvents);
   const [isPending, startTransition] = useTransition();
@@ -105,11 +102,9 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
     startTransition(async () => {
       const lim = isDay ? 50 : 500;
       const tasksPromise =
-        dateField === 'createdAt'
+        dateField === 'startDate'
           ? getMyTasksAction(companyId, 1, lim, 'custom', undefined, undefined, fromIso, toIso)
-          : dateField === 'dueDate'
-            ? getMyTasksAction(companyId, 1, lim, 'custom', fromIso, toIso)
-            : getMyTasksAction(companyId, 1, lim, 'custom', fromIso, toIso, fromIso, toIso, 'or');
+          : getMyTasksAction(companyId, 1, lim, 'custom', fromIso, toIso);
 
       const [tasksRes, eventsRes] = await Promise.all([
         tasksPromise,
@@ -124,7 +119,7 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
     <div className="rounded-lg border bg-card">
       {/* Toolbar */}
       <div className="border-b">
-        {/* Linha 1: título + abas de período + botão novo evento */}
+        {/* Linha 1: título + abas de período */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3">
           <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
           <h2 className="text-sm font-semibold">Agenda</h2>
@@ -145,48 +140,34 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
               </button>
             ))}
           </div>
-
-          <div className="ml-auto">
-            <Button
-              size="sm"
-              className="gap-1"
-              onClick={() => {
-                setCreateDate(anchor);
-                setCreateOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Novo evento
-            </Button>
-          </div>
         </div>
 
-        {/* Linha 2: filtro de data */}
+        {/* Linha 2: filtro de data (exclusivo) */}
         <div className="flex items-center gap-2 px-4 pb-3">
           <span className="text-xs text-muted-foreground shrink-0">Filtrar por data de:</span>
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => { if (!filterCreatedAt || filterDueDate) setFilterCreatedAt((v) => !v); }}
+              onClick={() => setDateField('startDate')}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all',
-                filterCreatedAt
+                dateField === 'startDate'
                   ? 'border-primary/40 bg-primary/10 text-primary'
                   : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground',
               )}
             >
-              {filterCreatedAt && <Check className="h-3 w-3" />}
-              Criação
+              {dateField === 'startDate' && <Check className="h-3 w-3" />}
+              Data de início
             </button>
             <button
-              onClick={() => { if (!filterDueDate || filterCreatedAt) setFilterDueDate((v) => !v); }}
+              onClick={() => setDateField('dueDate')}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all',
-                filterDueDate
+                dateField === 'dueDate'
                   ? 'border-primary/40 bg-primary/10 text-primary'
                   : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground',
               )}
             >
-              {filterDueDate && <Check className="h-3 w-3" />}
+              {dateField === 'dueDate' && <Check className="h-3 w-3" />}
               Prazo final
             </button>
           </div>
@@ -209,7 +190,7 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
       />
 
       {/* Navegação de período */}
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
+      <div className="flex items-center justify-between gap-2 px-4 py-2 border-b bg-muted/20">
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -227,7 +208,17 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
           >
             <ChevronRight className="h-4 w-4" />
           </button>
-
+          <Button
+            size="sm"
+            className="ml-1 gap-1 h-7"
+            onClick={() => {
+              setCreateDate(anchor);
+              setCreateOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Novo evento
+          </Button>
         </div>
         <p className="text-sm font-medium capitalize">{rangeLabel(view, anchor)}</p>
       </div>

@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useTransition, useState, useRef, useCallback } from 'react';
-import { TaskAttachmentsSection, IMAGE_MAX_MB, IMAGE_MAX_COUNT } from './task-attachments-section';
+import {
+  TaskAttachmentsSection,
+  IMAGE_MAX_MB,
+  IMAGE_MAX_COUNT,
+  VIDEO_MAX_MB,
+  PDF_MAX_MB,
+} from './task-attachments-section';
 import {
   Check,
   CheckSquare,
@@ -18,11 +24,13 @@ import {
   Square,
   Timer,
   Trash2,
+  UploadCloud,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -1025,28 +1033,40 @@ export function TaskDetailDialog({
     });
   }
 
-  async function uploadDirectAttachment(file: File) {
-    if (!file.type.startsWith('image/')) return;
-    if (file.size > IMAGE_MAX_MB * 1024 * 1024) {
-      setDialogUploadError(`Imagem excede o limite de ${IMAGE_MAX_MB} MB.`);
+  function isAcceptedAttachmentType(type: string) {
+    return type.startsWith('image/') || type.startsWith('video/') || type === 'application/pdf';
+  }
+
+  async function uploadDirectAttachment(file: File, opts: { fromPaste?: boolean } = {}) {
+    const isImg = file.type.startsWith('image/');
+    const isVid = file.type.startsWith('video/');
+    const isPdf = file.type === 'application/pdf';
+    if (!isImg && !isVid && !isPdf) return;
+
+    const maxMb = isImg ? IMAGE_MAX_MB : isVid ? VIDEO_MAX_MB : PDF_MAX_MB;
+    if (file.size > maxMb * 1024 * 1024) {
+      const label = isImg ? 'Imagem' : isVid ? 'Vídeo' : 'PDF';
+      setDialogUploadError(`${label} excede o limite de ${maxMb} MB.`);
       return;
     }
-    if (attachmentImageCount >= IMAGE_MAX_COUNT) {
+    if (isImg && attachmentImageCount >= IMAGE_MAX_COUNT) {
       setDialogUploadError(`Limite de ${IMAGE_MAX_COUNT} imagens atingido.`);
       return;
     }
+
     setDialogUploadError(null);
     setDialogUploading(true);
     try {
       const fd = new FormData();
-      fd.append('file', file, `paste-${Date.now()}.png`);
+      const filename = opts.fromPaste && isImg ? `paste-${Date.now()}.png` : file.name;
+      fd.append('file', file, filename);
       const res = await fetch(
         `/api/files/projetos/${projectId}/tasks/${task!.id}/attachments`,
         { method: 'POST', body: fd },
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({})) as { message?: string };
-        setDialogUploadError(data.message ?? 'Erro ao enviar imagem.');
+        setDialogUploadError(data.message ?? 'Erro ao enviar arquivo.');
         return;
       }
       const att = (await res.json()) as TaskAttachment;
@@ -1108,6 +1128,7 @@ export function TaskDetailDialog({
       }}
     >
       <DialogContent
+        showCloseButton={false}
         className="sm:max-w-3xl max-h-[95vh] flex flex-col p-0 gap-0"
         onPointerDownOutside={(e) => {
           if (isDateFocusedRef.current) e.preventDefault();
@@ -1120,14 +1141,15 @@ export function TaskDetailDialog({
           if (!imgItem) return;
           e.preventDefault();
           const file = imgItem.getAsFile();
-          if (file) uploadDirectAttachment(file);
+          if (file) uploadDirectAttachment(file, { fromPaste: true });
         }}
         onDragOver={(e) => {
-          const hasImage = Array.from(e.dataTransfer.items).some(
-            (item) => item.kind === 'file' && item.type.startsWith('image/'),
+          const hasFile = Array.from(e.dataTransfer.items).some(
+            (item) => item.kind === 'file' && isAcceptedAttachmentType(item.type),
           );
-          if (!hasImage) return;
+          if (!hasFile) return;
           e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
           setIsDragOver(true);
         }}
         onDragLeave={(e) => {
@@ -1139,14 +1161,25 @@ export function TaskDetailDialog({
           e.preventDefault();
           setIsDragOver(false);
           const file = Array.from(e.dataTransfer.files).find((f) =>
-            f.type.startsWith('image/'),
+            isAcceptedAttachmentType(f.type),
           );
           if (file) uploadDirectAttachment(file);
         }}
       >
+        <DialogClose
+          aria-label="Fechar"
+          className="fixed top-3 right-3 md:absolute md:top-4 md:right-4 z-50 flex h-9 w-9 items-center justify-center rounded-full border bg-background/90 backdrop-blur-sm shadow-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <X className="h-4 w-4" />
+        </DialogClose>
+
         {isDragOver && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/5 pointer-events-none">
-            <p className="text-sm font-medium text-primary">Soltar para anexar imagem</p>
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10 pointer-events-none backdrop-blur-sm">
+            <UploadCloud className="h-10 w-10 text-primary mb-2" />
+            <p className="text-base font-semibold text-primary">Solte aqui para anexar</p>
+            <p className="text-xs text-primary/80 mt-1">
+              Imagem (até {IMAGE_MAX_MB} MB) · Vídeo (até {VIDEO_MAX_MB} MB) · PDF (até {PDF_MAX_MB} MB)
+            </p>
           </div>
         )}
 
@@ -1180,7 +1213,7 @@ export function TaskDetailDialog({
         {(dialogUploading || dialogUploadError) && (
           <div className={`px-6 py-2 text-xs flex items-center gap-2 border-b ${dialogUploadError ? 'text-destructive bg-destructive/10' : 'text-muted-foreground'}`}>
             {dialogUploading && <Loader2 className="h-3 w-3 animate-spin shrink-0" />}
-            {dialogUploading ? 'Enviando imagem para anexos...' : dialogUploadError}
+            {dialogUploading ? 'Enviando anexo...' : dialogUploadError}
             {dialogUploadError && (
               <button type="button" onClick={() => setDialogUploadError(null)} className="ml-auto cursor-pointer">
                 <X className="h-3 w-3" />
@@ -1190,7 +1223,7 @@ export function TaskDetailDialog({
         )}
 
         {/* Body — two columns */}
-        <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
           {/* Left: title + description + comments + history */}
           <div className="flex flex-col flex-1 md:overflow-y-auto px-4 md:px-6 py-4 gap-4 min-w-0">
             {/* Title */}
