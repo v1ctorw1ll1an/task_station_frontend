@@ -4,7 +4,7 @@ import { ArrowLeft, Sparkles, Wrench, FileText, Tag } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-const APP_VERSION = "0.1.0-alpha.9";
+const APP_VERSION = "0.1.0-alpha.10";
 
 type ChangeType = "feat" | "fix" | "chore";
 
@@ -20,6 +20,24 @@ interface Release {
 }
 
 const releases: Release[] = [
+    {
+        version: "0.1.0-alpha.10",
+        date: "2026-05-06",
+        changes: [
+            {
+                type: "feat",
+                text: "Gestão de eventos no calendário — criar, editar, excluir e visualizar eventos na agenda; suporte a recorrência (diária/semanal/mensal/anual), múltiplos convidados por e-mail, lembretes configuráveis, seletor de cor e horário; notificações por e-mail ao criar, atualizar e cancelar",
+            },
+            {
+                type: "feat",
+                text: "Agenda — clicar em uma task abre o dialog de detalhes diretamente na view de agenda sem sair da tela; filtro de data ampliado para \"Criação\", \"Prazo\" ou ambos simultâneos (modo OR)",
+            },
+            {
+                type: "feat",
+                text: "Modo privacidade — botão na agenda ofusca os títulos das tasks visíveis na tela; estado gerenciado via Zustand e aplicado em todos os componentes de card",
+            },
+        ],
+    },
     {
         version: "0.1.0-alpha.9",
         date: "2026-04-28",
