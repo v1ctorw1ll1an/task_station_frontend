@@ -633,7 +633,7 @@ export function AppSidebar({
                         )}
                     >
                         <Activity className="h-4 w-4 shrink-0" />
-                        {!collapsed && <span>Acompanhamento</span>}
+                        {!collapsed && <span>Atividades</span>}
                     </Link>
                 )}
 
