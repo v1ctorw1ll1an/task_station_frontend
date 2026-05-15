@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useTransition, useState, useRef, useCallback } from 'react';
+import { useEffect, useTransition, useState, useRef } from 'react';
 import {
   TaskAttachmentsSection,
   IMAGE_MAX_MB,
@@ -69,6 +69,8 @@ import { updateTaskCommentAction } from '@/actions/projeto/update-task-comment.a
 import { deleteTaskCommentAction } from '@/actions/projeto/delete-task-comment.action';
 import type { KanbanTask } from './kanban-card';
 import { TransferTaskDialog } from './transfer-task-dialog';
+import { TaskGuestsSection } from './task-guests-section';
+import { listGuestsAction, type TaskGuestSummary } from '@/actions/projeto/list-guests.action';
 import type { WorkspaceMember, ProjectLabel } from './kanban-board';
 import { useActionState } from 'react';
 import { MarkdownEditor, MarkdownDisplay } from './markdown-editor';
@@ -169,6 +171,11 @@ interface TaskDetailDialogProps {
   labels: ProjectLabel[];
   currentUserId: string;
   onClose: () => void;
+  onRequestSendChanges?: (data: {
+    taskId: string;
+    guests: TaskGuestSummary[];
+    historyIds: string[];
+  }) => void;
 }
 
 function SortableChecklistItem({
@@ -823,9 +830,10 @@ export function TaskDetailDialog({
   labels,
   currentUserId,
   onClose,
+  onRequestSendChanges,
 }: TaskDetailDialogProps) {
   const isPrivacyMode = usePrivacyStore((s) => s.isPrivacyMode);
-  const [savePending, startSave] = useTransition();
+  const [savePending] = useTransition();
   const [deletePending, startDelete] = useTransition();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -891,6 +899,10 @@ export function TaskDetailDialog({
   const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
   const memberDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Marca o instante em que o modal foi aberto para filtrar entradas de
+  // TaskHistory criadas nesta sessão de edição (usado pelo fluxo SendChanges).
+  const sessionStartRef = useRef<number>(Date.now());
+
   // Reset fields when task changes (navegação entre tasks)
   useEffect(() => {
      
@@ -907,6 +919,7 @@ export function TaskDetailDialog({
     setSaveError(null);
     setSessionError(null);
 
+    sessionStartRef.current = Date.now();
     lastKnownUpdatedAtRef.current = task?.updatedAt ?? '';
     lastSyncedFieldsRef.current = {
       title: task?.title ?? '',
@@ -969,57 +982,6 @@ export function TaskDetailDialog({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [memberDropdownOpen]);
 
-  const doSave = useCallback(
-    (fields: {
-      title: string;
-      description: string;
-      priority: string;
-      startDate: string;
-      dueDate: string;
-      assigneeIds: string[];
-      labelIds: string[];
-    }) => {
-      if (!task) return;
-      setSaveStatus('saving');
-      setSaveError(null);
-
-      // Incrementa sequência — respostas com seq menor são descartadas
-      const seq = ++saveSeqRef.current;
-
-      const formData = new FormData();
-      formData.set('projectId', projectId);
-      formData.set('workspaceId', workspaceId);
-      formData.set('taskId', task.id);
-      formData.set('title', fields.title);
-      formData.set('description', fields.description);
-      formData.set('priority', fields.priority);
-      formData.set('startDate', fields.startDate);
-      formData.set('dueDate', fields.dueDate);
-      fields.assigneeIds.forEach((id) => formData.append('assigneeIds[]', id));
-      fields.labelIds.forEach((id) => formData.append('labelIds[]', id));
-
-      startSave(async () => {
-        const result = await updateTaskAction({}, formData);
-
-        // Descarta resposta se um save mais recente já foi iniciado
-        if (seq !== saveSeqRef.current) return;
-
-        if (result.success) {
-          lastSyncedFieldsRef.current = {
-            title: fields.title,
-            description: fields.description,
-            priority: fields.priority as 'low' | 'medium' | 'high' | 'urgent',
-          };
-          setSaveStatus('saved');
-          setTimeout(() => setSaveStatus('idle'), 2000);
-        } else {
-          setSaveStatus('error');
-          setSaveError(result.error ?? 'Erro ao salvar');
-        }
-      });
-    },
-    [task, projectId, workspaceId, startSave],  
-  );
 
 
   function handleDelete() {
@@ -1110,20 +1072,66 @@ export function TaskDetailDialog({
   const selectedMembers = membros.filter((m) => selectedAssigneeIds.includes(m.id));
 
   return (
+    <>
     <Dialog
       open={!!task}
       onOpenChange={(open) => {
         if (!open) {
-          doSave({
-            title,
-            description,
-            priority,
-            startDate,
-            dueDate,
-            assigneeIds: selectedAssigneeIds,
-            labelIds: selectedLabelIds,
-          });
+          if (!task) {
+            onClose();
+            return;
+          }
+          const projId = projectId;
+          const tId = task.id;
+          const since = sessionStartRef.current;
+          const localTitle = title;
+          const localDescription = description;
+          const localPriority = priority;
+          const localStartDate = startDate;
+          const localDueDate = dueDate;
+          const localAssigneeIds = [...selectedAssigneeIds];
+          const localLabelIds = [...selectedLabelIds];
+          // Fecha o modal pai imediatamente — o save e a verificação rodam em background.
+          // O fluxo de notificação é delegado ao parent via onRequestSendChanges,
+          // porque este componente é desmontado quando task vira null (key={selectedTask?.id}).
           onClose();
+          (async () => {
+            try {
+              const formData = new FormData();
+              formData.set('projectId', projId);
+              formData.set('workspaceId', workspaceId);
+              formData.set('taskId', tId);
+              formData.set('title', localTitle);
+              formData.set('description', localDescription);
+              formData.set('priority', localPriority);
+              formData.set('startDate', localStartDate);
+              formData.set('dueDate', localDueDate);
+              localAssigneeIds.forEach((id) => formData.append('assigneeIds[]', id));
+              localLabelIds.forEach((id) => formData.append('labelIds[]', id));
+              await updateTaskAction({}, formData);
+            } catch {
+              // se save falhar, ainda tentamos o fluxo de notificação
+            }
+            try {
+              const [guestsRes, history] = await Promise.all([
+                listGuestsAction(projId, tId),
+                getTaskHistoryAction(projId, tId),
+              ]);
+              const guests = guestsRes.guests ?? [];
+              const mine = history
+                .filter((h) => h.user?.id === currentUserId)
+                .filter((h) => new Date(h.changedAt).getTime() >= since);
+              if (guests.length > 0 && mine.length > 0 && onRequestSendChanges) {
+                onRequestSendChanges({
+                  taskId: tId,
+                  guests,
+                  historyIds: mine.map((h) => h.id),
+                });
+              }
+            } catch {
+              // silently ignore — não atrapalha o fechamento
+            }
+          })();
         }
       }}
     >
@@ -1424,6 +1432,9 @@ export function TaskDetailDialog({
               </div>
             </div>
 
+            {/* Convidados */}
+            {task && <TaskGuestsSection projectId={projectId} taskId={task.id} />}
+
             {/* Labels */}
             {labels.length > 0 && (
               <div className="space-y-1.5">
@@ -1657,5 +1668,6 @@ export function TaskDetailDialog({
         defaultMode={transferMode}
       />
     </Dialog>
+    </>
   );
 }

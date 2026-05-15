@@ -59,6 +59,7 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>['components'] = {
   hr: ({ ...p }) => <hr className="my-3 border-border" {...p} />,
   strong: ({ ...p }) => <strong className="font-semibold" {...p} />,
   em: ({ ...p }) => <em className="italic" {...p} />,
+  del: ({ ...p }) => <del className="line-through" {...p} />,
 };
 
 export function MarkdownDisplay({ content }: { content: string }) {

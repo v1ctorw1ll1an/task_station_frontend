@@ -35,6 +35,9 @@ import { KanbanColumnComponent } from "./kanban-column";
 import { KanbanCard, type KanbanTask } from "./kanban-card";
 import { KanbanBoardFilter, EMPTY_BOARD_FILTER, type KanbanBoardFilterState } from "./kanban-board-filter";
 import { TaskDetailDialog } from "./task-detail-dialog";
+import { SendChangesDialog } from "./send-changes-dialog";
+import { listGuestsAction, type TaskGuestSummary } from "@/actions/projeto/list-guests.action";
+import { getTaskHistoryAction } from "@/actions/projeto/get-task-history.action";
 import { moveTaskAction } from "@/actions/projeto/move-task.action";
 import { reorderColunasAction } from "@/actions/projeto/reorder-colunas.action";
 import {
@@ -120,6 +123,12 @@ export function KanbanBoard({
     const searchParams = useSearchParams();
     const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
     const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
+    const [sendChanges, setSendChanges] = useState<{
+        taskId: string;
+        guests: TaskGuestSummary[];
+        historyIds: string[];
+    } | null>(null);
+
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
         searchParams.get('task'),
     );
@@ -316,6 +325,10 @@ export function KanbanBoard({
                     capturedAfterTaskId,
                 );
 
+                const changedColumn =
+                    capturedDraggedTask.columnId !== capturedTargetColumnId;
+                const since = Date.now();
+
                 startTransition(async () => {
                     await moveTaskAction(
                         projectId,
@@ -326,10 +339,33 @@ export function KanbanBoard({
                     );
                     // Sem router.refresh() — o evento task:moved via socket atualiza outros clientes
                     // Este cliente usou actorId skip e já tem o estado correto
+
+                    // Se a task mudou de coluna e tem convidados, abre o pop-up
+                    // de notificação com a nova entrada de TaskHistory (columnId).
+                    if (!changedColumn) return;
+                    try {
+                        const [guestsRes, history] = await Promise.all([
+                            listGuestsAction(projectId, capturedDraggedTask.id),
+                            getTaskHistoryAction(projectId, capturedDraggedTask.id),
+                        ]);
+                        const guests = guestsRes.guests ?? [];
+                        const mine = history
+                            .filter((h) => h.user?.id === currentUserId)
+                            .filter((h) => new Date(h.changedAt).getTime() >= since);
+                        if (guests.length > 0 && mine.length > 0) {
+                            setSendChanges({
+                                taskId: capturedDraggedTask.id,
+                                guests,
+                                historyIds: mine.map((h) => h.id),
+                            });
+                        }
+                    } catch {
+                        // silently ignore
+                    }
                 });
             }
         },
-        [columns, projectId, workspaceId, store, startTransition],
+        [columns, projectId, workspaceId, store, startTransition, currentUserId],
     );
 
     const activeTaskData = activeTask
@@ -492,7 +528,20 @@ export function KanbanBoard({
                     setSelectedTaskId(null);
                     router.replace(pathname, { scroll: false });
                 }}
+                onRequestSendChanges={(data) => setSendChanges(data)}
             />
+            {sendChanges && (
+                <SendChangesDialog
+                    open
+                    onOpenChange={(open) => {
+                        if (!open) setSendChanges(null);
+                    }}
+                    projectId={projectId}
+                    taskId={sendChanges.taskId}
+                    guests={sendChanges.guests}
+                    historyEntryIds={sendChanges.historyIds}
+                />
+            )}
         </div>
     );
 }
