@@ -16,7 +16,9 @@ import {
   Clock,
   Copy,
   Loader2,
+  Maximize2,
   MessageSquare,
+  Minimize2,
   Pause,
   Pencil,
   Play,
@@ -30,7 +32,6 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -851,6 +852,9 @@ export function TaskDetailDialog({
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferMode, setTransferMode] = useState<'copy' | 'cut'>('copy');
 
+  // Modo expandido (desktop) — dialog vai a ~85% da viewport para facilitar edição da descrição
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Task session
   const trackingStore = useTaskTrackingStore();
   const activeSession = task
@@ -1137,7 +1141,7 @@ export function TaskDetailDialog({
     >
       <DialogContent
         showCloseButton={false}
-        className="sm:max-w-3xl max-h-[95vh] flex flex-col p-0 gap-0"
+        className={`${isExpanded ? 'sm:max-w-[85vw]' : 'sm:max-w-3xl'} max-h-[95vh] flex flex-col p-0 gap-0 transition-[max-width] duration-200`}
         onPointerDownOutside={(e) => {
           if (isDateFocusedRef.current) e.preventDefault();
         }}
@@ -1174,13 +1178,6 @@ export function TaskDetailDialog({
           if (file) uploadDirectAttachment(file);
         }}
       >
-        <DialogClose
-          aria-label="Fechar"
-          className="fixed top-3 right-3 md:absolute md:top-4 md:right-4 z-50 flex h-9 w-9 items-center justify-center rounded-full border bg-background/90 backdrop-blur-sm shadow-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-        >
-          <X className="h-4 w-4" />
-        </DialogClose>
-
         {isDragOver && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10 pointer-events-none backdrop-blur-sm">
             <UploadCloud className="h-10 w-10 text-primary mb-2" />
@@ -1215,6 +1212,30 @@ export function TaskDetailDialog({
             ) : saveStatus === 'error' ? (
               <span className="text-destructive">{saveError}</span>
             ) : null}
+            <div className="hidden md:flex items-center ml-2">
+              <button
+                type="button"
+                onClick={() => setIsExpanded((v) => !v)}
+                className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                title={isExpanded ? 'Recolher' : 'Expandir'}
+                aria-label={isExpanded ? 'Recolher card' : 'Expandir card'}
+              >
+                {isExpanded ? (
+                  <Minimize2 className="h-3.5 w-3.5" />
+                ) : (
+                  <Maximize2 className="h-3.5 w-3.5" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                title="Fechar"
+                aria-label="Fechar card"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -1308,7 +1329,7 @@ export function TaskDetailDialog({
           </div>
 
           {/* Right: metadata sidebar */}
-          <div className="w-full md:w-56 shrink-0 border-t md:border-t-0 md:border-l md:overflow-y-auto overflow-x-hidden px-4 py-4 space-y-5">
+          <div className="w-full md:w-56 shrink-0 border-t md:border-t-0 md:border-l md:overflow-y-auto overflow-x-hidden px-4 pt-4 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1.5rem))] md:pb-4 space-y-5">
             {/* Priority */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Prioridade</p>
@@ -1622,39 +1643,51 @@ export function TaskDetailDialog({
                 <Scissors className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                 Mover
               </Button>
-              {isAdmin && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={deletePending}
-                      className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                      Excluir
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Excluir task?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        A task <strong>{task.title}</strong> será removida permanentemente.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleDelete}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
-                      >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
+              <div className="flex gap-2 pt-1">
+                {isAdmin && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={deletePending}
+                          className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30 cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                          Excluir
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir task?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            A task <strong>{task.title}</strong> será removida permanentemente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onClose}
+                  className="flex-1 md:hidden cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                  Fechar
+                </Button>
+              </div>
             </div>
 
           </div>
