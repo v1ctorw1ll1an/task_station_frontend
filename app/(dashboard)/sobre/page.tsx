@@ -4,7 +4,7 @@ import { ArrowLeft, Sparkles, Wrench, FileText, Tag } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-const APP_VERSION = "0.1.0-alpha.10";
+const APP_VERSION = "0.1.0-alpha.11";
 
 type ChangeType = "feat" | "fix" | "chore";
 
@@ -20,6 +20,52 @@ interface Release {
 }
 
 const releases: Release[] = [
+    {
+        version: "0.1.0-alpha.11",
+        date: "2026-05-18",
+        changes: [
+            {
+                type: "feat",
+                text: "Lembretes de evento multi-canal — além de e-mail, agora notificam por toast in-app, som e notificação nativa do sistema operacional; toggles independentes em Perfil → Notificações (Lembrete de evento / Som / Pop-up no app / Notificação do navegador)",
+            },
+            {
+                type: "feat",
+                text: "Compartilhamento público de tasks com convidados externos via WhatsApp — link público com token opaco (SHA-256), edição restrita a campos seguros (título, descrição, prioridade, datas, coluna), histórico de alterações com identificação do guest e mensagens WhatsApp formatadas (negrito, riscado, itálico) com diff completo",
+            },
+            {
+                type: "feat",
+                text: "Agenda reage imediatamente a criação, edição, exclusão e RSVP de eventos — sem precisar recarregar a página; refetch automático do range visível",
+            },
+            {
+                type: "feat",
+                text: "Filtro por membros na aba Atividades — selecionar 1 ou N pessoas (busca inclui membros mesmo sem sessões ativas), badge com contagem e botão Limpar; disponível em empresa e workspace",
+            },
+            {
+                type: "feat",
+                text: "Kanban — botão \"Carregar mais\" por coluna em projetos grandes; arrastar-e-colar/colar imagem com upload direto; melhorias de acessibilidade nos dialogs",
+            },
+            {
+                type: "feat",
+                text: "Backend production-ready — endpoint /metrics no formato Prometheus, rate limiting por rota, hardening de configuração e otimizações de query do feed pessoal de tarefas",
+            },
+            {
+                type: "fix",
+                text: "Widget de tracking não mostra mais tasks excluídas — ao deletar uma task com sessão ativa, o backend encerra a sessão automaticamente e o widget reage via WebSocket",
+            },
+            {
+                type: "fix",
+                text: "Sidebar mantém o workspace atual expandido ao navegar para a Agenda — última seleção é persistida em localStorage por empresa",
+            },
+            {
+                type: "fix",
+                text: "Dispatcher de lembretes — triggers que caíram alguns segundos no passado agora disparam no próximo tick (até a hora do evento), evitando que lembretes criados perto da hora do evento fossem perdidos; idempotência via tabela calendar_event_reminders_sent",
+            },
+            {
+                type: "chore",
+                text: "Item de menu \"Acompanhamento\" renomeado para \"Atividades\" — consistente com o título da página",
+            },
+        ],
+    },
     {
         version: "0.1.0-alpha.10",
         date: "2026-05-06",
