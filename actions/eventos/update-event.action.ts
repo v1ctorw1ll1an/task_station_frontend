@@ -66,7 +66,12 @@ export async function updateEventAction(
             .split(',')
             .map((m) => Number(m))
             .filter((n) => Number.isInteger(n) && n >= 0)
-            .map((minutesBefore) => ({ minutesBefore, method: 'email' as const }))
+            // Cada lembrete dispara em ambos os canais (email + notification).
+            // A preferência do destinatário decide o que efetivamente aparece.
+            .flatMap((minutesBefore) => [
+              { minutesBefore, method: 'email' as const },
+              { minutesBefore, method: 'notification' as const },
+            ])
         : [];
   }
 

@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { createEventAction } from '@/actions/eventos/create-event.action';
+import { notifyAgendaChanged } from '@/lib/agenda-events';
 import {
   EventFormFields,
   buildInitialFormState,
@@ -80,6 +81,7 @@ export function CreateEventDialog({
       const result = await createEventAction({}, formData);
       if (result.success) {
         setOpen(false);
+        notifyAgendaChanged();
         router.refresh();
       } else {
         setError(result.error ?? 'Erro ao criar evento');

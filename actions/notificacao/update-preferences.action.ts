@@ -7,6 +7,10 @@ interface PreferencePayload {
   taskAssigned?: boolean;
   taskComment?: boolean;
   taskUpdated?: boolean;
+  eventReminder?: boolean;
+  eventReminderSound?: boolean;
+  eventReminderPopup?: boolean;
+  eventReminderBrowser?: boolean;
 }
 
 export async function updatePreferencesAction(data: PreferencePayload) {

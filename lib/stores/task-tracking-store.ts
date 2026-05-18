@@ -49,6 +49,7 @@ interface TaskTrackingStore {
   applySessionPaused: (sessionId: string, totalSeconds: number) => void;
   applySessionResumed: (sessionId: string, resumedAt: string) => void;
   applySessionStopped: (sessionId: string) => void;
+  applySessionsStoppedByTaskId: (taskId: string) => void;
 }
 
 export const useTaskTrackingStore = create<TaskTrackingStore>((set, get) => ({
@@ -93,6 +94,12 @@ export const useTaskTrackingStore = create<TaskTrackingStore>((set, get) => ({
   applySessionStopped(sessionId) {
     set((state) => ({
       sessions: state.sessions.filter((s) => s.id !== sessionId),
+    }));
+  },
+
+  applySessionsStoppedByTaskId(taskId) {
+    set((state) => ({
+      sessions: state.sessions.filter((s) => s.taskId !== taskId),
     }));
   },
 }));

@@ -279,7 +279,11 @@ export function EventFormFields({ state, onChange }: EventFormFieldsProps) {
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">Lembretes por email</Label>
+        <Label className="text-xs text-muted-foreground">Lembretes</Label>
+        <p className="text-[11px] text-muted-foreground/80">
+          Disparam por email, toast no app e notificação do sistema operacional —
+          conforme suas preferências em Perfil → Notificações.
+        </p>
         <div className="flex flex-wrap gap-2">
           {REMINDER_OPTIONS.map((opt) => {
             const active = state.reminders.includes(opt.minutes);

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { getCompanyActiveSessionsAction } from '@/actions/empresa/get-company-active-sessions.action';
+import { getCompanyMembersAction } from '@/actions/empresa/get-company-members.action';
 import { EmpresaAtividades } from '@/components/empresa/atividades/empresa-atividades';
 
 interface PageProps {
@@ -12,7 +13,10 @@ export default async function EmpresaAtividadesPage({ params }: PageProps) {
   const session = await getSession();
   if (!session) redirect('/login');
 
-  const { sessions, forbidden, error } = await getCompanyActiveSessionsAction(companyId);
+  const [{ sessions, forbidden, error }, allMembers] = await Promise.all([
+    getCompanyActiveSessionsAction(companyId),
+    getCompanyMembersAction(companyId),
+  ]);
 
   if (forbidden) {
     return (
@@ -44,6 +48,11 @@ export default async function EmpresaAtividadesPage({ params }: PageProps) {
       ) : (
         <EmpresaAtividades
           initialSessions={sessions}
+          allMembers={allMembers.map((m) => ({
+            id: m.id,
+            name: m.name,
+            photoUrl: m.photoUrl,
+          }))}
           companyId={companyId}
           token={session.token}
         />

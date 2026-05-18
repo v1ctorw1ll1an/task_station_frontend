@@ -14,6 +14,7 @@ import { CalendarDays, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getMyTasksAction } from '@/actions/me/get-my-tasks.action';
 import { listMyEventsAction } from '@/actions/eventos/list-my-events.action';
+import { subscribeAgendaChanged } from '@/lib/agenda-events';
 import type { TaskDueCardData } from '../task-due-card';
 import type { CalendarEventOccurrence } from '@/lib/event-types';
 import { computeRange, type AgendaView, type TaskDateField } from './agenda-utils';
@@ -76,6 +77,7 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
   const [tasks, setTasks] = useState<TaskDueCardData[]>(initialTasks);
   const [events, setEvents] = useState<CalendarEventOccurrence[]>(initialEvents);
   const [isPending, startTransition] = useTransition();
+  const [refreshTick, setRefreshTick] = useState(0);
   const isFirstRender = useRef(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [createDate, setCreateDate] = useState<Date>(() => new Date());
@@ -89,6 +91,12 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
     setCreateDate(date);
     setCreateOpen(true);
   }
+
+  useEffect(() => {
+    return subscribeAgendaChanged(() => {
+      setRefreshTick((t) => t + 1);
+    });
+  }, []);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -113,7 +121,7 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
       setTasks(tasksRes.data);
       setEvents(eventsRes.data);
     });
-  }, [view, anchor, dateField, companyId]);
+  }, [view, anchor, dateField, companyId, refreshTick]);
 
   return (
     <div className="rounded-lg border bg-card">

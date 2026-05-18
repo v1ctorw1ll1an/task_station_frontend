@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { getWorkspaceActiveSessionsAction } from '@/actions/workspace/get-workspace-active-sessions.action';
+import { getWorkspaceMembersAction } from '@/actions/workspace/get-workspace-members.action';
 import { WorkspaceAtividades } from '@/components/workspace/atividades/workspace-atividades';
 
 interface PageProps {
@@ -12,7 +13,10 @@ export default async function AtividadesPage({ params }: PageProps) {
   const session = await getSession();
   if (!session) redirect('/login');
 
-  const { sessions, forbidden, error } = await getWorkspaceActiveSessionsAction(workspaceId);
+  const [{ sessions, forbidden, error }, allMembers] = await Promise.all([
+    getWorkspaceActiveSessionsAction(workspaceId),
+    getWorkspaceMembersAction(workspaceId),
+  ]);
 
   if (forbidden) {
     return (
@@ -44,6 +48,7 @@ export default async function AtividadesPage({ params }: PageProps) {
       ) : (
         <WorkspaceAtividades
           initialSessions={sessions}
+          allMembers={allMembers}
           workspaceId={workspaceId}
           currentUserId={session.user.id}
           token={session.token}

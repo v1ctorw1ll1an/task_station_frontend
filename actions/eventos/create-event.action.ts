@@ -61,7 +61,13 @@ export async function createEventAction(
           .split(',')
           .map((m) => Number(m))
           .filter((n) => Number.isInteger(n) && n >= 0)
-          .map((minutesBefore) => ({ minutesBefore, method: 'email' as const }))
+          // Cada lembrete escolhido pelo usuário dispara em todos os canais:
+          // email + notification (in-app/Web Push). Cada canal respeita as
+          // preferências do destinatário no momento da entrega.
+          .flatMap((minutesBefore) => [
+            { minutesBefore, method: 'email' as const },
+            { minutesBefore, method: 'notification' as const },
+          ])
       : undefined;
 
   const body: Record<string, unknown> = {

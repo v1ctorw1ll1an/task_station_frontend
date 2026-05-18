@@ -72,7 +72,10 @@ export function useKanbanSocket(projectId: string, token: string | null) {
     socket.on('task:created', (p: TaskCreatedPayload) => store.applyTaskCreated(p));
     socket.on('task:updated', (p: TaskUpdatedPayload) => store.applyTaskUpdated(p));
     socket.on('task:moved', (p: TaskMovedPayload) => store.applyTaskMoved(p));
-    socket.on('task:deleted', (p: TaskDeletedPayload) => store.applyTaskDeleted(p));
+    socket.on('task:deleted', (p: TaskDeletedPayload) => {
+      store.applyTaskDeleted(p);
+      trackingStore.applySessionsStoppedByTaskId(p.taskId);
+    });
     socket.on('task:restored', (p: TaskRestoredPayload) => store.applyTaskRestored(p));
 
     // ── Handlers de coluna ────────────────────────────────────────────────────

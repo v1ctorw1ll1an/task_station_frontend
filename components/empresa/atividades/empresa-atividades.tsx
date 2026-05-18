@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ChevronRight, ExternalLink, Timer } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { rawToActiveSession, type ActiveSession, type RawSession } from '@/lib/stores/task-tracking-store';
 import { Badge } from '@/components/ui/badge';
+import { MemberFilter, type MemberOption } from '@/components/atividades/member-filter';
 
 interface TaskSessionStartedPayload {
   sessionId: string; taskId: string; taskTitle: string; taskNumber: number | null;
@@ -51,16 +52,29 @@ function getInitials(name: string): string {
   return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase();
 }
 
+interface MemberInfo {
+  id: string;
+  name: string;
+  photoUrl: string | null;
+}
+
 interface EmpresaAtividadesProps {
   initialSessions: RawSession[];
+  allMembers: MemberInfo[];
   companyId: string;
   token: string;
 }
 
-export function EmpresaAtividades({ initialSessions, companyId, token }: EmpresaAtividadesProps) {
+export function EmpresaAtividades({
+  initialSessions,
+  allMembers,
+  companyId,
+  token,
+}: EmpresaAtividadesProps) {
   const [sessions, setSessions] = useState<ActiveSession[]>(() => initialSessions.map(rawToActiveSession));
   const [, setTick] = useState(0);
   const [collapsedMembers, setCollapsedMembers] = useState<Set<string>>(new Set());
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -121,21 +135,59 @@ export function EmpresaAtividades({ initialSessions, companyId, token }: Empresa
     });
   }
 
-  const memberGroups = groupByMember(sessions);
+  const allMemberGroups = groupByMember(sessions);
 
-  if (memberGroups.length === 0) {
-    return (
-      <div className="rounded-lg border bg-card px-6 py-16 text-center space-y-2">
-        <Timer className="h-10 w-10 mx-auto text-muted-foreground/40" />
-        <p className="text-sm font-medium text-muted-foreground">Nenhum membro com tarefa em execução.</p>
-        <p className="text-xs text-muted-foreground">As tarefas iniciadas pelos membros aparecerão aqui em tempo real.</p>
-      </div>
-    );
-  }
+  const memberOptions = useMemo<MemberOption[]>(() => {
+    const byId = new Map<string, MemberOption>();
+    for (const m of allMembers) {
+      byId.set(m.id, { userId: m.id, userName: m.name, userPhotoUrl: m.photoUrl });
+    }
+    for (const g of allMemberGroups) {
+      if (!byId.has(g.userId)) {
+        byId.set(g.userId, {
+          userId: g.userId,
+          userName: g.userName,
+          userPhotoUrl: g.userPhotoUrl,
+        });
+      }
+    }
+    return Array.from(byId.values());
+  }, [allMembers, allMemberGroups]);
+
+  const memberGroups =
+    selectedUserIds.length === 0
+      ? allMemberGroups
+      : allMemberGroups.filter((g) => selectedUserIds.includes(g.userId));
 
   return (
     <div className="space-y-4">
-      {memberGroups.map((group) => {
+      <div className="flex items-center justify-between gap-3">
+        <MemberFilter
+          members={memberOptions}
+          selectedIds={selectedUserIds}
+          onChange={setSelectedUserIds}
+        />
+        <span className="text-xs text-muted-foreground">
+          {memberGroups.length} membro{memberGroups.length !== 1 ? 's' : ''} com atividade
+        </span>
+      </div>
+
+      {memberGroups.length === 0 ? (
+        <div className="rounded-lg border bg-card px-6 py-16 text-center space-y-2">
+          <Timer className="h-10 w-10 mx-auto text-muted-foreground/40" />
+          <p className="text-sm font-medium text-muted-foreground">
+            {selectedUserIds.length > 0
+              ? 'Nenhum dos membros selecionados tem tarefa em execução.'
+              : 'Nenhum membro com tarefa em execução.'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {selectedUserIds.length > 0
+              ? 'Ajuste o filtro para incluir outros membros.'
+              : 'As tarefas iniciadas pelos membros aparecerão aqui em tempo real.'}
+          </p>
+        </div>
+      ) : (
+        memberGroups.map((group) => {
         const isCollapsed = collapsedMembers.has(group.userId);
         return (
           <div key={group.userId} className="rounded-lg border bg-card overflow-hidden">
@@ -185,7 +237,8 @@ export function EmpresaAtividades({ initialSessions, companyId, token }: Empresa
             )}
           </div>
         );
-      })}
+        })
+      )}
     </div>
   );
 }

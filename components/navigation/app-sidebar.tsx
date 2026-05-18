@@ -83,6 +83,26 @@ function storageKey(companyId: string) {
     return `sidebar-order-${companyId}`;
 }
 
+function lastWorkspaceKey(companyId: string) {
+    return `sidebar-last-workspace-${companyId}`;
+}
+
+function readLastWorkspace(companyId: string): string | null {
+    try {
+        return localStorage.getItem(lastWorkspaceKey(companyId));
+    } catch {
+        return null;
+    }
+}
+
+function writeLastWorkspace(companyId: string, workspaceId: string) {
+    try {
+        localStorage.setItem(lastWorkspaceKey(companyId), workspaceId);
+    } catch {
+        // ignore
+    }
+}
+
 function readCache(companyId: string): SidebarOrderCache | null {
     try {
         const raw = localStorage.getItem(storageKey(companyId));
@@ -248,6 +268,9 @@ export function AppSidebar({
     // ── Auto-expand current workspace ─────────────────────────────────────────
     useEffect(() => {
         if (currentWorkspaceId) {
+            // Persiste o último workspace ativo para que rotas fora de workspace
+            // (ex: /empresa/[id]/inicio - Agenda) mantenham este expandido no aside.
+            writeLastWorkspace(companyId, currentWorkspaceId);
             startTransition(() => {
                 setExpandedWorkspaces((prev) => {
                     if (prev.has(currentWorkspaceId)) return prev;
@@ -255,7 +278,25 @@ export function AppSidebar({
                 });
             });
         }
-    }, [currentWorkspaceId]);
+    }, [currentWorkspaceId, companyId]);
+
+    // ── Restore last-active workspace when no workspaceId in route ────────────
+    // Roda só uma vez na hidratação. SSR não tem acesso a localStorage, então
+    // o initial state usa workspaces[0]; aqui corrigimos para o último workspace
+    // efetivamente aberto pelo usuário.
+    useEffect(() => {
+        if (currentWorkspaceId) return; // já tratado pelo effect acima
+        const last = readLastWorkspace(companyId);
+        if (!last) return;
+        if (!workspaces.some((ws) => ws.workspaceId === last)) return;
+        setExpandedWorkspaces((prev) => {
+            if (prev.has(last) && prev.size === 1) return prev;
+            return new Set([last]);
+        });
+    // Apenas no mount — evitar reagir a mudanças posteriores de currentWorkspaceId
+    // (essas já são tratadas pelo effect acima).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // ── Load projects when workspace expands ──────────────────────────────────
     useEffect(() => {

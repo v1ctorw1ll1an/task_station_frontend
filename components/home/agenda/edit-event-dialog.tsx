@@ -24,6 +24,7 @@ import {
 import { updateEventAction } from '@/actions/eventos/update-event.action';
 import { deleteEventAction } from '@/actions/eventos/delete-event.action';
 import { rsvpEventAction } from '@/actions/eventos/rsvp-event.action';
+import { notifyAgendaChanged } from '@/lib/agenda-events';
 import type { CalendarEventOccurrence, AttendeeStatus } from '@/lib/event-types';
 import {
   EventFormFields,
@@ -70,6 +71,7 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
       const result = await updateEventAction({}, formData);
       if (result.success) {
         onOpenChange(false);
+        notifyAgendaChanged();
         router.refresh();
       } else {
         setError(result.error ?? 'Erro ao salvar');
@@ -88,6 +90,7 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
       if (result.success) {
         setConfirmDelete(false);
         onOpenChange(false);
+        notifyAgendaChanged();
         router.refresh();
       }
     });
@@ -98,6 +101,7 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
       const result = await rsvpEventAction(occurrence.eventId, status, companyId);
       if (result.success) {
         onOpenChange(false);
+        notifyAgendaChanged();
         router.refresh();
       }
     });
