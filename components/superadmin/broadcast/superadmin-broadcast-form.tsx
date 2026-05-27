@@ -4,7 +4,8 @@ import { useActionState, useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { MarkdownEditor } from '@/components/workspace/kanban/markdown-editor';
+import { FREE } from '@/lib/limits';
+import { CharCounter, MarkdownEditor } from '@/components/workspace/kanban/markdown-editor';
 import {
   sendSuperadminBroadcastAction,
   type SendBroadcastState,
@@ -115,9 +116,10 @@ export function SuperadminBroadcastForm() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Título do comunicado"
-          maxLength={200}
+          maxLength={FREE.broadcastTitle}
           required
         />
+        <CharCounter value={title.length} max={FREE.broadcastTitle} />
       </div>
 
       <div className="space-y-2">
@@ -128,6 +130,7 @@ export function SuperadminBroadcastForm() {
             onChange={setBody}
             placeholder="Escreva o conteúdo do comunicado. Suporta **markdown**, links e imagens externas."
             minRows={8}
+            maxLength={FREE.broadcastBody}
           />
         </div>
         <ImageUploadButton onInsert={(md) => setBody((b) => b + md)} pasteLoading={pasteLoading} />

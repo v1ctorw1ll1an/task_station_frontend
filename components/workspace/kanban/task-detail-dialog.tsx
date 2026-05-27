@@ -74,7 +74,8 @@ import { TaskGuestsSection } from './task-guests-section';
 import { listGuestsAction, type TaskGuestSummary } from '@/actions/projeto/list-guests.action';
 import type { WorkspaceMember, ProjectLabel } from './kanban-board';
 import { useActionState } from 'react';
-import { MarkdownEditor, MarkdownDisplay } from './markdown-editor';
+import { FREE } from '@/lib/limits';
+import { MarkdownEditor, MarkdownDisplay, CharCounter } from './markdown-editor';
 import type { TaskAttachment } from '@/actions/projeto/get-attachments.action';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -233,18 +234,22 @@ function SortableChecklistItem({
       </button>
 
       {editingId === item.id ? (
-        <input
-          autoFocus
-          type="text"
-          value={editingTitle}
-          onChange={(e) => onEditingTitleChange(e.target.value)}
-          onBlur={() => onCommitEdit(item)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') onCommitEdit(item);
-            if (e.key === 'Escape') onCancelEdit();
-          }}
-          className="flex-1 text-sm bg-transparent border-b border-input focus:outline-none focus:border-primary"
-        />
+        <div className="flex-1 min-w-0">
+          <input
+            autoFocus
+            type="text"
+            value={editingTitle}
+            onChange={(e) => onEditingTitleChange(e.target.value)}
+            onBlur={() => onCommitEdit(item)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onCommitEdit(item);
+              if (e.key === 'Escape') onCancelEdit();
+            }}
+            maxLength={FREE.checklistItem}
+            className="w-full text-sm bg-transparent border-b border-input focus:outline-none focus:border-primary"
+          />
+          <CharCounter value={editingTitle.length} max={FREE.checklistItem} className="mt-0.5" />
+        </div>
       ) : (
         <span
           onDoubleClick={() => onStartEdit(item)}
@@ -403,30 +408,36 @@ function TaskChecklistSection({
       )}
 
       {/* Add item input */}
-      <div className="flex items-center gap-2 mt-1">
-        <input
-          ref={addInputRef}
-          type="text"
-          placeholder="Adicionar item..."
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void handleAdd();
-          }}
-          className="flex-1 rounded-md border bg-background px-2.5 py-1 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-        />
-        <button
-          type="button"
-          onClick={() => void handleAdd()}
-          disabled={!newTitle.trim() || isAdding}
-          className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-        >
-          {isAdding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Adicionar'}
-        </button>
+      <div className="mt-1">
+        <div className="flex items-center gap-2">
+          <input
+            ref={addInputRef}
+            type="text"
+            placeholder="Adicionar item..."
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void handleAdd();
+            }}
+            maxLength={FREE.checklistItem}
+            className="flex-1 rounded-md border bg-background px-2.5 py-1 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          <button
+            type="button"
+            onClick={() => void handleAdd()}
+            disabled={!newTitle.trim() || isAdding}
+            className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          >
+            {isAdding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Adicionar'}
+          </button>
+        </div>
+        <CharCounter value={newTitle.length} max={500} className="mt-0.5" />
       </div>
     </div>
   );
 }
+
+const HISTORY_PAGE_SIZE = 20;
 
 function TaskHistorySection({
   projectId,
@@ -436,21 +447,38 @@ function TaskHistorySection({
   taskId: string;
 }) {
   const [history, setHistory] = useState<TaskHistoryEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    getTaskHistoryAction(projectId, taskId).then((data) => {
-      setHistory(data);
+    setPage(1);
+    getTaskHistoryAction(projectId, taskId, 1, HISTORY_PAGE_SIZE).then((res) => {
+      setHistory(res.data);
+      setTotal(res.total);
       setLoading(false);
     });
   }, [projectId, taskId]);
 
+  async function loadMore() {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    const next = page + 1;
+    const res = await getTaskHistoryAction(projectId, taskId, next, HISTORY_PAGE_SIZE);
+    setHistory((prev) => [...prev, ...res.data]);
+    setTotal(res.total);
+    setPage(next);
+    setLoadingMore(false);
+  }
+
   const sorted = [...history].sort(
     (a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime(),
   );
+  const hasMore = history.length < total;
 
   return (
     <div className="space-y-2">
@@ -462,8 +490,8 @@ function TaskHistorySection({
         <span className="flex items-center gap-1.5">
           <Clock className="h-4 w-4 text-muted-foreground" />
           Histórico de alterações
-          {!loading && history.length > 0 && (
-            <span className="text-xs text-muted-foreground font-normal">({history.length})</span>
+          {!loading && total > 0 && (
+            <span className="text-xs text-muted-foreground font-normal">({total})</span>
           )}
         </span>
         {isOpen ? (
@@ -519,6 +547,16 @@ function TaskHistorySection({
                   </div>
                 </div>
               ))}
+              {hasMore && (
+                <button
+                  type="button"
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                  className="w-full text-xs text-primary hover:underline disabled:opacity-50 py-1.5 cursor-pointer"
+                >
+                  {loadingMore ? 'Carregando...' : `Carregar mais (${total - history.length} restantes)`}
+                </button>
+              )}
             </div>
           )}
         </>
@@ -625,7 +663,26 @@ function TaskCommentsSection({
     setMentionStart(-1);
   }
 
+  // Conta @mentions únicas (case-insensitive) já presentes no texto.
+  // Espelha a lógica do backend em projeto.service.ts.
+  function countMentions(text: string): number {
+    const seen = new Set<string>();
+    for (const m of text.matchAll(/@(\w+)/g)) seen.add(m[1].toLowerCase());
+    return seen.size;
+  }
+
+  const mentionCount = countMentions(newCommentValue);
+  const mentionLimitReached = mentionCount >= FREE.mentionsPerComment;
+
   function insertMention(name: string) {
+    // Se já existe esse @nome no texto, não conta como novo — permite.
+    // Senão e estamos no limite, bloqueia.
+    const alreadyMentioned = new RegExp(`@${name}\\b`, 'i').test(newCommentValue);
+    if (!alreadyMentioned && mentionLimitReached) {
+      setMentionQuery(null);
+      setMentionStart(-1);
+      return;
+    }
     const textarea = textareaRef.current;
     const cursor = textarea?.selectionStart ?? mentionStart;
     const before = newCommentValue.slice(0, mentionStart);
@@ -702,6 +759,7 @@ function TaskCommentsSection({
                           onChange={setEditContent}
                           minRows={2}
                           autoFocus
+                          maxLength={FREE.comment}
                         />
                         {editError && <p className="text-xs text-destructive">{editError}</p>}
                         <div className="flex gap-1.5">
@@ -776,26 +834,44 @@ function TaskCommentsSection({
                 textareaRef={textareaRef}
                 placeholder="Escreva um comentário... Use @ para mencionar membros"
                 minRows={2}
+                maxLength={FREE.comment}
               />
               {mentionQuery !== null && filteredMentionMembers.length > 0 && (
                 <div className="absolute bottom-full mb-1 left-0 w-full rounded-md border bg-popover shadow-md z-50 max-h-40 overflow-y-auto">
-                  {filteredMentionMembers.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        insertMention(m.name);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer"
-                    >
-                      <UserAvatar name={m.name} email={m.email} photoUrl={m.photoUrl} size="sm" />
-                      <span className="flex flex-col items-start min-w-0">
-                        <span className="truncate font-medium">{m.name}</span>
-                        <span className="truncate text-xs text-muted-foreground">{m.email}</span>
-                      </span>
-                    </button>
-                  ))}
+                  {mentionLimitReached && (
+                    <div className="px-3 py-2 text-xs text-amber-600 dark:text-amber-500 border-b bg-amber-50/50 dark:bg-amber-950/20">
+                      Limite de {FREE.mentionsPerComment} menções por comentário atingido.
+                    </div>
+                  )}
+                  {filteredMentionMembers.map((m) => {
+                    const alreadyMentioned = new RegExp(`@${m.name.split(/\s+/)[0]}\\b`, 'i').test(
+                      newCommentValue,
+                    );
+                    const disabled = mentionLimitReached && !alreadyMentioned;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        disabled={disabled}
+                        onMouseDown={(e) => {
+                          if (disabled) return;
+                          e.preventDefault();
+                          insertMention(m.name);
+                        }}
+                        className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm cursor-pointer ${
+                          disabled
+                            ? 'opacity-40 cursor-not-allowed'
+                            : 'hover:bg-accent'
+                        }`}
+                      >
+                        <UserAvatar name={m.name} email={m.email} photoUrl={m.photoUrl} size="sm" />
+                        <span className="flex flex-col items-start min-w-0">
+                          <span className="truncate font-medium">{m.name}</span>
+                          <span className="truncate text-xs text-muted-foreground">{m.email}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1117,12 +1193,12 @@ export function TaskDetailDialog({
               // se save falhar, ainda tentamos o fluxo de notificação
             }
             try {
-              const [guestsRes, history] = await Promise.all([
+              const [guestsRes, historyPage] = await Promise.all([
                 listGuestsAction(projId, tId),
-                getTaskHistoryAction(projId, tId),
+                getTaskHistoryAction(projId, tId, 1, 100),
               ]);
               const guests = guestsRes.guests ?? [];
-              const mine = history
+              const mine = historyPage.data
                 .filter((h) => h.user?.id === currentUserId)
                 .filter((h) => new Date(h.changedAt).getTime() >= since);
               if (guests.length > 0 && mine.length > 0 && onRequestSendChanges) {
@@ -1256,13 +1332,17 @@ export function TaskDetailDialog({
           {/* Left: title + description + comments + history */}
           <div className="flex flex-col flex-1 md:overflow-y-auto px-4 md:px-6 py-4 gap-4 min-w-0">
             {/* Title */}
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Título da task"
-              className={`w-full text-lg font-semibold bg-transparent border-0 border-b border-transparent focus:border-input focus:outline-none focus:ring-0 pb-1 placeholder:text-muted-foreground/50 transition-colors${isPrivacyMode ? ' blur-sm select-none' : ''}`}
-            />
+            <div>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Título da task"
+                maxLength={FREE.taskTitle}
+                className={`w-full text-lg font-semibold bg-transparent border-0 border-b border-transparent focus:border-input focus:outline-none focus:ring-0 pb-1 placeholder:text-muted-foreground/50 transition-colors${isPrivacyMode ? ' blur-sm select-none' : ''}`}
+              />
+              <CharCounter value={title.length} max={FREE.taskTitle} className="mt-0.5" />
+            </div>
 
             {/* Description */}
             <div className="space-y-1">
@@ -1276,6 +1356,7 @@ export function TaskDetailDialog({
                 imageCount={attachmentImageCount}
                 onPasteAttachmentAdded={setPendingAttachment}
                 collapsible
+                maxLength={FREE.taskDescription}
               />
             </div>
 

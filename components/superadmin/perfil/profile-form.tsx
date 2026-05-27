@@ -46,6 +46,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
             name="name"
             defaultValue={initialData.name}
             placeholder="Nome completo"
+            maxLength={120}
           />
         </div>
 
@@ -57,6 +58,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
             type="email"
             defaultValue={initialData.email}
             placeholder="seu@email.com"
+            maxLength={254}
           />
           <p className="text-xs text-muted-foreground">
             Ao alterar o email, use o novo endereço para fazer login.
@@ -70,6 +72,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
             name="phone"
             defaultValue={initialData.phone}
             placeholder="(11) 99999-9999"
+            maxLength={20}
           />
         </div>
       </div>
@@ -93,6 +96,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
               name="newPassword"
               type={showNew ? 'text' : 'password'}
               placeholder="Mínimo 8 caracteres"
+              maxLength={72}
               className="pr-10"
             />
             <button
@@ -114,6 +118,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
               name="confirmPassword"
               type={showConfirm ? 'text' : 'password'}
               placeholder="Repita a nova senha"
+              maxLength={72}
               className="pr-10"
             />
             <button

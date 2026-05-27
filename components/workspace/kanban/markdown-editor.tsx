@@ -4,6 +4,21 @@ import { useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+
+// Sanitization schema based on rehype-sanitize default, restricting href/src
+// to safe protocols. Blocks `javascript:`, `vbscript:`, etc.
+const safeProtocols = ['http', 'https', 'mailto', 'tel'];
+const safeImageProtocols = ['http', 'https', 'data'];
+const sanitizeSchema = {
+  ...defaultSchema,
+  protocols: {
+    ...defaultSchema.protocols,
+    href: safeProtocols,
+    src: safeImageProtocols,
+    cite: safeProtocols,
+  },
+};
 import {
   Bold,
   Code,
@@ -64,7 +79,11 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>['components'] = {
 
 export function MarkdownDisplay({ content }: { content: string }) {
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={mdComponents}>
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, remarkBreaks]}
+      rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
+      components={mdComponents}
+    >
       {content}
     </ReactMarkdown>
   );
@@ -95,6 +114,8 @@ interface MarkdownEditorProps {
   alwaysEdit?: boolean;
   /** Truncates the preview to ~5 lines with a gradient + "Ver mais/menos" toggle */
   collapsible?: boolean;
+  /** Hard cap on character count enforced by the underlying textarea */
+  maxLength?: number;
 }
 
 export function MarkdownEditor({
@@ -112,6 +133,7 @@ export function MarkdownEditor({
   autoFocus,
   alwaysEdit,
   collapsible,
+  maxLength,
 }: MarkdownEditorProps) {
   // Start in edit mode when autoFocus is requested or alwaysEdit is true
   const [tab, setTab] = useState<'edit' | 'preview'>(autoFocus || alwaysEdit ? 'edit' : 'preview');
@@ -379,8 +401,42 @@ export function MarkdownEditor({
         rows={minRows}
         disabled={disabled}
         autoFocus={autoFocus}
+        maxLength={maxLength}
         className="flex w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-y-auto"
       />
+
+      {maxLength !== undefined && (
+        <CharCounter value={value.length} max={maxLength} className="px-3 pb-1.5 -mt-1" />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CharCounter — pequeno indicador "10/100" reutilizável
+// ---------------------------------------------------------------------------
+
+export function CharCounter({
+  value,
+  max,
+  className = '',
+}: {
+  value: number;
+  max: number;
+  className?: string;
+}) {
+  const ratio = value / max;
+  const tone =
+    ratio >= 1
+      ? 'text-destructive font-medium'
+      : ratio >= 0.9
+        ? 'text-destructive/80'
+        : ratio >= 0.7
+          ? 'text-amber-600 dark:text-amber-500'
+          : 'text-muted-foreground/60';
+  return (
+    <div className={`text-[10px] tabular-nums text-right ${tone} ${className}`}>
+      {value}/{max}
     </div>
   );
 }

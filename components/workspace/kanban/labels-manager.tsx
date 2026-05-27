@@ -336,6 +336,7 @@ export function LabelsManager({ projectId, workspaceId, labels }: LabelsManagerP
                 value={createName}
                 onChange={(e) => { setCreateName(e.target.value); setCreateError(''); }}
                 placeholder="Nome da label"
+                maxLength={50}
                 className="flex-1"
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCreate(); } }}
               />

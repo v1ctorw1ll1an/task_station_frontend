@@ -39,6 +39,15 @@ export function useNotificationSocket(token: string | null) {
           eventReminderPopup: Boolean(data.eventReminderPopup ?? true),
           eventReminderBrowser: Boolean(data.eventReminderBrowser ?? true),
         };
+
+        if (
+          prefsRef.current.eventReminderBrowser
+          && typeof window !== 'undefined'
+          && 'Notification' in window
+          && Notification.permission === 'default'
+        ) {
+          Notification.requestPermission().catch(() => undefined);
+        }
       })
       .catch(() => undefined);
     return () => {
@@ -68,19 +77,22 @@ export function useNotificationSocket(token: string | null) {
 
       if (n.type === 'EVENT_REMINDER') {
         const prefs = prefsRef.current;
-        const isVisible = typeof document !== 'undefined' && document.visibilityState === 'visible';
+        const hasFocus =
+          typeof document !== 'undefined'
+          && document.visibilityState === 'visible'
+          && document.hasFocus();
 
         if (prefs.eventReminderSound) {
           playReminderSound();
         }
-        if (prefs.eventReminderPopup && isVisible) {
+        if (prefs.eventReminderPopup && hasFocus) {
           pushToast({
             id: n.id ?? `evrem-${Date.now()}`,
             title: n.title,
             body: n.body,
           });
         }
-        if (prefs.eventReminderBrowser && !isVisible) {
+        if (prefs.eventReminderBrowser && !hasFocus) {
           showBrowserReminderNotification(n.title, n.body);
         }
       }

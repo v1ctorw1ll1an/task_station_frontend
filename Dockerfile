@@ -16,6 +16,11 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
+# Stable encryption key for Server Action IDs — must match across builds/replicas,
+# otherwise clients get "Failed to find Server Action" after redeploys.
+ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=$NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+
 RUN pnpm build
 
 # Stage 3: production runner

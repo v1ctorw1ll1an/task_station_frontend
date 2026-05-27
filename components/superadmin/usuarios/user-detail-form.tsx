@@ -89,6 +89,7 @@ export function UserDetailForm({ user }: UserDetailFormProps) {
               name="name"
               defaultValue={user.name}
               placeholder="Nome completo"
+              maxLength={120}
             />
           </div>
 
@@ -100,6 +101,7 @@ export function UserDetailForm({ user }: UserDetailFormProps) {
               type="email"
               defaultValue={user.email}
               placeholder="email@exemplo.com"
+              maxLength={254}
             />
           </div>
 
@@ -110,6 +112,7 @@ export function UserDetailForm({ user }: UserDetailFormProps) {
               name="phone"
               defaultValue={user.phone ?? ''}
               placeholder="(11) 99999-9999"
+              maxLength={20}
             />
           </div>
 
@@ -121,6 +124,7 @@ export function UserDetailForm({ user }: UserDetailFormProps) {
                 name="password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Deixe em branco para manter"
+                maxLength={72}
                 className="pr-10"
               />
               <button

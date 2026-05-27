@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition, useCallback } from "react";
+import { useState, useEffect, useRef, useTransition, useCallback } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import {
     DndContext,
@@ -123,6 +123,7 @@ export function KanbanBoard({
     const searchParams = useSearchParams();
     const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
     const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
+    const dragSourceColumnIdRef = useRef<string | null>(null);
     const [sendChanges, setSendChanges] = useState<{
         taskId: string;
         guests: TaskGuestSummary[];
@@ -186,7 +187,9 @@ export function KanbanBoard({
     function handleDragStart(event: DragStartEvent) {
         const { active } = event;
         if (active.data.current?.type === "task") {
-            setActiveTask(active.data.current.task as KanbanTask);
+            const t = active.data.current.task as KanbanTask;
+            setActiveTask(t);
+            dragSourceColumnIdRef.current = t.columnId;
         } else if (active.data.current?.type === "column") {
             setActiveColumnId(active.id as string);
         }
@@ -325,8 +328,10 @@ export function KanbanBoard({
                     capturedAfterTaskId,
                 );
 
-                const changedColumn =
-                    capturedDraggedTask.columnId !== capturedTargetColumnId;
+                const sourceColumnId =
+                    dragSourceColumnIdRef.current ?? capturedDraggedTask.columnId;
+                dragSourceColumnIdRef.current = null;
+                const changedColumn = sourceColumnId !== capturedTargetColumnId;
                 const since = Date.now();
 
                 startTransition(async () => {
@@ -344,12 +349,12 @@ export function KanbanBoard({
                     // de notificação com a nova entrada de TaskHistory (columnId).
                     if (!changedColumn) return;
                     try {
-                        const [guestsRes, history] = await Promise.all([
+                        const [guestsRes, historyPage] = await Promise.all([
                             listGuestsAction(projectId, capturedDraggedTask.id),
-                            getTaskHistoryAction(projectId, capturedDraggedTask.id),
+                            getTaskHistoryAction(projectId, capturedDraggedTask.id, 1, 100),
                         ]);
                         const guests = guestsRes.guests ?? [];
-                        const mine = history
+                        const mine = historyPage.data
                             .filter((h) => h.user?.id === currentUserId)
                             .filter((h) => new Date(h.changedAt).getTime() >= since);
                         if (guests.length > 0 && mine.length > 0) {

@@ -378,6 +378,8 @@ export function ColumnOptionsMenu({
                 name="name"
                 defaultValue={column.name}
                 placeholder="Nome da coluna"
+                maxLength={100}
+                required
                 autoFocus
               />
             </div>
