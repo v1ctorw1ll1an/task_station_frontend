@@ -77,6 +77,7 @@ export function useKanbanSocket(projectId: string, token: string | null) {
       trackingStore.applySessionsStoppedByTaskId(p.taskId);
     });
     socket.on('task:restored', (p: TaskRestoredPayload) => store.applyTaskRestored(p));
+    socket.on('task:detailChanged', (p: { taskId: string }) => store.signalDetailChanged(p.taskId));
 
     // ── Handlers de coluna ────────────────────────────────────────────────────
     socket.on('column:created', (p: ColumnCreatedPayload) => store.applyColumnCreated(p));

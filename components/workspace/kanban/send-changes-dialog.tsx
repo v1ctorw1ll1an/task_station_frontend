@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { Check, Loader2, Send, X } from 'lucide-react';
 import {
   Dialog,
@@ -11,7 +11,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { notifyGuestAction } from '@/actions/projeto/notify-guest.action';
+import { previewNotifyAction } from '@/actions/projeto/preview-notify.action';
 import type { TaskGuestSummary } from '@/actions/projeto/list-guests.action';
 
 interface SendChangesDialogProps {
@@ -40,12 +42,25 @@ export function SendChangesDialog({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [message, setMessage] = useState('');
+  const [loadingPreview, setLoadingPreview] = useState(true);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoadingPreview(true);
+    previewNotifyAction(projectId, taskId, historyEntryIds).then((res) => {
+      if (res.message !== undefined) setMessage(res.message);
+      else if (res.error) setError(res.error);
+      setLoadingPreview(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, projectId, taskId]);
 
   const handleSend = (guestId: string) => {
     setError(null);
     setPendingId(guestId);
     startTransition(async () => {
-      const res = await notifyGuestAction(projectId, taskId, guestId, historyEntryIds);
+      const res = await notifyGuestAction(projectId, taskId, guestId, historyEntryIds, message);
       if (res.error || !res.whatsappUrl) {
         setError(res.error ?? 'Erro ao gerar mensagem');
       } else {
@@ -77,6 +92,30 @@ export function SendChangesDialog({
           </p>
         )}
 
+        <div className="space-y-1.5">
+          <Label htmlFor="send-changes-message" className="text-xs text-muted-foreground">
+            Mensagem (resumo das alterações)
+          </Label>
+          {loadingPreview ? (
+            <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-4 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Gerando resumo…
+            </div>
+          ) : (
+            <textarea
+              id="send-changes-message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={8}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          )}
+          <p className="text-[10px] text-muted-foreground">
+            A saudação com o nome e o link de cada convidado são adicionados automaticamente ao
+            enviar.
+          </p>
+        </div>
+
         <ul className="space-y-1 max-h-[40vh] overflow-y-auto">
           {guests.map((guest) => {
             const isSent = sent.has(guest.id);
@@ -104,7 +143,7 @@ export function SendChangesDialog({
                   <button
                     type="button"
                     onClick={() => handleSend(guest.id)}
-                    disabled={pending}
+                    disabled={pending || loadingPreview}
                     className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
                     title={`Enviar para ${guest.name}`}
                   >

@@ -16,6 +16,8 @@ interface DatePickerProps {
   className?: string;
   disabled?: boolean;
   side?: 'top' | 'bottom' | 'left' | 'right';
+  /** Exibe o botão de limpar (X / "Limpar"). Default: true. Use false em campos obrigatórios. */
+  clearable?: boolean;
 }
 
 export function DatePicker({
@@ -25,6 +27,7 @@ export function DatePicker({
   className,
   disabled,
   side,
+  clearable = true,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
 
@@ -69,7 +72,7 @@ export function DatePicker({
         >
           <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <span className="flex-1 text-left truncate">{formattedDate ?? placeholder}</span>
-          {value && (
+          {clearable && value && (
             <span
               role="button"
               tabIndex={-1}
@@ -99,7 +102,7 @@ export function DatePicker({
           >
             Hoje
           </Button>
-          {value && (
+          {clearable && value && (
             <Button
               type="button"
               variant="ghost"

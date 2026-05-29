@@ -1,6 +1,7 @@
 'use server';
 
 import { getSession } from '@/lib/auth';
+import { TASK_HISTORY_MAX } from '@/lib/limits';
 
 export interface TaskHistoryEntry {
   id: string;
@@ -8,7 +9,8 @@ export interface TaskHistoryEntry {
   oldValue: string | null;
   newValue: string | null;
   changedAt: string;
-  user: { id: string; name: string; email: string; photoUrl: string | null };
+  user: { id: string; name: string; email: string; photoUrl: string | null } | null;
+  guest: { id: string; name: string } | null;
 }
 
 export interface TaskHistoryPage {
@@ -19,13 +21,13 @@ export interface TaskHistoryPage {
   totalPages: number;
 }
 
-const EMPTY: TaskHistoryPage = { data: [], total: 0, page: 1, limit: 20, totalPages: 1 };
+const EMPTY: TaskHistoryPage = { data: [], total: 0, page: 1, limit: TASK_HISTORY_MAX, totalPages: 1 };
 
 export async function getTaskHistoryAction(
   projectId: string,
   taskId: string,
   page = 1,
-  limit = 20,
+  limit = TASK_HISTORY_MAX,
 ): Promise<TaskHistoryPage> {
   const session = await getSession();
   if (!session) return EMPTY;

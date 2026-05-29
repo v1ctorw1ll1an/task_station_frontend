@@ -1,11 +1,7 @@
 'use server';
 
-export interface PublicTaskAssignee {
-  name: string;
-  photoUrl: string | null;
-}
-
 export interface PublicTaskLabel {
+  id: string;
   name: string;
   color: string;
 }
@@ -40,7 +36,6 @@ export interface PublicTask {
   dueDate: string | null;
   order: number;
   column: PublicTaskColumn;
-  assignees: PublicTaskAssignee[];
   labels: PublicTaskLabel[];
   checklists: PublicTaskChecklist[];
   guests: PublicTaskGuest[];

@@ -62,6 +62,12 @@ interface KanbanState {
   labels: ProjectLabel[];
   membros: WorkspaceMember[];
 
+  // Sinal incremental para forçar refetch de comentários/checklist/histórico do
+  // dialog aberto quando a task recebe `task:detailChanged` via socket.
+  detailChangedTaskId: string | null;
+  detailChangedTick: number;
+  signalDetailChanged: (taskId: string) => void;
+
   // Hidratação: chamado no mount do KanbanBoard com os dados do servidor
   hydrate: (data: {
     projectId: string;
@@ -114,6 +120,11 @@ export const useKanbanStore = create<KanbanState>((set, get) => ({
   columns: [],
   labels: [],
   membros: [],
+  detailChangedTaskId: null,
+  detailChangedTick: 0,
+
+  signalDetailChanged: (taskId) =>
+    set((state) => ({ detailChangedTaskId: taskId, detailChangedTick: state.detailChangedTick + 1 })),
 
   hydrate: (data) =>
     set({

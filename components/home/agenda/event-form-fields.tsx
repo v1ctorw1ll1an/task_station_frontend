@@ -1,6 +1,6 @@
 'use client';
 
-import { addHours, format, parseISO } from 'date-fns';
+import { addHours, addMinutes, format, parseISO } from 'date-fns';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
@@ -101,8 +101,12 @@ export function combineDateAndTime(
   allDay: boolean,
   timezone: string,
 ): string {
+  // Sem data não há instante a calcular — evita `RangeError: Invalid time value`
+  // ao renderizar enquanto o campo está vazio.
+  if (!date) return '';
   const t = allDay ? '00:00:00' : `${time || '00:00'}:00`;
-  return fromZonedTime(`${date}T${t}`, timezone).toISOString();
+  const d = fromZonedTime(`${date}T${t}`, timezone);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString();
 }
 
 interface EventFormFieldsProps {
@@ -116,6 +120,24 @@ export function EventFormFields({ state, onChange }: EventFormFieldsProps) {
 
   function patch(updates: Partial<EventFormState>) {
     onChange({ ...state, ...updates });
+  }
+
+  // Ao escolher o início, o fim vira início + 30 min. Em "dia inteiro" não há
+  // hora: o fim apenas acompanha a data de início. O `format` cuida da virada
+  // de dia quando início + 30 min cruza a meia-noite.
+  function applyStart(
+    startDate: string,
+    startTime: string,
+    allDay: boolean,
+  ): Partial<EventFormState> {
+    if (allDay) return { startDate, startTime, endDate: startDate };
+    const end = addMinutes(parseISO(`${startDate}T${startTime || '00:00'}:00`), 30);
+    return {
+      startDate,
+      startTime,
+      endDate: format(end, 'yyyy-MM-dd'),
+      endTime: format(end, 'HH:mm'),
+    };
   }
 
   function toggleReminder(minutes: number) {
@@ -168,16 +190,13 @@ export function EventFormFields({ state, onChange }: EventFormFieldsProps) {
           <Label className="text-xs text-muted-foreground">Início</Label>
           <DatePicker
             value={state.startDate}
-            onChange={(startDate) => {
-              const updates: Partial<EventFormState> = { startDate };
-              if (startDate > state.endDate) updates.endDate = startDate;
-              patch(updates);
-            }}
+            onChange={(startDate) => patch(applyStart(startDate, state.startTime, state.allDay))}
+            clearable={false}
           />
           {!state.allDay && (
             <TimePicker
               value={state.startTime}
-              onChange={(startTime) => patch({ startTime })}
+              onChange={(startTime) => patch(applyStart(state.startDate, startTime, state.allDay))}
             />
           )}
         </div>
@@ -186,6 +205,7 @@ export function EventFormFields({ state, onChange }: EventFormFieldsProps) {
           <DatePicker
             value={state.endDate}
             onChange={(endDate) => patch({ endDate })}
+            clearable={false}
           />
           {!state.allDay && (
             <TimePicker

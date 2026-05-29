@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { AlignLeft, CalendarDays, Copy, MessageSquare, Scissors, Tag, User } from 'lucide-react';
+import { AlignLeft, CalendarDays, Copy, MessageSquare, Scissors, Tag, User, UserRound } from 'lucide-react';
 import { gravatarUrl } from '@/lib/gravatar';
 import {
   ContextMenu,
@@ -35,7 +35,7 @@ export interface KanbanTask {
   taskAssignees: { user: { id: string; name: string; email: string; photoUrl: string | null } }[];
   reporter: { id: string; name: string; email: string; photoUrl: string | null };
   taskLabels: KanbanTaskLabel[];
-  _count: { taskComments: number };
+  _count: { taskComments: number; taskGuests: number };
 }
 
 const PRIORITY_LABELS: Record<KanbanTask['priority'], string> = {
@@ -203,6 +203,14 @@ export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false, c
                 const [, m, d] = task.dueDate.split('T')[0].split('-');
                 return `${d}/${m}`;
               })()}
+            </span>
+          )}
+          {task._count.taskGuests > 0 && (
+            <span
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-muted ring-2 ring-green-500"
+              title={`${task._count.taskGuests} convidado${task._count.taskGuests > 1 ? 's' : ''}`}
+            >
+              <UserRound className="h-3 w-3 text-muted-foreground" />
             </span>
           )}
           {assignees.length > 0 ? (

@@ -114,6 +114,8 @@ interface MarkdownEditorProps {
   alwaysEdit?: boolean;
   /** Truncates the preview to ~5 lines with a gradient + "Ver mais/menos" toggle */
   collapsible?: boolean;
+  /** Permite ao usuário arrastar a borda inferior para redimensionar verticalmente (resize-y) */
+  resizable?: boolean;
   /** Hard cap on character count enforced by the underlying textarea */
   maxLength?: number;
 }
@@ -133,6 +135,7 @@ export function MarkdownEditor({
   autoFocus,
   alwaysEdit,
   collapsible,
+  resizable,
   maxLength,
 }: MarkdownEditorProps) {
   // Start in edit mode when autoFocus is requested or alwaysEdit is true
@@ -305,7 +308,7 @@ export function MarkdownEditor({
               tabIndex={0}
               onDoubleClick={enterEdit}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); enterEdit(); } }}
-              className={`cursor-default select-text rounded-md px-3 py-2 hover:bg-muted/30 transition-colors overflow-hidden${previewExpanded ? '' : ' max-h-[7.5rem]'}`}
+              className={`cursor-default select-text rounded-md px-3 py-2 hover:bg-muted/30 transition-colors overflow-hidden${previewExpanded ? '' : ' max-h-[18rem]'}`}
             >
               <MarkdownDisplay content={value} />
             </div>
@@ -402,7 +405,9 @@ export function MarkdownEditor({
         disabled={disabled}
         autoFocus={autoFocus}
         maxLength={maxLength}
-        className="flex w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-y-auto"
+        className={`flex w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none overflow-y-auto ${
+          resizable ? 'resize-y min-h-[8rem] max-h-[70vh]' : 'resize-none'
+        }`}
       />
 
       {maxLength !== undefined && (

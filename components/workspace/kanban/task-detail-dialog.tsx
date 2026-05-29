@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useTransition, useState, useRef } from 'react';
+import { useEffect, useTransition, useState, useRef, useCallback } from 'react';
 import {
   TaskAttachmentsSection,
   IMAGE_MAX_MB,
@@ -74,7 +74,7 @@ import { TaskGuestsSection } from './task-guests-section';
 import { listGuestsAction, type TaskGuestSummary } from '@/actions/projeto/list-guests.action';
 import type { WorkspaceMember, ProjectLabel } from './kanban-board';
 import { useActionState } from 'react';
-import { FREE } from '@/lib/limits';
+import { FREE, TASK_HISTORY_MAX } from '@/lib/limits';
 import { MarkdownEditor, MarkdownDisplay, CharCounter } from './markdown-editor';
 import type { TaskAttachment } from '@/actions/projeto/get-attachments.action';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -110,7 +110,14 @@ import { pauseSessionAction } from '@/actions/task-session/pause-session.action'
 import { resumeSessionAction } from '@/actions/task-session/resume-session.action';
 import { stopSessionAction } from '@/actions/task-session/stop-session.action';
 import { rawToActiveSession } from '@/lib/stores/task-tracking-store';
+import { useKanbanStore } from '@/lib/stores/kanban-store';
 import { TaskLinkedNotes } from '@/components/sticky-notes/task-linked-notes';
+
+// Tick que muda quando chega `task:detailChanged` para a task informada — usado
+// como dependência de efeitos para refazer fetch de comentários/checklist/histórico.
+function useDetailRefreshKey(taskId: string): number {
+  return useKanbanStore((s) => (s.detailChangedTaskId === taskId ? s.detailChangedTick : 0));
+}
 
 const FIELD_LABELS: Record<string, string> = {
   title: 'Título',
@@ -291,12 +298,13 @@ function TaskChecklistSection({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
+  const refreshKey = useDetailRefreshKey(taskId);
   useEffect(() => {
     getChecklistsAction(projectId, taskId).then((data) => {
       setItems(data);
       setLoading(false);
     });
-  }, [projectId, taskId]);
+  }, [projectId, taskId, refreshKey]);
 
   const total = items.length;
   const completedCount = items.filter((i) => i.completed).length;
@@ -437,7 +445,7 @@ function TaskChecklistSection({
   );
 }
 
-const HISTORY_PAGE_SIZE = 20;
+const HISTORY_PAGE_SIZE = TASK_HISTORY_MAX;
 
 function TaskHistorySection({
   projectId,
@@ -453,6 +461,7 @@ function TaskHistorySection({
   const [loadingMore, setLoadingMore] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
+  const refreshKey = useDetailRefreshKey(taskId);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
@@ -462,7 +471,7 @@ function TaskHistorySection({
       setTotal(res.total);
       setLoading(false);
     });
-  }, [projectId, taskId]);
+  }, [projectId, taskId, refreshKey]);
 
   async function loadMore() {
     if (loadingMore) return;
@@ -512,10 +521,17 @@ function TaskHistorySection({
               {sorted.map((entry) => (
                 <div key={entry.id} className="flex items-start gap-2 text-xs">
                   <span className="mt-0.5">
-                    <UserAvatar name={entry.user.name} email={entry.user.email} photoUrl={entry.user.photoUrl} size="xs" />
+                    <UserAvatar
+                      name={entry.user?.name ?? entry.guest?.name ?? 'Convidado'}
+                      email={entry.user?.email ?? ''}
+                      photoUrl={entry.user?.photoUrl ?? null}
+                      size="xs"
+                    />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <span className="font-medium">{entry.user.name}</span>
+                    <span className="font-medium">
+                      {entry.user?.name ?? entry.guest?.name ?? 'Convidado'}
+                    </span>
                     {ATTACHMENT_FIELDS.has(entry.field) ? (
                       <>
                         {entry.field === 'attachment_added' ? ' adicionou ' : ' removeu '}
@@ -557,6 +573,9 @@ function TaskHistorySection({
                   {loadingMore ? 'Carregando...' : `Carregar mais (${total - history.length} restantes)`}
                 </button>
               )}
+              <p className="pt-1 text-[11px] text-muted-foreground">
+                Apenas as últimas {TASK_HISTORY_MAX} alterações são mantidas.
+              </p>
             </div>
           )}
         </>
@@ -607,10 +626,11 @@ function TaskCommentsSection({
     });
   };
 
+  const refreshKey = useDetailRefreshKey(taskId);
   useEffect(() => {
     loadComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, taskId]);
+  }, [projectId, taskId, refreshKey]);
 
   useEffect(() => {
     if (commentState.success) {
@@ -741,11 +761,23 @@ function TaskCommentsSection({
               {sorted.map((c) => (
                 <div key={c.id} className="flex items-start gap-2 text-sm">
                   <span className="mt-0.5">
-                    <UserAvatar name={c.user.name} email={c.user.email} photoUrl={c.user.photoUrl} size="sm" />
+                    <UserAvatar
+                      name={c.user?.name ?? c.guest?.name ?? 'Convidado'}
+                      email={c.user?.email ?? ''}
+                      photoUrl={c.user?.photoUrl ?? null}
+                      size="sm"
+                    />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 flex-wrap">
-                      <span className="font-medium text-xs">{c.user.name}</span>
+                      <span className="font-medium text-xs">
+                        {c.user?.name ?? c.guest?.name ?? 'Convidado'}
+                      </span>
+                      {c.guestId && (
+                        <span className="rounded bg-emerald-500/10 px-1 text-[9px] font-medium uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                          convidado
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground">
                         {formatHistoryDate(c.createdAt)}
                         {c.updatedAt !== c.createdAt && ' (editado)'}
@@ -789,9 +821,9 @@ function TaskCommentsSection({
                     )}
                   </div>
 
-                  {editingId !== c.id && (c.user.id === currentUserId || isAdmin) && (
+                  {editingId !== c.id && (c.user?.id === currentUserId || isAdmin) && (
                     <div className="flex shrink-0 gap-0.5 mt-0.5">
-                      {c.user.id === currentUserId && (
+                      {c.user?.id === currentUserId && (
                         <button
                           type="button"
                           title="Editar"
@@ -1132,6 +1164,80 @@ export function TaskDetailDialog({
     setSelectedLabelIds(next);
   }
 
+  // Fecha o modal salvando os dados — usado tanto pelo clique-fora (onOpenChange)
+  // quanto pelo botão "x", para que ambos persistam as alterações.
+  const closeAndSave = useCallback(() => {
+    if (!task) {
+      onClose();
+      return;
+    }
+    const projId = projectId;
+    const tId = task.id;
+    const since = sessionStartRef.current;
+    const localTitle = title;
+    const localDescription = description;
+    const localPriority = priority;
+    const localStartDate = startDate;
+    const localDueDate = dueDate;
+    const localAssigneeIds = [...selectedAssigneeIds];
+    const localLabelIds = [...selectedLabelIds];
+    // Fecha o modal pai imediatamente — o save e a verificação rodam em background.
+    // O fluxo de notificação é delegado ao parent via onRequestSendChanges,
+    // porque este componente é desmontado quando task vira null (key={selectedTask?.id}).
+    onClose();
+    (async () => {
+      try {
+        const formData = new FormData();
+        formData.set('projectId', projId);
+        formData.set('workspaceId', workspaceId);
+        formData.set('taskId', tId);
+        formData.set('title', localTitle);
+        formData.set('description', localDescription);
+        formData.set('priority', localPriority);
+        formData.set('startDate', localStartDate);
+        formData.set('dueDate', localDueDate);
+        localAssigneeIds.forEach((id) => formData.append('assigneeIds[]', id));
+        localLabelIds.forEach((id) => formData.append('labelIds[]', id));
+        await updateTaskAction({}, formData);
+      } catch {
+        // se save falhar, ainda tentamos o fluxo de notificação
+      }
+      try {
+        const [guestsRes, historyPage] = await Promise.all([
+          listGuestsAction(projId, tId),
+          getTaskHistoryAction(projId, tId, 1, 100),
+        ]);
+        const guests = guestsRes.guests ?? [];
+        const mine = historyPage.data
+          .filter((h) => h.user?.id === currentUserId)
+          .filter((h) => new Date(h.changedAt).getTime() >= since);
+        if (guests.length > 0 && mine.length > 0 && onRequestSendChanges) {
+          onRequestSendChanges({
+            taskId: tId,
+            guests,
+            historyIds: mine.map((h) => h.id),
+          });
+        }
+      } catch {
+        // silently ignore — não atrapalha o fechamento
+      }
+    })();
+  }, [
+    task,
+    projectId,
+    workspaceId,
+    title,
+    description,
+    priority,
+    startDate,
+    dueDate,
+    selectedAssigneeIds,
+    selectedLabelIds,
+    currentUserId,
+    onClose,
+    onRequestSendChanges,
+  ]);
+
   if (!task) return null;
 
   const filteredMembros = membros
@@ -1156,63 +1262,7 @@ export function TaskDetailDialog({
     <Dialog
       open={!!task}
       onOpenChange={(open) => {
-        if (!open) {
-          if (!task) {
-            onClose();
-            return;
-          }
-          const projId = projectId;
-          const tId = task.id;
-          const since = sessionStartRef.current;
-          const localTitle = title;
-          const localDescription = description;
-          const localPriority = priority;
-          const localStartDate = startDate;
-          const localDueDate = dueDate;
-          const localAssigneeIds = [...selectedAssigneeIds];
-          const localLabelIds = [...selectedLabelIds];
-          // Fecha o modal pai imediatamente — o save e a verificação rodam em background.
-          // O fluxo de notificação é delegado ao parent via onRequestSendChanges,
-          // porque este componente é desmontado quando task vira null (key={selectedTask?.id}).
-          onClose();
-          (async () => {
-            try {
-              const formData = new FormData();
-              formData.set('projectId', projId);
-              formData.set('workspaceId', workspaceId);
-              formData.set('taskId', tId);
-              formData.set('title', localTitle);
-              formData.set('description', localDescription);
-              formData.set('priority', localPriority);
-              formData.set('startDate', localStartDate);
-              formData.set('dueDate', localDueDate);
-              localAssigneeIds.forEach((id) => formData.append('assigneeIds[]', id));
-              localLabelIds.forEach((id) => formData.append('labelIds[]', id));
-              await updateTaskAction({}, formData);
-            } catch {
-              // se save falhar, ainda tentamos o fluxo de notificação
-            }
-            try {
-              const [guestsRes, historyPage] = await Promise.all([
-                listGuestsAction(projId, tId),
-                getTaskHistoryAction(projId, tId, 1, 100),
-              ]);
-              const guests = guestsRes.guests ?? [];
-              const mine = historyPage.data
-                .filter((h) => h.user?.id === currentUserId)
-                .filter((h) => new Date(h.changedAt).getTime() >= since);
-              if (guests.length > 0 && mine.length > 0 && onRequestSendChanges) {
-                onRequestSendChanges({
-                  taskId: tId,
-                  guests,
-                  historyIds: mine.map((h) => h.id),
-                });
-              }
-            } catch {
-              // silently ignore — não atrapalha o fechamento
-            }
-          })();
-        }
+        if (!open) closeAndSave();
       }}
     >
       <DialogContent
@@ -1304,7 +1354,7 @@ export function TaskDetailDialog({
               </button>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={closeAndSave}
                 className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
                 title="Fechar"
                 aria-label="Fechar card"
@@ -1356,6 +1406,8 @@ export function TaskDetailDialog({
                 imageCount={attachmentImageCount}
                 onPasteAttachmentAdded={setPendingAttachment}
                 collapsible
+                minRows={8}
+                resizable
                 maxLength={FREE.taskDescription}
               />
             </div>

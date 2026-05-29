@@ -28,6 +28,15 @@ interface AddGuestDialogProps {
 
 const initialState: AddGuestActionState = {};
 
+function formatBrPhone(digits: string): string {
+  const d = digits.replace(/\D/g, '').slice(0, 11);
+  if (d.length === 0) return '';
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
 export function AddGuestDialog({
   open,
   onOpenChange,
@@ -38,6 +47,7 @@ export function AddGuestDialog({
   const [state, formAction, pending] = useActionState(addGuestAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const handledWhatsappRef = useRef<string | null>(null);
+  const phoneHiddenRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (state.success && state.whatsappUrl && handledWhatsappRef.current !== state.whatsappUrl) {
@@ -79,19 +89,30 @@ export function AddGuestDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="guest-phone">
-              Telefone (com DDI) <span className="text-destructive">*</span>
+              Telefone <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="guest-phone"
-              name="phone"
-              required
-              placeholder="+55 11 99999-9999"
-              inputMode="tel"
-              autoComplete="off"
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Use formato internacional, ex: +5511999999999
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-9 items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground select-none">
+                +55
+              </span>
+              <Input
+                id="guest-phone"
+                required
+                placeholder="(11) 99999-9999"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={16}
+                className="flex-1"
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                  e.target.value = formatBrPhone(digits);
+                  if (phoneHiddenRef.current) {
+                    phoneHiddenRef.current.value = digits ? `+55${digits}` : '';
+                  }
+                }}
+              />
+            </div>
+            <input ref={phoneHiddenRef} type="hidden" name="phone" />
           </div>
 
           <div className="space-y-1.5">

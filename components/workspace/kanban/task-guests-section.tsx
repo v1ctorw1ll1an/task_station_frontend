@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { ChevronDown, Loader2, Trash2, UserCircle2, UserPlus } from 'lucide-react';
+import { Check, ChevronDown, Copy, Loader2, Trash2, UserCircle2, UserPlus } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { setGuestLinkAction } from '@/actions/projeto/set-guest-link.action';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -133,6 +135,36 @@ export function TaskGuestsSection({ projectId, taskId }: TaskGuestsSectionProps)
     [projectId, taskId, fetchGuests, linkedPhones],
   );
 
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const handleCopyLink = useCallback(async (guest: TaskGuestSummary) => {
+    if (!guest.publicUrl) return;
+    try {
+      await navigator.clipboard.writeText(guest.publicUrl);
+      setCopiedId(guest.id);
+      setTimeout(() => setCopiedId((id) => (id === guest.id ? null : id)), 1500);
+    } catch {
+      setError('Não foi possível copiar o link');
+    }
+  }, []);
+
+  const handleToggleLink = useCallback(
+    async (guest: TaskGuestSummary, enabled: boolean) => {
+      setTogglingId(guest.id);
+      setGuests((prev) => prev.map((g) => (g.id === guest.id ? { ...g, linkEnabled: enabled } : g)));
+      const res = await setGuestLinkAction(projectId, taskId, guest.id, enabled);
+      setTogglingId(null);
+      if (res.error) {
+        setError(res.error);
+        setGuests((prev) =>
+          prev.map((g) => (g.id === guest.id ? { ...g, linkEnabled: !enabled } : g)),
+        );
+      }
+    },
+    [projectId, taskId],
+  );
+
   const handleRevoke = useCallback(() => {
     if (!revokeTarget) return;
     const guestId = revokeTarget.id;
@@ -262,8 +294,38 @@ export function TaskGuestsSection({ projectId, taskId }: TaskGuestsSectionProps)
                 <span className="truncate text-[10px] text-muted-foreground">
                   {formatPhone(guest.phoneE164)}
                   {guest.email ? ` · ${guest.email}` : ''}
+                  {!guest.linkEnabled && (
+                    <span className="ml-1 text-amber-600 dark:text-amber-500">· link desativado</span>
+                  )}
                 </span>
               </div>
+
+              {guest.canManage && guest.publicUrl && (
+                <button
+                  type="button"
+                  onClick={() => handleCopyLink(guest)}
+                  className="rounded p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                  title="Copiar link público"
+                  aria-label={`Copiar link de ${guest.name}`}
+                >
+                  {copiedId === guest.id ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              )}
+
+              {guest.canManage && (
+                <Switch
+                  checked={guest.linkEnabled}
+                  disabled={togglingId === guest.id}
+                  onCheckedChange={(v) => handleToggleLink(guest, v)}
+                  title={guest.linkEnabled ? 'Desabilitar link público' : 'Habilitar link público'}
+                  aria-label={`Alternar link público de ${guest.name}`}
+                />
+              )}
+
               <button
                 type="button"
                 onClick={() => setRevokeTarget(guest)}

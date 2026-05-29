@@ -51,3 +51,10 @@ export const LIMITS: Record<Plan, TierLimits> = {
 };
 
 export const FREE = LIMITS.free;
+
+/**
+ * Cap de retenção do histórico de alterações por task (ring buffer).
+ * Mantém apenas as N entradas mais recentes; as mais antigas são deletadas.
+ * Espelho de `backend/src/common/limits.ts`.
+ */
+export const TASK_HISTORY_MAX = 15;

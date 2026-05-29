@@ -9,6 +9,7 @@ export interface UpdatePublicTaskFields {
   startDate?: string | null;
   dueDate?: string | null;
   columnId?: string;
+  labelIds?: string[];
 }
 
 export async function updatePublicTaskAction(

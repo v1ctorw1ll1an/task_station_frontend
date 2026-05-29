@@ -9,6 +9,9 @@ export interface TaskGuestSummary {
   email: string | null;
   invitedAt: string;
   lastAccessedAt: string | null;
+  linkEnabled: boolean;
+  canManage: boolean;
+  publicUrl: string | null;
 }
 
 export async function listGuestsAction(
