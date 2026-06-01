@@ -11,6 +11,8 @@ interface PreferencePayload {
   eventReminderSound?: boolean;
   eventReminderPopup?: boolean;
   eventReminderBrowser?: boolean;
+  notificationSound?: boolean;
+  notificationBrowser?: boolean;
 }
 
 export async function updatePreferencesAction(data: PreferencePayload) {

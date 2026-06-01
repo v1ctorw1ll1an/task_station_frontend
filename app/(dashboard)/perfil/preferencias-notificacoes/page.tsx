@@ -18,6 +18,8 @@ interface Preferences {
   eventReminderSound: boolean;
   eventReminderPopup: boolean;
   eventReminderBrowser: boolean;
+  notificationSound: boolean;
+  notificationBrowser: boolean;
 }
 
 const PREF_CONFIG: {
@@ -112,9 +114,38 @@ const EVENT_REMINDER_CHANNELS: {
   },
 ];
 
+// Canais globais — valem para todas as notificações (menções, tasks, avisos).
+// Lembretes de evento têm seus próprios canais acima.
+const GLOBAL_CHANNELS: {
+  key: keyof Preferences;
+  label: string;
+  description: string;
+  icon: React.ElementType;
+  iconBg: string;
+  iconColor: string;
+}[] = [
+  {
+    key: 'notificationSound',
+    label: 'Som de notificação',
+    description: 'Tocar um som curto sempre que você receber uma notificação',
+    icon: Volume2,
+    iconBg: 'bg-pink-100 dark:bg-pink-900/40',
+    iconColor: 'text-pink-600 dark:text-pink-400',
+  },
+  {
+    key: 'notificationBrowser',
+    label: 'Notificação do sistema',
+    description: 'Mostrar a notificação na central do Windows quando o app estiver em segundo plano (requer permissão)',
+    icon: Monitor,
+    iconBg: 'bg-teal-100 dark:bg-teal-900/40',
+    iconColor: 'text-teal-600 dark:text-teal-400',
+  },
+];
+
 const PREF_KEYS = [
   ...PREF_CONFIG.map((p) => p.key),
   ...EVENT_REMINDER_CHANNELS.map((p) => p.key),
+  ...GLOBAL_CHANNELS.map((p) => p.key),
 ];
 const TOP_LEVEL_PREF_KEYS = PREF_CONFIG.map((p) => p.key);
 
@@ -143,8 +174,13 @@ export default function PreferenciasNotificacoesPage() {
     setSavingKey(key);
     setSavedKey(null);
 
-    // Se ativando Browser Notification, pedir permissão antes
-    if (key === 'eventReminderBrowser' && value && typeof window !== 'undefined' && 'Notification' in window) {
+    // Se ativando uma notificação do sistema, pedir permissão antes
+    if (
+      (key === 'eventReminderBrowser' || key === 'notificationBrowser')
+      && value
+      && typeof window !== 'undefined'
+      && 'Notification' in window
+    ) {
       if (Notification.permission === 'default') {
         await Notification.requestPermission().catch(() => undefined);
       }
@@ -217,6 +253,7 @@ export default function PreferenciasNotificacoesPage() {
             ))}
           </div>
         ) : (
+          <>
           <div className="space-y-3">
             {PREF_CONFIG.map(({ key, label, description, icon: Icon, iconBg, iconColor }) => (
               <div
@@ -297,6 +334,58 @@ export default function PreferenciasNotificacoesPage() {
               </div>
             )}
           </div>
+
+          <Separator />
+
+          {/* Canais de alerta globais — valem para todas as notificações */}
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium">Canais de alerta</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Como você é avisado quando chega qualquer notificação (menções, tasks, avisos)
+              </p>
+            </div>
+            {GLOBAL_CHANNELS.map(({ key, label, description, icon: Icon, iconBg, iconColor }) => (
+              <div
+                key={key}
+                className="flex items-center gap-4 p-4 rounded-lg border bg-card transition-colors hover:bg-muted/30"
+              >
+                <div className={`rounded-full p-2.5 shrink-0 ${iconBg}`}>
+                  <Icon className={`h-4 w-4 ${iconColor}`} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+                  {key === 'notificationBrowser'
+                    && typeof window !== 'undefined'
+                    && 'Notification' in window
+                    && Notification.permission === 'denied'
+                    && prefs[key] && (
+                      <p className="text-xs text-destructive mt-1">
+                        Permissão bloqueada nas configurações do navegador.
+                      </p>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0">
+                  {savedKey === key && (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  )}
+                  {savingKey === key && (
+                    <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground animate-spin" />
+                  )}
+                  <Switch
+                    id={key}
+                    checked={prefs[key]}
+                    onCheckedChange={(v) => handleToggle(key, v)}
+                    disabled={savingKey === key}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          </>
         )}
       </div>
     </div>

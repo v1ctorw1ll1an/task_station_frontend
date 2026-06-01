@@ -1,12 +1,13 @@
 /**
  * Helpers para tocar som e disparar notificação do navegador
- * em resposta a lembretes de eventos (NotificationType.EVENT_REMINDER).
+ * em resposta a notificações em tempo real (socket `notification:new`).
  *
  * O som é gerado via Web Audio API (sem precisar de asset MP3) —
  * um "ding" curto de duas notas.
  */
 
 let audioCtx: AudioContext | null = null;
+let audioPrimed = false;
 
 function getAudioCtx(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -16,6 +17,26 @@ function getAudioCtx(): AudioContext | null {
   if (!Ctor) return null;
   audioCtx = new Ctor();
   return audioCtx;
+}
+
+/**
+ * Navegadores bloqueiam áudio até o primeiro gesto do usuário. Chamamos isso
+ * uma vez ao montar o socket: no primeiro clique/tecla destravamos o
+ * AudioContext para que o som da notificação consiga tocar depois.
+ */
+export function primeAudio(): void {
+  if (typeof window === 'undefined' || audioPrimed) return;
+  audioPrimed = true;
+  const unlock = () => {
+    const ctx = getAudioCtx();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => undefined);
+    }
+    window.removeEventListener('pointerdown', unlock);
+    window.removeEventListener('keydown', unlock);
+  };
+  window.addEventListener('pointerdown', unlock, { once: true });
+  window.addEventListener('keydown', unlock, { once: true });
 }
 
 export function playReminderSound(): void {
@@ -45,14 +66,22 @@ export function playReminderSound(): void {
   tone(1046, 0.18, 0.28);
 }
 
-export function showBrowserReminderNotification(title: string, body: string): void {
+/** Alias semântico: o mesmo "ding" serve para qualquer notificação. */
+export const playNotificationSound = playReminderSound;
+
+/**
+ * Dispara uma notificação nativa do SO (central de notificações do Windows,
+ * etc.). Requer que o usuário já tenha concedido permissão.
+ */
+export function showBrowserNotification(title: string, body: string, tag?: string): void {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
   try {
     const n = new Notification(title, {
       body,
-      tag: `event-reminder-${title}`,
-      icon: '/favicon.ico',
+      tag: tag ?? `taskdy-${title}`,
+      icon: '/taskDY/android-chrome-192x192.png',
+      badge: '/taskDY/favicon-32x32.png',
     });
     n.onclick = () => {
       window.focus();
@@ -64,3 +93,6 @@ export function showBrowserReminderNotification(title: string, body: string): vo
     // Ignora — alguns navegadores bloqueiam silenciosamente
   }
 }
+
+/** @deprecated use {@link showBrowserNotification} */
+export const showBrowserReminderNotification = showBrowserNotification;
