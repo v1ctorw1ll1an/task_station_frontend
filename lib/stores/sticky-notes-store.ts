@@ -37,6 +37,40 @@ export const NOTE_COLORS: Record<StickyNoteColor, { bg: string; border: string; 
   gray:   { bg: '#f3f4f6', border: '#d1d5db', header: '#e5e7eb' },
 };
 
+// Note geometry (must match the rendered card in sticky-note.tsx)
+export const NOTE_WIDTH = 264;
+export const NOTE_MARGIN = 8;
+// Approximate heights used only to keep a card on-screen; erring large is safe
+// (it just nudges the card a bit higher rather than letting it overflow).
+const NOTE_HEIGHT_MINIMIZED = 56;
+const NOTE_HEIGHT_EXPANDED = 230;
+
+/**
+ * Clamps a note's stored position into the visible viewport so a note saved on
+ * a large monitor doesn't end up hidden off-screen when reopened on a smaller
+ * one — it snaps to the nearest edge instead. The stored x/y are left intact;
+ * this only computes where to *display* the card for the current viewport.
+ */
+export function clampNotePosition(
+  x: number,
+  y: number,
+  minimized: boolean | undefined,
+  viewportWidth: number,
+  viewportHeight: number,
+): { x: number; y: number } {
+  // No reliable viewport yet (SSR / first paint) — keep the stored position.
+  if (!viewportWidth || !viewportHeight) return { x, y };
+
+  const height = minimized ? NOTE_HEIGHT_MINIMIZED : NOTE_HEIGHT_EXPANDED;
+  const maxX = Math.max(NOTE_MARGIN, viewportWidth - NOTE_WIDTH - NOTE_MARGIN);
+  const maxY = Math.max(NOTE_MARGIN, viewportHeight - height - NOTE_MARGIN);
+
+  return {
+    x: Math.min(Math.max(x, NOTE_MARGIN), maxX),
+    y: Math.min(Math.max(y, NOTE_MARGIN), maxY),
+  };
+}
+
 // Debounce timer map (lives outside store to avoid serialization issues)
 const positionTimers = new Map<string, ReturnType<typeof setTimeout>>();
 

@@ -7,7 +7,10 @@ import {
   type StickyNote as StickyNoteType,
   type StickyNoteColor,
   NOTE_COLORS,
+  NOTE_WIDTH,
+  clampNotePosition,
 } from '@/lib/stores/sticky-notes-store';
+import { useViewportSize } from '@/hooks/use-viewport-size';
 
 const COLOR_KEYS = Object.keys(NOTE_COLORS) as StickyNoteColor[];
 const MAX_CHARS = 255;
@@ -26,6 +29,12 @@ export function StickyNote({ note }: StickyNoteProps) {
     deleteNote,
     bringToFront,
   } = useStickyNotesStore();
+
+  const { width: vw, height: vh } = useViewportSize();
+  // Display position clamped to the current viewport so a note saved on a large
+  // monitor snaps to the nearest edge instead of disappearing on a smaller one.
+  // The stored note.x / note.y stay untouched (preserved for larger screens).
+  const { x: displayX, y: displayY } = clampNotePosition(note.x, note.y, note.minimized, vw, vh);
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [charCount, setCharCount] = useState(note.content.length);
@@ -58,8 +67,8 @@ export function StickyNote({ note }: StickyNoteProps) {
       dragStart.current = {
         mouseX: e.clientX,
         mouseY: e.clientY,
-        noteX: note.x,
-        noteY: note.y,
+        noteX: displayX,
+        noteY: displayY,
       };
 
       const noteEl = (e.currentTarget as HTMLDivElement).parentElement!;
@@ -85,7 +94,7 @@ export function StickyNote({ note }: StickyNoteProps) {
       window.addEventListener('mousemove', onMouseMove);
       window.addEventListener('mouseup', onMouseUp);
     },
-    [note.id, note.x, note.y, bringToFront, updatePosition],
+    [note.id, displayX, displayY, bringToFront, updatePosition],
   );
 
   const colors = NOTE_COLORS[note.color];
@@ -95,10 +104,10 @@ export function StickyNote({ note }: StickyNoteProps) {
     <div
       className="fixed select-none shadow-lg rounded-xl overflow-hidden flex flex-col"
       style={{
-        left: note.x,
-        top: note.y,
+        left: displayX,
+        top: displayY,
         zIndex: note.zIndex,
-        width: 264,
+        width: NOTE_WIDTH,
         minHeight: note.minimized ? 'auto' : 200,
         backgroundColor: colors.bg,
         border: `1.5px solid ${colors.border}`,
