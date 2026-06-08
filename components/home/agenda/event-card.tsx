@@ -44,7 +44,7 @@ export function EventCard({ event, onClick, compact }: EventCardProps) {
             {formatInTimeZone(start, tz, 'HH:mm')}
           </span>
         )}
-        <span className="truncate">{event.title}</span>
+        <span className="min-w-0 truncate">{event.title}</span>
       </button>
     );
   }

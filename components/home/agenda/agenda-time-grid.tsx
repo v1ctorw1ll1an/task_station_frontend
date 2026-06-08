@@ -103,49 +103,57 @@ export function AgendaTimeGrid({
   return (
     <>
       <div className="rounded-lg border overflow-hidden">
-        {showHeaders && (
-          <div className="grid border-b bg-muted/20" style={{ gridTemplateColumns: cols }}>
-            <div />
-            {days.map((day) => {
-              const today = isToday(day);
-              return (
-                <div key={day.toISOString()} className="flex flex-col items-center gap-0.5 border-l py-1.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    {format(day, 'EEE', { locale: ptBR })}
-                  </span>
-                  <span
-                    className={cn(
-                      'flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium',
-                      today && 'bg-primary text-primary-foreground',
-                    )}
-                  >
-                    {format(day, 'd')}
-                  </span>
+        {/* Cabeçalho + faixa "Dia todo" + corpo no MESMO container de scroll: como
+            todos compartilham `cols` e a mesma largura útil (descontada a scrollbar),
+            as colunas ficam sempre alinhadas. Cabeçalho/faixa ficam fixos via sticky. */}
+        <div ref={scrollRef} className="max-h-[600px] overflow-y-auto">
+          {(showHeaders || hasAllDayBand) && (
+            <div className="sticky top-0 z-30 bg-card">
+              {showHeaders && (
+                <div className="grid border-b bg-muted/20" style={{ gridTemplateColumns: cols }}>
+                  <div />
+                  {days.map((day) => {
+                    const today = isToday(day);
+                    return (
+                      <div key={day.toISOString()} className="flex flex-col items-center gap-0.5 border-l py-1.5">
+                        <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                          {format(day, 'EEE', { locale: ptBR })}
+                        </span>
+                        <span
+                          className={cn(
+                            'flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium',
+                            today && 'bg-primary text-primary-foreground',
+                          )}
+                        >
+                          {format(day, 'd')}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
 
-        {hasAllDayBand && (
-          <div className="grid border-b bg-muted/10" style={{ gridTemplateColumns: cols }}>
-            <div className="flex items-start justify-end pr-2 pt-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-              Dia todo
+              {hasAllDayBand && (
+                <div className="grid border-b bg-muted/10" style={{ gridTemplateColumns: cols }}>
+                  <div className="flex items-start justify-end pr-2 pt-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    Dia todo
+                  </div>
+                  {perDay.map(({ key, allDayEvents, allDayTasks }) => (
+                    <div key={key} className="flex max-h-28 min-h-[2rem] flex-col gap-1 overflow-y-auto border-l p-1">
+                      {allDayEvents.map((ev) => (
+                        <EventCard key={ev.occurrenceKey} event={ev} compact onClick={() => setSelectedEvent(ev)} />
+                      ))}
+                      {allDayTasks.map((t) => (
+                        <TaskChip key={t.id} task={t} onTaskClick={onTaskClick} />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            {perDay.map(({ key, allDayEvents, allDayTasks }) => (
-              <div key={key} className="flex min-h-[2rem] flex-col gap-1 border-l p-1">
-                {allDayEvents.map((ev) => (
-                  <EventCard key={ev.occurrenceKey} event={ev} compact onClick={() => setSelectedEvent(ev)} />
-                ))}
-                {allDayTasks.map((t) => (
-                  <TaskChip key={t.id} task={t} onTaskClick={onTaskClick} />
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
+          )}
 
-        <div ref={scrollRef} className="max-h-[560px] overflow-y-auto">
+          {/* Corpo: grid de horas */}
           <div className="grid" style={{ gridTemplateColumns: cols }}>
             {/* Gutter de horas */}
             <div className="relative" style={{ height: GRID_HEIGHT }}>
@@ -264,7 +272,7 @@ function TimedTaskBlock({
   const inner = (
     <>
       <span className="shrink-0 tabular-nums text-muted-foreground">{formatMin(item.startMin)}</span>
-      <span className="truncate">{t.title}</span>
+      <span className="min-w-0 truncate">{t.title}</span>
     </>
   );
   return onTaskClick ? (
@@ -296,7 +304,7 @@ function TaskChip({
   );
   return onTaskClick ? (
     <button type="button" onClick={() => onTaskClick(task)} title={task.title} className={cls}>
-      <span className="truncate">{task.title}</span>
+      <span className="min-w-0 truncate">{task.title}</span>
     </button>
   ) : (
     <Link
@@ -304,7 +312,7 @@ function TaskChip({
       title={task.title}
       className={cls}
     >
-      <span className="truncate">{task.title}</span>
+      <span className="min-w-0 truncate">{task.title}</span>
     </Link>
   );
 }
