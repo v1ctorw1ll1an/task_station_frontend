@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { OverviewTask, OverviewColumn } from '@/actions/workspace/get-workspace-overview.action';
 import { usePrivacyStore } from '@/lib/stores/privacy-store';
+import { formatTaskTime } from '@/lib/datetime';
 
 const PRIORITY_CLASSES = {
   low: 'text-slate-500 bg-slate-100 border border-slate-200 dark:text-slate-400 dark:bg-slate-800 dark:border-slate-700',
@@ -82,6 +83,7 @@ export function OverviewTaskRow({ task, column, projectId, workspaceId }: Overvi
   const isPrivacyMode = usePrivacyStore((s) => s.isPrivacyMode);
   const dueDateLabel = task.dueDate ? relativeDueDate(task.dueDate) : null;
   const activityLabel = !task.dueDate ? relativeActivity(task.updatedAt) : null;
+  const dueTimeLabel = task.dueDate ? formatTaskTime(task.dueDate, task.timezone) : '';
   const taskUrl = `/workspace/${workspaceId}/projetos/${projectId}?task=${task.id}`;
 
   return (
@@ -146,8 +148,9 @@ export function OverviewTaskRow({ task, column, projectId, workspaceId }: Overvi
       </span>
 
       {/* Due date / Activity */}
-      <span className="shrink-0 text-xs w-16 text-right text-muted-foreground">
+      <span className="shrink-0 text-xs w-16 text-right text-muted-foreground leading-tight">
         {dueDateLabel ?? activityLabel ?? ''}
+        {dueTimeLabel && <span className="block text-[10px] tabular-nums">{dueTimeLabel}</span>}
       </span>
     </div>
   );

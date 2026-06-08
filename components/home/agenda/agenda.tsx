@@ -233,7 +233,7 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
 
       {/* Conteúdo da view */}
       <div className={cn('p-4', isPending && 'opacity-50 pointer-events-none')}>
-        {view === 'day' && <AgendaDay tasks={tasks} events={events} companyId={companyId} onTaskClick={handleTaskClick} />}
+        {view === 'day' && <AgendaDay anchor={anchor} tasks={tasks} events={events} companyId={companyId} dateField={dateField} onTaskClick={handleTaskClick} />}
         {view === 'week' && <AgendaWeek anchor={anchor} tasks={tasks} events={events} companyId={companyId} onCreateAt={handleCreateAt} dateField={dateField} onTaskClick={handleTaskClick} />}
         {view === 'month' && <AgendaMonth anchor={anchor} tasks={tasks} events={events} companyId={companyId} onCreateAt={handleCreateAt} dateField={dateField} onTaskClick={handleTaskClick} />}
         {view === 'year' && <AgendaYear anchor={anchor} tasks={tasks} events={events} companyId={companyId} onCreateAt={handleCreateAt} dateField={dateField} onTaskClick={handleTaskClick} />}

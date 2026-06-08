@@ -29,6 +29,8 @@ export interface KanbanTask {
   order: number;
   dueDate: string | null;
   startDate: string | null;
+  allDay: boolean;
+  timezone: string;
   updatedAt: string;
   columnId: string;
   projectId: string;

@@ -34,6 +34,8 @@ export interface PublicTask {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   startDate: string | null;
   dueDate: string | null;
+  allDay: boolean;
+  timezone: string;
   order: number;
   column: PublicTaskColumn;
   labels: PublicTaskLabel[];

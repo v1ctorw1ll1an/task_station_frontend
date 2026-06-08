@@ -47,6 +47,12 @@ export async function updateTaskAction(
   if (dueDate !== null && typeof dueDate === 'string')
     body.dueDate = dueDate || null;
 
+  const allDay = formData.get('allDay');
+  if (allDay !== null && typeof allDay === 'string') body.allDay = allDay === 'true';
+
+  const timezone = formData.get('timezone');
+  if (timezone && typeof timezone === 'string') body.timezone = timezone;
+
   const labelIds = formData.getAll('labelIds[]');
   body.labelIds = labelIds.filter((id): id is string => typeof id === 'string');
 

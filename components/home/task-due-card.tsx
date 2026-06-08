@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ICON_MAP } from '@/lib/icons/project-icons';
 import { usePrivacyStore } from '@/lib/stores/privacy-store';
+import { dateInTz, formatTaskTime } from '@/lib/datetime';
 
 const PRIORITY_BORDER: Record<string, string> = {
   urgent: 'border-l-red-500',
@@ -25,10 +26,11 @@ const PRIORITY_CLASSES: Record<string, string> = {
   urgent: 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950',
 };
 
-function relativeDueDate(dueDate: string): { label: string; isOverdue: boolean } {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate.split('T')[0]);
+function relativeDueDate(dueDate: string, timezone: string): { label: string; isOverdue: boolean } {
+  // Compara dias-mural no TZ da task (não em UTC cru vs. meia-noite local) —
+  // uma task às 22h BRT continua "hoje", não "amanhã".
+  const due = new Date(`${dateInTz(dueDate, timezone)}T00:00:00Z`);
+  const today = new Date(`${dateInTz(new Date().toISOString(), timezone)}T00:00:00Z`);
   const diffMs = due.getTime() - today.getTime();
   const days = Math.round(diffMs / 86400000);
 
@@ -45,6 +47,8 @@ export interface TaskDueCardData {
   priority: string;
   dueDate: string | null;
   startDate: string | null;
+  allDay: boolean;
+  timezone: string;
   createdAt: string;
   column: { id: string; name: string; color: string | null };
   project: {
@@ -67,7 +71,8 @@ export function TaskDueCard({ task, onTaskClick }: TaskDueCardProps) {
     ? (ICON_MAP as Record<string, React.ComponentType<{ className?: string }>>)[task.project.icon]
     : null;
   const taskUrl = `/workspace/${task.project.workspace.id}/projetos/${task.project.id}?task=${task.id}`;
-  const due = task.dueDate ? relativeDueDate(task.dueDate) : null;
+  const due = task.dueDate ? relativeDueDate(task.dueDate, task.timezone) : null;
+  const dueTime = task.dueDate ? formatTaskTime(task.dueDate, task.timezone) : '';
 
   const cardClass = `block rounded-lg border border-l-4 ${PRIORITY_BORDER[task.priority] ?? 'border-l-slate-300'} bg-card p-3 hover:bg-accent/50 transition-colors`;
 
@@ -91,9 +96,10 @@ export function TaskDueCard({ task, onTaskClick }: TaskDueCardProps) {
         </div>
         {due && (
           <span
-            className={`shrink-0 text-xs font-medium ${due.isOverdue ? 'text-red-500' : 'text-muted-foreground'}`}
+            className={`shrink-0 text-right text-xs font-medium leading-tight ${due.isOverdue ? 'text-red-500' : 'text-muted-foreground'}`}
           >
             {due.label}
+            {dueTime && <span className="block text-[10px] tabular-nums font-normal">{dueTime}</span>}
           </span>
         )}
       </div>

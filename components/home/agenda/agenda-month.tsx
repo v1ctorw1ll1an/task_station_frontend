@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import type { TaskDueCardData } from '../task-due-card';
 import type { CalendarEventOccurrence } from '@/lib/event-types';
 import { dayKey, groupEventsByDay, groupTasksByDay, monthGridRange, type TaskDateField } from './agenda-utils';
+import { formatTaskTime } from '@/lib/datetime';
 import { DayTasksPopover } from './day-tasks-popover';
 import { EditEventDialog } from './edit-event-dialog';
 
@@ -126,6 +127,14 @@ export function AgendaMonth({ anchor, tasks, events, companyId, onCreateAt, date
                       'block rounded border-l-2 bg-muted/40 hover:bg-accent/60 transition-colors px-1.5 py-0.5 text-[11px] truncate',
                       PRIORITY_BORDER[t.priority] ?? 'border-l-slate-300',
                     );
+                    const raw = dateField === 'startDate' ? t.startDate : t.dueDate;
+                    const timeStr = raw ? formatTaskTime(raw, t.timezone) : '';
+                    const label = (
+                      <>
+                        {timeStr && <span className="tabular-nums text-muted-foreground mr-1">{timeStr}</span>}
+                        {t.title}
+                      </>
+                    );
                     return onTaskClick ? (
                       <button
                         key={t.id}
@@ -134,7 +143,7 @@ export function AgendaMonth({ anchor, tasks, events, companyId, onCreateAt, date
                         onClick={() => onTaskClick(t)}
                         className={`${cls} w-full text-left`}
                       >
-                        {t.title}
+                        {label}
                       </button>
                     ) : (
                       <Link
@@ -143,7 +152,7 @@ export function AgendaMonth({ anchor, tasks, events, companyId, onCreateAt, date
                         title={t.title}
                         className={cls}
                       >
-                        {t.title}
+                        {label}
                       </Link>
                     );
                   })}

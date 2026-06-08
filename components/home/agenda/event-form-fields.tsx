@@ -1,7 +1,8 @@
 'use client';
 
 import { addHours, addMinutes, format, parseISO } from 'date-fns';
-import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
+import { formatInTimeZone } from 'date-fns-tz';
+import { BROWSER_TZ, combineDateAndTime } from '@/lib/datetime';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
 import { Input } from '@/components/ui/input';
@@ -25,11 +26,6 @@ export interface EventFormState {
   timezone: string; // IANA tz do evento
   guestEmails: string[]; // emails externos a notificar
 }
-
-const BROWSER_TZ =
-  typeof Intl !== 'undefined'
-    ? Intl.DateTimeFormat().resolvedOptions().timeZone
-    : 'America/Sao_Paulo';
 
 export const REMINDER_OPTIONS: { minutes: number; label: string }[] = [
   { minutes: 10, label: '10 min antes' },
@@ -91,23 +87,8 @@ export function buildInitialFormState(occurrence?: {
   };
 }
 
-/**
- * Combina data + hora no TZ informado e retorna ISO UTC.
- * Para all-day, usa 00:00 como wall-clock.
- */
-export function combineDateAndTime(
-  date: string,
-  time: string,
-  allDay: boolean,
-  timezone: string,
-): string {
-  // Sem data não há instante a calcular — evita `RangeError: Invalid time value`
-  // ao renderizar enquanto o campo está vazio.
-  if (!date) return '';
-  const t = allDay ? '00:00:00' : `${time || '00:00'}:00`;
-  const d = fromZonedTime(`${date}T${t}`, timezone);
-  return Number.isNaN(d.getTime()) ? '' : d.toISOString();
-}
+// Reexport para os diálogos de evento que já importam daqui.
+export { combineDateAndTime };
 
 interface EventFormFieldsProps {
   state: EventFormState;

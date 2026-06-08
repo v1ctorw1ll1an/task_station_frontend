@@ -79,6 +79,8 @@ import { MarkdownEditor, MarkdownDisplay, CharCounter } from './markdown-editor'
 import type { TaskAttachment } from '@/actions/projeto/get-attachments.action';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { DatePicker } from '@/components/ui/date-picker';
+import { TimePicker } from '@/components/ui/time-picker';
+import { BROWSER_TZ, combineDateAndTime, dateInTz, formatTaskTime } from '@/lib/datetime';
 import { useTaskTrackingStore } from '@/lib/stores/task-tracking-store';
 import { usePrivacyStore } from '@/lib/stores/privacy-store';
 import {
@@ -153,8 +155,12 @@ function formatHistoryValue(field: string, value: string | null): string {
   if (value === null || value === '') return '(vazio)';
   if (field === 'priority') return PRIORITY_LABELS[value] ?? value;
   if (field === 'startDate' || field === 'dueDate') {
-    const [y, m, d] = value.split('-');
-    return `${d}/${m}/${y}`;
+    // Backend envia 'yyyy-MM-dd' (dia inteiro) ou 'yyyy-MM-dd HH:mm' (com hora).
+    const [datePart, timePart] = value.split(' ');
+    const [y, m, d] = datePart.split('-');
+    if (!y || !m || !d) return value;
+    const dmy = `${d}/${m}/${y}`;
+    return timePart ? `${dmy} ${timePart}` : dmy;
   }
   return value;
 }
@@ -999,8 +1005,11 @@ export function TaskDetailDialog({
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
   const [priority, setPriority] = useState(task?.priority ?? 'medium');
-  const [startDate, setStartDate] = useState(task?.startDate ? task.startDate.split('T')[0] : '');
-  const [dueDate, setDueDate] = useState(task?.dueDate ? task.dueDate.split('T')[0] : '');
+  const taskTz = task?.timezone ?? BROWSER_TZ;
+  const [startDate, setStartDate] = useState(dateInTz(task?.startDate, taskTz));
+  const [startTime, setStartTime] = useState(formatTaskTime(task?.startDate, taskTz));
+  const [dueDate, setDueDate] = useState(dateInTz(task?.dueDate, taskTz));
+  const [dueTime, setDueTime] = useState(formatTaskTime(task?.dueDate, taskTz));
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>(
     task?.taskAssignees.map((ta) => ta.user.id) ?? [],
   );
@@ -1021,8 +1030,10 @@ export function TaskDetailDialog({
     setTitle(task?.title ?? '');
     setDescription(task?.description ?? '');
     setPriority(task?.priority ?? 'medium');
-    setStartDate(task?.startDate ? task.startDate.split('T')[0] : '');
-    setDueDate(task?.dueDate ? task.dueDate.split('T')[0] : '');
+    setStartDate(dateInTz(task?.startDate, taskTz));
+    setStartTime(formatTaskTime(task?.startDate, taskTz));
+    setDueDate(dateInTz(task?.dueDate, taskTz));
+    setDueTime(formatTaskTime(task?.dueDate, taskTz));
     setSelectedAssigneeIds(task?.taskAssignees.map((ta) => ta.user.id) ?? []);
     setSelectedLabelIds(task?.taskLabels.map((tl) => tl.label.id) ?? []);
     setMemberSearch('');
@@ -1067,8 +1078,10 @@ export function TaskDetailDialog({
       setTitle(task.title ?? '');
       setDescription(task.description ?? '');
       setPriority(task.priority ?? 'medium');
-      setStartDate(task.startDate ? task.startDate.split('T')[0] : '');
-      setDueDate(task.dueDate ? task.dueDate.split('T')[0] : '');
+      setStartDate(dateInTz(task.startDate, taskTz));
+      setStartTime(formatTaskTime(task.startDate, taskTz));
+      setDueDate(dateInTz(task.dueDate, taskTz));
+      setDueTime(formatTaskTime(task.dueDate, taskTz));
       setSelectedAssigneeIds(task.taskAssignees.map((ta) => ta.user.id));
       setSelectedLabelIds(task.taskLabels.map((tl) => tl.label.id));
        
@@ -1177,8 +1190,10 @@ export function TaskDetailDialog({
     const localTitle = title;
     const localDescription = description;
     const localPriority = priority;
-    const localStartDate = startDate;
-    const localDueDate = dueDate;
+    // Hora zerada/vazia = "sem horário"; allDay derivado disso (sem toggle na UI).
+    const localAllDay = !startTime && !dueTime;
+    const localStartDate = startDate ? combineDateAndTime(startDate, startTime, localAllDay, taskTz) : '';
+    const localDueDate = dueDate ? combineDateAndTime(dueDate, dueTime, localAllDay, taskTz) : '';
     const localAssigneeIds = [...selectedAssigneeIds];
     const localLabelIds = [...selectedLabelIds];
     // Fecha o modal pai imediatamente — o save e a verificação rodam em background.
@@ -1196,6 +1211,8 @@ export function TaskDetailDialog({
         formData.set('priority', localPriority);
         formData.set('startDate', localStartDate);
         formData.set('dueDate', localDueDate);
+        formData.set('allDay', String(localAllDay));
+        formData.set('timezone', taskTz);
         localAssigneeIds.forEach((id) => formData.append('assigneeIds[]', id));
         localLabelIds.forEach((id) => formData.append('labelIds[]', id));
         await updateTaskAction({}, formData);
@@ -1230,7 +1247,10 @@ export function TaskDetailDialog({
     description,
     priority,
     startDate,
+    startTime,
     dueDate,
+    dueTime,
+    taskTz,
     selectedAssigneeIds,
     selectedLabelIds,
     currentUserId,
@@ -1625,6 +1645,9 @@ export function TaskDetailDialog({
                 placeholder="Sem data de início"
                 side="top"
               />
+              {startDate && (
+                <TimePicker value={startTime} onChange={setStartTime} />
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -1635,6 +1658,9 @@ export function TaskDetailDialog({
                 placeholder="Sem prazo"
                 side="top"
               />
+              {dueDate && (
+                <TimePicker value={dueTime} onChange={setDueTime} />
+              )}
             </div>
 
             {/* Time tracking */}

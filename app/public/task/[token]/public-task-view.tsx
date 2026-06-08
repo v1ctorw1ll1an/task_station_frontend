@@ -23,6 +23,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
+import { TimePicker } from '@/components/ui/time-picker';
+import { BROWSER_TZ, combineDateAndTime, dateInTz, formatTaskTime } from '@/lib/datetime';
 import { MarkdownEditor, MarkdownDisplay } from '@/components/workspace/kanban/markdown-editor';
 import {
   updatePublicTaskAction,
@@ -86,11 +88,6 @@ const FIELD_LABELS: Record<string, string> = {
   assignees: 'Responsáveis',
 };
 
-function toDateInput(iso: string | null): string {
-  if (!iso) return '';
-  return iso.split('T')[0] ?? '';
-}
-
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', {
     day: '2-digit',
@@ -111,8 +108,10 @@ export function PublicTaskView({ token, initialTask }: PublicTaskViewProps) {
   const [description, setDescription] = useState(initialTask.description ?? '');
   const [priority, setPriority] = useState<Priority>(initialTask.priority);
   const [columnId, setColumnId] = useState(initialTask.column.id);
-  const [startDate, setStartDate] = useState(toDateInput(initialTask.startDate));
-  const [dueDate, setDueDate] = useState(toDateInput(initialTask.dueDate));
+  const [startDate, setStartDate] = useState(dateInTz(initialTask.startDate, initialTask.timezone));
+  const [startTime, setStartTime] = useState(formatTaskTime(initialTask.startDate, initialTask.timezone));
+  const [dueDate, setDueDate] = useState(dateInTz(initialTask.dueDate, initialTask.timezone));
+  const [dueTime, setDueTime] = useState(formatTaskTime(initialTask.dueDate, initialTask.timezone));
   const [labelIds, setLabelIds] = useState<string[]>(initialTask.labels.map((l) => l.id));
 
   const [columns, setColumns] = useState<PublicTaskColumn[]>([]);
@@ -126,21 +125,32 @@ export function PublicTaskView({ token, initialTask }: PublicTaskViewProps) {
     setDescription(t.description ?? '');
     setPriority(t.priority);
     setColumnId(t.column.id);
-    setStartDate(toDateInput(t.startDate));
-    setDueDate(toDateInput(t.dueDate));
+    setStartDate(dateInTz(t.startDate, t.timezone));
+    setStartTime(formatTaskTime(t.startDate, t.timezone));
+    setDueDate(dateInTz(t.dueDate, t.timezone));
+    setDueTime(formatTaskTime(t.dueDate, t.timezone));
     setLabelIds(t.labels.map((l) => l.id));
   }, []);
 
   const sameLabels = (a: string[], b: string[]) =>
     a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
 
+  // Combina data + hora no TZ da task; compara instantes normalizados.
+  const tz = task.timezone || BROWSER_TZ;
+  const normIso = (iso: string | null) => (iso ? new Date(iso).toISOString() : null);
+  // Hora zerada/vazia = "sem horário"; allDay derivado disso (sem toggle na UI).
+  const allDay = !startTime && !dueTime;
+  const draftStartIso = startDate ? combineDateAndTime(startDate, startTime, allDay, tz) : null;
+  const draftDueIso = dueDate ? combineDateAndTime(dueDate, dueTime, allDay, tz) : null;
+
   const isDirty =
     title.trim() !== task.title ||
     description !== (task.description ?? '') ||
     priority !== task.priority ||
     columnId !== task.column.id ||
-    startDate !== toDateInput(task.startDate) ||
-    dueDate !== toDateInput(task.dueDate) ||
+    allDay !== task.allDay ||
+    normIso(draftStartIso) !== normIso(task.startDate) ||
+    normIso(draftDueIso) !== normIso(task.dueDate) ||
     !sameLabels(labelIds, task.labels.map((l) => l.id));
 
   // Ref para ler isDirty dentro de callbacks (socket) sem stale closure.
@@ -211,8 +221,12 @@ export function PublicTaskView({ token, initialTask }: PublicTaskViewProps) {
     if (description !== (task.description ?? '')) fields.description = description || null;
     if (priority !== task.priority) fields.priority = priority;
     if (columnId !== task.column.id) fields.columnId = columnId;
-    if (startDate !== toDateInput(task.startDate)) fields.startDate = startDate || null;
-    if (dueDate !== toDateInput(task.dueDate)) fields.dueDate = dueDate || null;
+    const startChanged = normIso(draftStartIso) !== normIso(task.startDate);
+    const dueChanged = normIso(draftDueIso) !== normIso(task.dueDate);
+    if (startChanged) fields.startDate = draftStartIso;
+    if (dueChanged) fields.dueDate = draftDueIso;
+    if (allDay !== task.allDay) fields.allDay = allDay;
+    if (startChanged || dueChanged || allDay !== task.allDay) fields.timezone = tz;
     if (!sameLabels(labelIds, task.labels.map((l) => l.id))) fields.labelIds = labelIds;
 
     setError(null);
@@ -339,11 +353,17 @@ export function PublicTaskView({ token, initialTask }: PublicTaskViewProps) {
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">Início</Label>
             <DatePicker value={startDate} onChange={(v) => setStartDate(v)} disabled={pending} />
+            {startDate && (
+              <TimePicker value={startTime} onChange={setStartTime} disabled={pending} />
+            )}
           </div>
 
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">Vencimento</Label>
             <DatePicker value={dueDate} onChange={(v) => setDueDate(v)} disabled={pending} />
+            {dueDate && (
+              <TimePicker value={dueTime} onChange={setDueTime} disabled={pending} />
+            )}
           </div>
         </div>
 

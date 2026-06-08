@@ -8,6 +8,8 @@ export interface UpdatePublicTaskFields {
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   startDate?: string | null;
   dueDate?: string | null;
+  allDay?: boolean;
+  timezone?: string;
   columnId?: string;
   labelIds?: string[];
 }

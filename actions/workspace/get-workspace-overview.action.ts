@@ -16,6 +16,8 @@ export interface OverviewTask {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDate: string | null;
   startDate: string | null;
+  allDay: boolean;
+  timezone: string;
   createdAt: string;
   updatedAt: string;
   columnId: string;
