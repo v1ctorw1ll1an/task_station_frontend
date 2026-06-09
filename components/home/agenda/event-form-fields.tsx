@@ -81,7 +81,10 @@ export function buildInitialFormState(occurrence?: {
     endTime: formatInTimeZone(end, tz, 'HH:mm'),
     color: occurrence.color ?? EVENT_COLOR_PRESETS[1].value,
     rrule: occurrence.rrule ?? '',
-    reminders: occurrence.reminders?.map((r) => r.minutesBefore) ?? [],
+    // O backend guarda 1 entrada por canal (email + notification), então o mesmo
+    // minuto vem repetido. Deduplica para o state ter 1 chip por lembrete — sem
+    // isso, salvar re-expandiria os duplicados (×2) e estouraria o limite.
+    reminders: [...new Set(occurrence.reminders?.map((r) => r.minutesBefore) ?? [])],
     timezone: tz,
     guestEmails: occurrence.guestEmails ?? [],
   };

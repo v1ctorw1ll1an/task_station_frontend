@@ -62,10 +62,14 @@ export async function updateEventAction(
   if (typeof remindersRaw === 'string') {
     body.reminders =
       remindersRaw.length > 0
-        ? remindersRaw
-            .split(',')
-            .map((m) => Number(m))
-            .filter((n) => Number.isInteger(n) && n >= 0)
+        ? [
+            ...new Set(
+              remindersRaw
+                .split(',')
+                .map((m) => Number(m))
+                .filter((n) => Number.isInteger(n) && n >= 0),
+            ),
+          ]
             // Cada lembrete dispara em ambos os canais (email + notification).
             // A preferência do destinatário decide o que efetivamente aparece.
             .flatMap((minutesBefore) => [

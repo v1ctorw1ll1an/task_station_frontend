@@ -57,10 +57,14 @@ export async function createEventAction(
   const remindersRaw = formData.get('reminders');
   const reminders =
     typeof remindersRaw === 'string' && remindersRaw.length > 0
-      ? remindersRaw
-          .split(',')
-          .map((m) => Number(m))
-          .filter((n) => Number.isInteger(n) && n >= 0)
+      ? [
+          ...new Set(
+            remindersRaw
+              .split(',')
+              .map((m) => Number(m))
+              .filter((n) => Number.isInteger(n) && n >= 0),
+          ),
+        ]
           // Cada lembrete escolhido pelo usuário dispara em todos os canais:
           // email + notification (in-app/Web Push). Cada canal respeita as
           // preferências do destinatário no momento da entrega.
