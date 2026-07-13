@@ -181,6 +181,11 @@ export function AppSidebar({
         new Set(workspaces.map((ws) => ws.workspaceId)),
     );
 
+    // Workspaces criados otimisticamente (evento workspace:created) que ainda não
+    // apareceram no prop do servidor. Protegidos da reconciliação até o prop os
+    // incluir, para não sumirem caso um refresh chegue antes do dado novo.
+    const pendingCreatedIdsRef = useRef<Set<string>>(new Set());
+
     const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(
         () => {
             const initial = currentWorkspaceId ?? workspaces[0]?.workspaceId;
@@ -253,16 +258,39 @@ export function AppSidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ── Sync new workspaces from router.refresh() into state ──────────────────
+    // ── Sync workspaces prop (add / remove / rename) into state ───────────────
+    // O `workspaces` prop é a fonte de verdade vinda do servidor (atualizada por
+    // router.refresh() após criar/editar/excluir). Reconciliamos o estado local
+    // preservando a ordem atual (DnD/localStorage): removemos os excluídos,
+    // atualizamos os dados (ex: nome renomeado) e anexamos os novos no fim.
     useEffect(() => {
-        const newWorkspaces = workspaces.filter(
-            (ws) => !knownWorkspaceIdsRef.current.has(ws.workspaceId),
-        );
-        if (newWorkspaces.length === 0) return;
-        for (const ws of newWorkspaces) {
-            knownWorkspaceIdsRef.current.add(ws.workspaceId);
+        const incoming = new Map(workspaces.map((ws) => [ws.workspaceId, ws]));
+        knownWorkspaceIdsRef.current = new Set(incoming.keys());
+        // Criações otimistas que o servidor já confirmou (presentes no prop) deixam
+        // de precisar de proteção.
+        for (const id of pendingCreatedIdsRef.current) {
+            if (incoming.has(id)) pendingCreatedIdsRef.current.delete(id);
         }
-        setOrderedWorkspaces((prev) => [...prev, ...newWorkspaces]);
+
+        setOrderedWorkspaces((prev) => {
+            const reconciled = prev
+                .filter(
+                    (ws) =>
+                        incoming.has(ws.workspaceId) ||
+                        pendingCreatedIdsRef.current.has(ws.workspaceId),
+                )
+                // Atualiza com o dado do servidor; mantém o otimista se ainda pendente.
+                .map((ws) => incoming.get(ws.workspaceId) ?? ws);
+            const seen = new Set(reconciled.map((ws) => ws.workspaceId));
+            for (const ws of workspaces) {
+                if (!seen.has(ws.workspaceId)) reconciled.push(ws);
+            }
+            // Evita re-render quando nada mudou (mesma ordem e mesmas referências).
+            const unchanged =
+                reconciled.length === prev.length &&
+                reconciled.every((ws, i) => ws === prev[i]);
+            return unchanged ? prev : reconciled;
+        });
     }, [workspaces]);
 
     // ── Auto-expand current workspace ─────────────────────────────────────────
@@ -359,7 +387,11 @@ export function AppSidebar({
             ).detail;
 
             if (eventCompanyId !== companyId) return;
-            if (knownWorkspaceIdsRef.current.has(workspaceId)) return;
+            if (
+                knownWorkspaceIdsRef.current.has(workspaceId) ||
+                pendingCreatedIdsRef.current.has(workspaceId)
+            )
+                return;
 
             const newWs: SidebarWorkspace = {
                 workspaceId,
@@ -369,6 +401,8 @@ export function AppSidebar({
             };
 
             knownWorkspaceIdsRef.current.add(workspaceId);
+            // Protege este workspace até o prop do servidor confirmá-lo.
+            pendingCreatedIdsRef.current.add(workspaceId);
             setOrderedWorkspaces((prev) => {
                 const updated = [...prev, newWs];
                 // Persist updated order to localStorage
@@ -746,6 +780,9 @@ export function AppSidebar({
                                                 isAdmin={
                                                     isCompanyAdmin ||
                                                     ws.role === "workspace_admin"
+                                                }
+                                                isCompanyAdmin={
+                                                    isCompanyAdmin
                                                 }
                                                 projects={
                                                     projectsMap[

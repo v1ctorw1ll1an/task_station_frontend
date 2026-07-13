@@ -31,6 +31,8 @@ export interface CalendarEventOccurrence {
   timezone: string;
   visibility: EventVisibility;
   isRecurringInstance: boolean;
+  /** Regra de recorrência da série (null = evento único). Usada ao editar a série. */
+  rrule: string | null;
   isOwner: boolean;
   myRsvpStatus: AttendeeStatus | null;
   attendees: EventAttendee[];

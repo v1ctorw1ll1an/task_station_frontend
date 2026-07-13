@@ -47,10 +47,23 @@ export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspa
       startTransition(() => {
         setOpen(false);
         setSuccessMessage(state.workspaceName ?? 'Workspace criado com sucesso!');
+        // Reflete a criação na sidebar imediatamente (mesmo evento do criador inline),
+        // sem esperar o round-trip do router.refresh().
+        if (state.workspaceId && state.workspaceName) {
+          window.dispatchEvent(
+            new CustomEvent('workspace:created', {
+              detail: {
+                workspaceId: state.workspaceId,
+                workspaceName: state.workspaceName,
+                companyId,
+              },
+            }),
+          );
+        }
         router.refresh();
       });
     }
-  }, [state.success, state.workspaceName, router]);
+  }, [state.success, state.workspaceName, state.workspaceId, companyId, router]);
 
   useEffect(() => {
     if (!successMessage) return;

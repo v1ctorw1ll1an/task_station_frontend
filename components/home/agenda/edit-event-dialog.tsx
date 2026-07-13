@@ -51,13 +51,15 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
       startsAt: occurrence.startsAt,
       endsAt: occurrence.endsAt,
       color: occurrence.color,
-      rrule: null,
+      rrule: occurrence.rrule,
       reminders: occurrence.reminders.map((r) => ({ minutesBefore: r.minutesBefore })),
       timezone: occurrence.timezone,
       guestEmails: occurrence.guestEmails,
     }),
   );
-  const [scope, setScope] = useState<'single' | 'all'>('all');
+  const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
+  const [saveScope, setSaveScope] = useState<'single' | 'all'>('all');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteScope, setDeleteScope] = useState<'single' | 'all'>('all');
   const [error, setError] = useState<string | null>(null);
@@ -65,18 +67,47 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
   const [isDeleting, startDeleting] = useTransition();
   const [isRsvping, startRsvp] = useTransition();
 
-  function handleSubmit(formData: FormData) {
-    setError(null);
+  function doSave(formData: FormData) {
     startSaving(async () => {
       const result = await updateEventAction({}, formData);
       if (result.success) {
+        setConfirmSaveOpen(false);
         onOpenChange(false);
         notifyAgendaChanged();
         router.refresh();
       } else {
         setError(result.error ?? 'Erro ao salvar');
+        setConfirmSaveOpen(false);
       }
     });
+  }
+
+  function handleSubmit(formData: FormData) {
+    setError(null);
+    // Evento recorrente: pergunta o escopo (apenas este / toda a série) num popup
+    // antes de salvar. Ao confirmar lá, o evento é salvo e o diálogo fecha.
+    if (occurrence.isRecurringInstance) {
+      setPendingFormData(formData);
+      setSaveScope('all');
+      setConfirmSaveOpen(true);
+      return;
+    }
+    doSave(formData);
+  }
+
+  function confirmSave() {
+    if (!pendingFormData) return;
+    const fd = pendingFormData;
+    fd.set('scope', saveScope);
+    if (saveScope === 'single') {
+      fd.set('originalDate', occurrence.originalDate);
+      // Alterar só esta ocorrência não deve mexer na regra da série.
+      fd.delete('rrule');
+    } else {
+      fd.delete('originalDate');
+      fd.set('rrule', formState.rrule);
+    }
+    doSave(fd);
   }
 
   function handleDelete() {
@@ -121,10 +152,9 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
             <form action={handleSubmit} className="space-y-4">
               <input type="hidden" name="eventId" value={occurrence.eventId} />
               <input type="hidden" name="companyId" value={companyId} />
-              <input type="hidden" name="scope" value={scope} />
-              {scope === 'single' && (
-                <input type="hidden" name="originalDate" value={occurrence.originalDate} />
-              )}
+              {/* scope/originalDate/rrule são ajustados em confirmSave conforme a
+                  escolha no popup; aqui vai o padrão (toda a série / evento único). */}
+              <input type="hidden" name="scope" value="all" />
               <input type="hidden" name="title" value={formState.title} />
               <input type="hidden" name="description" value={formState.description} />
               <input type="hidden" name="location" value={formState.location} />
@@ -151,45 +181,11 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
                   formState.timezone,
                 )}
               />
-              {scope === 'all' && (
-                <input type="hidden" name="rrule" value={formState.rrule} />
-              )}
+              <input type="hidden" name="rrule" value={formState.rrule} />
               <input type="hidden" name="reminders" value={formState.reminders.join(',')} />
               <input type="hidden" name="guestEmails" value={formState.guestEmails.join(',')} />
 
               <EventFormFields state={formState} onChange={setFormState} />
-
-              {occurrence.isRecurringInstance && (
-                <div className="rounded-md border bg-muted/40 p-3 space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Este é um evento recorrente. As alterações afetam:
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setScope('single')}
-                      className={
-                        scope === 'single'
-                          ? 'rounded-full border border-primary bg-primary text-primary-foreground px-3 py-1 text-xs'
-                          : 'rounded-full border bg-card hover:bg-accent px-3 py-1 text-xs'
-                      }
-                    >
-                      Apenas este
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setScope('all')}
-                      className={
-                        scope === 'all'
-                          ? 'rounded-full border border-primary bg-primary text-primary-foreground px-3 py-1 text-xs'
-                          : 'rounded-full border bg-card hover:bg-accent px-3 py-1 text-xs'
-                      }
-                    >
-                      Toda a série
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 
@@ -263,6 +259,53 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmSaveOpen} onOpenChange={setConfirmSaveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Salvar alterações</AlertDialogTitle>
+            <AlertDialogDescription>
+              Este é um evento recorrente. As alterações afetam:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setSaveScope('single')}
+              className={
+                saveScope === 'single'
+                  ? 'rounded-full border border-primary bg-primary text-primary-foreground px-3 py-1 text-xs'
+                  : 'rounded-full border bg-card hover:bg-accent px-3 py-1 text-xs'
+              }
+            >
+              Apenas este
+            </button>
+            <button
+              type="button"
+              onClick={() => setSaveScope('all')}
+              className={
+                saveScope === 'all'
+                  ? 'rounded-full border border-primary bg-primary text-primary-foreground px-3 py-1 text-xs'
+                  : 'rounded-full border bg-card hover:bg-accent px-3 py-1 text-xs'
+              }
+            >
+              Toda a série
+            </button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmSave();
+              }}
+            >
+              {isPending ? 'Salvando...' : 'Salvar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>

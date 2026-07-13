@@ -67,11 +67,21 @@ export function CreateEventDialog({
     }
   }
 
-  function handleOpenChange(nextOpen: boolean) {
-    if (nextOpen) {
+  // Reseta o form sempre que o dialog ABRE (borda de subida de `open`), ajustando
+  // o estado durante o render (padrão recomendado do React para reagir a mudança
+  // de prop). Cobre tanto a abertura pelo trigger quanto a abertura controlada via
+  // prop (agenda), onde o onOpenChange do Radix não dispara — evitando que o
+  // título/campos do evento anterior venham preenchidos ao criar um novo evento.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
       setFormState(buildStateForDate(defaultDate));
       setError(null);
     }
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
   }
 

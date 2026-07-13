@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ChevronDown,
   GripVertical,
+  Layers,
   LayoutList,
   Plus,
   Users,
@@ -50,6 +51,8 @@ interface WorkspaceNavItemProps {
   isExpanded: boolean;
   onToggle: (workspaceId: string) => void;
   isAdmin: boolean;
+  /** True apenas para admins da empresa — habilita a exclusão do workspace. */
+  isCompanyAdmin: boolean;
   projects: SidebarProject[];
   loadingProjects: boolean;
   onProjectCreated: (workspaceId: string) => void;
@@ -95,7 +98,7 @@ function CreateProjetoSidebarDialog({
         {footerMode ? (
           <button
             title="Novo projeto"
-            className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            className="flex items-center gap-2 w-full px-2 py-1.5 mb-1 rounded-md border border-dashed border-border/70 text-xs font-medium text-primary hover:border-primary/50 hover:bg-primary/5 transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             <Plus className="h-3 w-3 shrink-0" />
@@ -237,6 +240,7 @@ export function WorkspaceNavItem({
   isExpanded,
   onToggle,
   isAdmin,
+  isCompanyAdmin,
   projects,
   loadingProjects,
   onProjectCreated,
@@ -309,22 +313,24 @@ export function WorkspaceNavItem({
           )}
         </button>
 
-        {/* Workspace name link */}
+        {/* Workspace name link — ícone de contêiner (camadas) neutro marca o nível
+            "workspace", diferenciando-o dos projetos (ícones de linha coloridos) */}
         <Link
           href={`/workspace/${workspace.workspaceId}/projetos`}
-          className="flex-1 text-sm font-medium truncate min-w-0"
+          className="flex flex-1 items-center gap-2 text-sm font-medium min-w-0"
           onClick={() => {
             if (!isExpanded) onToggle(workspace.workspaceId);
             mobileNav?.close();
           }}
         >
-          {workspace.workspaceName}
+          <Layers className="h-3.5 w-3.5 shrink-0 opacity-70" />
+          <span className="truncate">{workspace.workspaceName}</span>
         </Link>
 
         {/* Actions (visible on hover) */}
         <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0">
           {isAdmin && (
-            <WorkspaceSettingsDialog workspace={workspace} />
+            <WorkspaceSettingsDialog workspace={workspace} canDelete={isCompanyAdmin} />
           )}
         </div>
       </div>
@@ -332,6 +338,15 @@ export function WorkspaceNavItem({
       {/* Expanded content */}
       {isExpanded && (
         <div className="ml-5 mt-0.5 space-y-0.5 border-l border-border/50 pl-2">
+          {/* Novo projeto — no topo, em destaque sutil, para ficar fácil de achar */}
+          {isAdmin && (
+            <CreateProjetoSidebarDialog
+              workspaceId={workspace.workspaceId}
+              onCreated={handleCreated}
+              footerMode
+            />
+          )}
+
           {loadingProjects ? (
             <div className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -356,15 +371,6 @@ export function WorkspaceNavItem({
                 />
               ))}
             </SortableContext>
-          )}
-
-          {/* Novo projeto */}
-          {isAdmin && (
-            <CreateProjetoSidebarDialog
-              workspaceId={workspace.workspaceId}
-              onCreated={handleCreated}
-              footerMode
-            />
           )}
 
           {/* Visão Geral */}

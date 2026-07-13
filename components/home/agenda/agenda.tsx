@@ -23,7 +23,9 @@ import { AgendaWeek } from './agenda-week';
 import { AgendaMonth } from './agenda-month';
 import { AgendaYear } from './agenda-year';
 import { CreateEventDialog } from './create-event-dialog';
+import { EditEventDialog } from './edit-event-dialog';
 import { AgendaTaskDialog } from './agenda-task-dialog';
+import { AgendaSearch } from './agenda-search';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -82,6 +84,7 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
   const [createOpen, setCreateOpen] = useState(false);
   const [createDate, setCreateDate] = useState<Date>(() => new Date());
   const [selectedTask, setSelectedTask] = useState<TaskDueCardData | null>(null);
+  const [searchEvent, setSearchEvent] = useState<CalendarEventOccurrence | null>(null);
 
   function handleTaskClick(task: TaskDueCardData) {
     setSelectedTask(task);
@@ -150,8 +153,13 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
           </div>
         </div>
 
-        {/* Linha 2: filtro de data (exclusivo) */}
-        <div className="flex items-center gap-2 px-4 pb-3">
+        {/* Linha 2: busca + filtro de data (exclusivo) */}
+        <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
+          <AgendaSearch
+            companyId={companyId}
+            onSelectEvent={setSearchEvent}
+            onSelectTask={handleTaskClick}
+          />
           <span className="text-xs text-muted-foreground shrink-0">Filtrar por data de:</span>
           <div className="flex items-center gap-1.5">
             <button
@@ -196,6 +204,17 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
         currentUserId={currentUserId}
         onClose={() => setSelectedTask(null)}
       />
+
+      {searchEvent && (
+        <EditEventDialog
+          occurrence={searchEvent}
+          companyId={companyId}
+          open
+          onOpenChange={(v) => {
+            if (!v) setSearchEvent(null);
+          }}
+        />
+      )}
 
       {/* Navegação de período */}
       <div className="flex items-center justify-between gap-2 px-4 py-2 border-b bg-muted/20">
