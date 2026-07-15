@@ -191,6 +191,12 @@ interface TaskDetailDialogProps {
     guests: TaskGuestSummary[];
     historyIds: string[];
   }) => void;
+  /**
+   * Disparado após o save/delete da task persistir. Usado por consumidores que
+   * não recebem os eventos de socket do board (ex.: a Agenda, que re-busca via
+   * event-bus). No Kanban é omitido — lá o store atualiza via socket.
+   */
+  onSaved?: () => void;
 }
 
 function SortableChecklistItem({
@@ -946,6 +952,7 @@ export function TaskDetailDialog({
   currentUserId,
   onClose,
   onRequestSendChanges,
+  onSaved,
 }: TaskDetailDialogProps) {
   const isPrivacyMode = usePrivacyStore((s) => s.isPrivacyMode);
   const [savePending] = useTransition();
@@ -1116,6 +1123,8 @@ export function TaskDetailDialog({
       if (!result.error) {
         onClose();
         // Sem router.refresh() — o evento task:deleted via socket atualiza o store
+        // (no Kanban). Consumidores sem socket, como a Agenda, re-buscam aqui.
+        onSaved?.();
       }
     });
   }
@@ -1216,6 +1225,9 @@ export function TaskDetailDialog({
         localAssigneeIds.forEach((id) => formData.append('assigneeIds[]', id));
         localLabelIds.forEach((id) => formData.append('labelIds[]', id));
         await updateTaskAction({}, formData);
+        // Notifica consumidores sem socket (Agenda) só depois que o save
+        // persistiu — disparar no onClose causaria re-fetch de dado velho.
+        onSaved?.();
       } catch {
         // se save falhar, ainda tentamos o fluxo de notificação
       }
@@ -1256,6 +1268,7 @@ export function TaskDetailDialog({
     currentUserId,
     onClose,
     onRequestSendChanges,
+    onSaved,
   ]);
 
   if (!task) return null;

@@ -7,6 +7,7 @@ import { computeTaskPrefix } from '@/components/workspace/kanban/kanban-board';
 import { getTaskByIdAction } from '@/actions/projeto/get-task-by-id.action';
 import { getProjectMembrosAction } from '@/actions/projeto/get-project-membros.action';
 import { getLabelsAction } from '@/actions/projeto/get-labels.action';
+import { notifyAgendaChanged } from '@/lib/agenda-events';
 import type { KanbanTask } from '@/components/workspace/kanban/kanban-card';
 import type { WorkspaceMember } from '@/components/workspace/kanban/kanban-board';
 import type { ProjectLabel } from '@/actions/projeto/get-labels.action';
@@ -79,6 +80,7 @@ export function AgendaTaskDialog({ task, currentUserId, onClose }: AgendaTaskDia
       labels={labels}
       currentUserId={currentUserId}
       onClose={onClose}
+      onSaved={notifyAgendaChanged}
     />
   );
 }
