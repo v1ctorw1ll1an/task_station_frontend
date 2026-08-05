@@ -8,9 +8,7 @@ import {
   ChevronDown,
   GripVertical,
   Layers,
-  LayoutList,
   Plus,
-  Users,
   Loader2,
 } from 'lucide-react';
 import { WorkspaceSettingsDialog } from './workspace-settings-dialog';
@@ -98,10 +96,14 @@ function CreateProjetoSidebarDialog({
         {footerMode ? (
           <button
             title="Novo projeto"
-            className="flex items-center gap-2 w-full px-2 py-1.5 mb-1 rounded-md border border-dashed border-border/70 text-xs font-medium text-primary hover:border-primary/50 hover:bg-primary/5 transition-colors"
+            // `pl-6` (24px) alinha o "+" com o ícone dos projetos logo abaixo, que
+            // começa depois do botão de arrastar: 4px de `pl-1` + 14px do ícone + 2px
+            // de `p-0.5` + 4px do `gap-1` da linha. Com o ícone no mesmo `h-3.5` e o
+            // mesmo `gap-2`, o texto também cai na coluna do nome do projeto.
+            className="flex items-center gap-2 w-full pl-6 pr-2 py-1.5 mb-1 rounded-md border border-dashed border-border/70 text-xs font-medium text-primary hover:border-primary/50 hover:bg-primary/5 transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
-            <Plus className="h-3 w-3 shrink-0" />
+            <Plus className="h-3.5 w-3.5 shrink-0" />
             Novo projeto
           </button>
         ) : (
@@ -327,11 +329,16 @@ export function WorkspaceNavItem({
           <span className="truncate">{workspace.workspaceName}</span>
         </Link>
 
-        {/* Actions (visible on hover) */}
-        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0">
-          {isAdmin && (
-            <WorkspaceSettingsDialog workspace={workspace} canDelete={isCompanyAdmin} />
-          )}
+        {/* A engrenagem fica sempre visível, não só no hover: ela é o único caminho
+            para a Visão geral e para os membros, e caminho único não pode depender de
+            o usuário passar o mouse por cima para descobrir que existe. Aparece para
+            qualquer membro — o que é de admin o próprio diálogo esconde. */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          <WorkspaceSettingsDialog
+            workspace={workspace}
+            isAdmin={isAdmin}
+            canDelete={isCompanyAdmin}
+          />
         </div>
       </div>
 
@@ -373,37 +380,8 @@ export function WorkspaceNavItem({
             </SortableContext>
           )}
 
-          {/* Visão Geral */}
-          <Link
-            href={`/workspace/${workspace.workspaceId}/visao-geral`}
-            onClick={mobileNav?.close}
-            className={cn(
-              'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
-              pathname.startsWith(`/workspace/${workspace.workspaceId}/visao-geral`)
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-            )}
-          >
-            <LayoutList className="h-3 w-3 shrink-0" />
-            Visão Geral
-          </Link>
-
-          {isAdmin && (
-            <Link
-              href={`/workspace/${workspace.workspaceId}/membros`}
-              onClick={mobileNav?.close}
-              className={cn(
-                'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
-                pathname.startsWith(`/workspace/${workspace.workspaceId}/membros`)
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-              )}
-            >
-              <Users className="h-3 w-3 shrink-0" />
-              Membros
-            </Link>
-          )}
-
+          {/* Visão Geral e Membros saíram daqui: a lista do workspace é sobre os
+              projetos, e eles moram na engrenagem, junto do resto da configuração. */}
         </div>
       )}
     </div>

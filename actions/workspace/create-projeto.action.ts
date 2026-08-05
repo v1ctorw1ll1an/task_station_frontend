@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession } from '@/lib/auth';
+import { extractActionError } from '@/lib/action-error';
 import { createProjetoSchema } from '@/lib/schemas/create-projeto.schema';
 
 export interface CreateProjetoActionState {
@@ -45,7 +46,7 @@ export async function createProjetoAction(
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      return { error: body.message ?? 'Erro ao criar projeto' };
+      return { error: extractActionError(body, 'Erro ao criar projeto').message };
     }
 
     const body = await res.json().catch(() => ({}));

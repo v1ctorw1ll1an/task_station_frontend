@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
+import { redirecionaSeSessaoInvalida } from '@/lib/session-guard';
 import { AppSidebar } from '@/components/navigation/app-sidebar';
 import { SidebarShell } from '@/components/navigation/sidebar-shell';
 import { EmpresaUserMenu } from '@/components/empresa/user-menu';
@@ -11,6 +12,12 @@ import { TrackingWidget } from '@/components/workspace/task-tracking/tracking-wi
 import { getMyActiveSessionsAction } from '@/actions/task-session/get-my-active-sessions.action';
 import { StickyNotesButtonClient, StickyNotesManagerClient } from '@/components/sticky-notes/sticky-notes-client';
 import { fetchStickyNotesAction } from '@/actions/sticky-notes/fetch-sticky-notes.action';
+import { SubscribeBanner } from '@/components/billing/subscribe-banner';
+import { AccessBlockedScreen } from '@/components/billing/access-blocked-screen';
+import { BillingModeProvider } from '@/components/billing/billing-mode';
+import { ReadOnlyBar } from '@/components/billing/read-only-bar';
+import { TourProvider } from '@/components/tour/tour-provider';
+import { TourButton } from '@/components/tour/tour-button';
 
 interface EmpresaLayoutProps {
   children: React.ReactNode;
@@ -32,15 +39,47 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
     headers,
     cache: 'no-store',
   });
+  // Sessão derrubada sai pela rota que apaga o cookie; o resto cai no dashboard.
+  await redirecionaSeSessaoInvalida(companiesRes);
   if (!companiesRes.ok) redirect('/dashboard');
 
-  const companies: Array<{ companyId: string; legalName: string; role: string }> =
-    await companiesRes.json();
+  const companies: Array<{
+    companyId: string;
+    legalName: string;
+    role: string;
+    blocked?: boolean;
+    mode?: 'ok' | 'read_only' | 'suspended';
+    blockReason?: 'trial_ended' | 'subscription_expired' | 'admin_locked' | 'admin_suspended' | null;
+    needsSubscription?: boolean;
+    billingStatus?: string | null;
+    trialEndsAt?: string | null;
+  }> = await companiesRes.json();
 
   const company = companies.find((c) => c.companyId === companyId);
   if (!company) redirect('/dashboard');
 
   const isCompanyAdmin = company.role === 'admin';
+
+  // Suspensão total (R44) é o único caso em que o app não aparece.
+  if (company.mode === 'suspended') {
+    return (
+      <AccessBlockedScreen
+        companyId={companyId}
+        companyName={company.legalName}
+        isAdmin={isCompanyAdmin}
+        reason="admin_suspended"
+        hasOtherCompanies={companies.length > 1}
+      />
+    );
+  }
+
+  // Somente leitura (R20): o app continua inteiro — consulta e apaga —, só não
+  // cria nem altera. Quem garante isso é o backend; aqui é a explicação para o time.
+  const readOnly = company.mode === 'read_only';
+  const readOnlyReason =
+    company.blockReason === 'trial_ended' || company.blockReason === 'admin_locked'
+      ? company.blockReason
+      : 'subscription_expired';
 
   // Fetch workspace list for sidebar tree
   let workspaces: SidebarWorkspace[] = [];
@@ -87,6 +126,7 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
   const initialNotes = await fetchStickyNotesAction();
 
   return (
+    <BillingModeProvider readOnly={readOnly} companyId={companyId}>
     <SidebarShell
       sidebar={
         <AppSidebar
@@ -107,14 +147,28 @@ export default async function EmpresaLayout({ children, params }: EmpresaLayoutP
         <>
           <div className="hidden sm:flex"><ThemeToggle /></div>
           <StickyNotesButtonClient />
+          <TourButton />
           <NotificationBellClient token={session.token} />
           <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />
         </>
       }
     >
+      {readOnly && (
+        <ReadOnlyBar companyId={companyId} isAdmin={isCompanyAdmin} reason={readOnlyReason} />
+      )}
+      {!readOnly && company.needsSubscription && (
+        <SubscribeBanner
+          companyId={companyId}
+          isAdmin={isCompanyAdmin}
+          status={company.billingStatus ?? 'trial'}
+          trialEndsAt={company.trialEndsAt ?? null}
+        />
+      )}
       {children}
       <TrackingWidget initialSessions={mySessions} />
       <StickyNotesManagerClient initialNotes={initialNotes} />
+      <TourProvider companyId={companyId} />
     </SidebarShell>
+    </BillingModeProvider>
   );
 }

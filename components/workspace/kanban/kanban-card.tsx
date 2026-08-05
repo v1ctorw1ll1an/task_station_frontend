@@ -150,6 +150,9 @@ export function KanbanCard({ task, taskPrefix, onClick, isDragOverlay = false, c
       {...attributes}
       {...listeners}
       onClick={() => onClick(task)}
+      // O overlay de arraste é um clone: se ele também levasse a âncora, o tutorial
+      // poderia destacar o clone em vez do card real.
+      data-tour={isDragOverlay ? undefined : 'kanban-card'}
       className={[
         'bg-background rounded-md border p-3 cursor-pointer hover:border-primary/50 transition-colors space-y-2',
         isDragging && !isDragOverlay ? 'opacity-40' : '',

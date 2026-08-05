@@ -1,5 +1,7 @@
 'use client';
 
+import { MSG_SOMENTE_LEITURA, useReadOnly } from '@/components/billing/billing-mode';
+
 import { useEffect, useActionState, useState, useRef, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { PlusCircle, X, ChevronDown, Check, CheckCircle } from 'lucide-react';
@@ -32,6 +34,7 @@ interface CreateWorkspaceFormProps {
 const initialState: CreateWorkspaceActionState = {};
 
 export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspaceFormProps) {
+  const readOnly = useReadOnly();
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createWorkspaceAction, initialState);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -118,7 +121,7 @@ export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspa
       )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button size="sm">
+          <Button size="sm" disabled={readOnly} title={readOnly ? MSG_SOMENTE_LEITURA : undefined}>
             <PlusCircle className="h-4 w-4 mr-2" />
             Novo workspace
           </Button>
@@ -172,6 +175,10 @@ export function CreateWorkspaceForm({ companyId, companyMembers }: CreateWorkspa
                 </div>
               )}
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              Você entra automaticamente como administrador deste workspace.
+            </p>
 
             {companyMembers.length === 0 ? (
               <p className="text-sm text-muted-foreground">

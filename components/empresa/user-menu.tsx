@@ -1,8 +1,9 @@
 'use client';
 
-import { LogOut, ChevronDown, Building2, LayoutDashboard, Info } from 'lucide-react';
+import { LogOut, ChevronDown, Building2, LayoutDashboard, Info, GraduationCap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { logoutAction } from '@/actions/logout.action';
+import { useTourStore } from '@/lib/stores/tour-store';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -20,6 +21,7 @@ interface UserMenuProps {
 
 export function EmpresaUserMenu({ email, isSuperuser = false }: UserMenuProps) {
   const router = useRouter();
+  const startTour = useTourStore((s) => s.start);
 
   return (
     <DropdownMenu>
@@ -54,6 +56,10 @@ export function EmpresaUserMenu({ email, isSuperuser = false }: UserMenuProps) {
             Painel do superusuário
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem onClick={() => startTour()}>
+          <GraduationCap className="h-4 w-4" />
+          Ver tutorial
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/sobre')}>
           <Info className="h-4 w-4" />
           Sobre o sistema

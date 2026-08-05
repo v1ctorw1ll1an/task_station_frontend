@@ -33,10 +33,16 @@ async function proxy(request: NextRequest, pathSegments: string[]) {
 
   const contentType = res.headers.get('content-type') ?? 'application/octet-stream';
   const cacheControl = res.headers.get('cache-control') ?? 'private, max-age=3600';
+  // Sem repassar isto, a exportação abre no navegador em vez de baixar com nome.
+  const disposition = res.headers.get('content-disposition');
 
   return new NextResponse(res.body, {
     status: res.status,
-    headers: { 'Content-Type': contentType, 'Cache-Control': cacheControl },
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': cacheControl,
+      ...(disposition ? { 'Content-Disposition': disposition } : {}),
+    },
   });
 }
 

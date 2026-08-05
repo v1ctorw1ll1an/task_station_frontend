@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
+import { redirecionaSeSessaoInvalida } from '@/lib/session-guard';
 import { AppSidebar } from '@/components/navigation/app-sidebar';
 import { SidebarShell } from '@/components/navigation/sidebar-shell';
 import { EmpresaUserMenu } from '@/components/empresa/user-menu';
@@ -11,6 +12,12 @@ import { TrackingWidget } from '@/components/workspace/task-tracking/tracking-wi
 import { getMyActiveSessionsAction } from '@/actions/task-session/get-my-active-sessions.action';
 import { StickyNotesButtonClient, StickyNotesManagerClient } from '@/components/sticky-notes/sticky-notes-client';
 import { fetchStickyNotesAction } from '@/actions/sticky-notes/fetch-sticky-notes.action';
+import { SubscribeBanner } from '@/components/billing/subscribe-banner';
+import { AccessBlockedScreen } from '@/components/billing/access-blocked-screen';
+import { BillingModeProvider } from '@/components/billing/billing-mode';
+import { ReadOnlyBar } from '@/components/billing/read-only-bar';
+import { TourProvider } from '@/components/tour/tour-provider';
+import { TourButton } from '@/components/tour/tour-button';
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -32,12 +39,25 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     headers,
     cache: 'no-store',
   });
+  // Sessão derrubada sai pela rota que apaga o cookie; o resto cai no dashboard.
+  await redirecionaSeSessaoInvalida(wsInfoRes);
   if (!wsInfoRes.ok) redirect('/dashboard');
   const wsInfo: { id: string; companyId: string; isActive: boolean } = await wsInfoRes.json();
   const companyId = wsInfo.companyId;
 
   let companyName = '';
   let isCompanyAdmin = false;
+  let companyMode: 'ok' | 'read_only' | 'suspended' = 'ok';
+  let companyBlockReason:
+    | 'trial_ended'
+    | 'subscription_expired'
+    | 'admin_locked'
+    | 'admin_suspended'
+    | null = null;
+  let companyNeedsSubscription = false;
+  let companyBillingStatus: string | null = null;
+  let companyTrialEndsAt: string | null = null;
+  let companiesCount = 0;
   let workspaces: SidebarWorkspace[] = [];
 
   const companiesRes = await fetch(`${apiUrl}/api/v1/me/empresas`, {
@@ -45,14 +65,54 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     cache: 'no-store',
   });
   if (companiesRes.ok) {
-    const companies: Array<{ companyId: string; legalName: string; role: string }> =
-      await companiesRes.json();
+    const companies: Array<{
+      companyId: string;
+      legalName: string;
+      role: string;
+      blocked?: boolean;
+      mode?: 'ok' | 'read_only' | 'suspended';
+      blockReason?:
+        | 'trial_ended'
+        | 'subscription_expired'
+        | 'admin_locked'
+        | 'admin_suspended'
+        | null;
+      needsSubscription?: boolean;
+      billingStatus?: string | null;
+      trialEndsAt?: string | null;
+    }> = await companiesRes.json();
+    companiesCount = companies.length;
     const company = companies.find((c) => c.companyId === companyId);
     if (company) {
       companyName = company.legalName;
       isCompanyAdmin = company.role === 'admin';
+      companyMode = company.mode ?? 'ok';
+      companyBlockReason = company.blockReason ?? null;
+      companyNeedsSubscription = company.needsSubscription ?? false;
+      companyBillingStatus = company.billingStatus ?? null;
+      companyTrialEndsAt = company.trialEndsAt ?? null;
     }
   }
+
+  // Suspensão total (R44) é o único caso em que o app não aparece.
+  if (companyMode === 'suspended') {
+    return (
+      <AccessBlockedScreen
+        companyId={companyId}
+        companyName={companyName || undefined}
+        isAdmin={isCompanyAdmin}
+        reason="admin_suspended"
+        hasOtherCompanies={companiesCount > 1}
+      />
+    );
+  }
+
+  // Somente leitura (R20): o workspace continua utilizável, sem criar/alterar.
+  const readOnly = companyMode === 'read_only';
+  const readOnlyReason =
+    companyBlockReason === 'trial_ended' || companyBlockReason === 'admin_locked'
+      ? companyBlockReason
+      : 'subscription_expired';
 
   if (isCompanyAdmin) {
     // Company admins see all workspaces
@@ -103,6 +163,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
   const initialNotes = await fetchStickyNotesAction();
 
   return (
+    <BillingModeProvider readOnly={readOnly} companyId={companyId}>
     <SidebarShell
       variant="full-height"
       sidebar={
@@ -124,14 +185,28 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
         <>
           <div className="hidden sm:flex"><ThemeToggle /></div>
           <StickyNotesButtonClient />
+          <TourButton />
           <NotificationBellClient token={session.token} />
           <EmpresaUserMenu email={session.user.email} isSuperuser={session.user.isSuperuser} />
         </>
       }
     >
+      {readOnly && (
+        <ReadOnlyBar companyId={companyId} isAdmin={isCompanyAdmin} reason={readOnlyReason} />
+      )}
+      {!readOnly && companyNeedsSubscription && (
+        <SubscribeBanner
+          companyId={companyId}
+          isAdmin={isCompanyAdmin}
+          status={companyBillingStatus ?? 'trial'}
+          trialEndsAt={companyTrialEndsAt}
+        />
+      )}
       {children}
       <TrackingWidget initialSessions={mySessions} />
       <StickyNotesManagerClient initialNotes={initialNotes} />
+      <TourProvider companyId={companyId} workspaceId={workspaceId} />
     </SidebarShell>
+    </BillingModeProvider>
   );
 }

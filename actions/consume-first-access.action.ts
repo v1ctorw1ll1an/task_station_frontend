@@ -70,5 +70,26 @@ export async function consumeFirstAccessAction(
     maxAge: 60 * 60 * 24 * 7,
   });
 
-  redirect('/dashboard');
+  // Dono recém-cadastrado cai direto na tela de planos após ativar a conta.
+  // Só admin de empresa que ainda precisa de plano — convidado (membro) segue pro dashboard.
+  let destination = '/dashboard';
+  try {
+    const res = await fetch(`${apiUrl}/api/v1/me/empresas`, {
+      headers: { Authorization: `Bearer ${data.access_token}` },
+      cache: 'no-store',
+    });
+    if (res.ok) {
+      const companies: Array<{
+        companyId: string;
+        role: string;
+        needsSubscription?: boolean;
+      }> = await res.json();
+      const pending = companies.find((c) => c.role === 'admin' && c.needsSubscription);
+      if (pending) destination = `/empresa/${pending.companyId}/cobranca`;
+    }
+  } catch {
+    // Falha ao resolver empresa não impede o login — segue pro dashboard.
+  }
+
+  redirect(destination);
 }

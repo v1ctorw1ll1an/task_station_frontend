@@ -16,11 +16,13 @@ import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { PASSWORD_MIN } from '@/lib/limits';
 
 interface MagicLinkFirstAccessProps {
   token: string;
@@ -73,6 +75,7 @@ export function MagicLinkFirstAccess({ token, email }: MagicLinkFirstAccessProps
                   {...field}
                 />
               </FormControl>
+              <FormDescription>Mínimo de {PASSWORD_MIN} caracteres.</FormDescription>
               <FormMessage />
             </FormItem>
           )}

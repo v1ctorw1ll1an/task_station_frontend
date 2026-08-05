@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { MembrosTable } from '@/components/empresa/membros/membros-table';
 import { ContratarMembroModal } from '@/components/empresa/membros/contratar-membro-modal';
+import { ConvitesPendentes } from '@/components/empresa/membros/convites-pendentes';
+import { listarConvitesAction } from '@/actions/empresa/convites.action';
 
 interface PageProps {
   params: Promise<{ companyId: string }>;
@@ -48,6 +50,9 @@ export default async function MembrosPage({ params, searchParams }: PageProps) {
     if (company?.role === 'admin') canHire = true;
   }
 
+  // Convidado ainda não é membro: só quem administra a empresa precisa (e pode) ver.
+  const convites = canHire ? await listarConvitesAction(companyId) : [];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -59,6 +64,8 @@ export default async function MembrosPage({ params, searchParams }: PageProps) {
         </div>
         {canHire && <ContratarMembroModal companyId={companyId} />}
       </div>
+
+      {canHire && <ConvitesPendentes companyId={companyId} convites={convites} />}
 
       <MembrosTable
         data={data}

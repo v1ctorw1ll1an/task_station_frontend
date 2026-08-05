@@ -8,6 +8,8 @@ import { deactivateCompanyAction } from '@/actions/superadmin/deactivate-company
 import { deleteCompanyAction } from '@/actions/superadmin/delete-company.action';
 import { deactivateMembershipAction } from '@/actions/superadmin/deactivate-membership.action';
 import { Button } from '@/components/ui/button';
+import { mascaraCpfCnpj } from '@/lib/mascaras';
+import { validarCpfCnpj } from '@/lib/tax-id';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +61,10 @@ export function CompanyDetail({ company, admins }: CompanyDetailProps) {
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const [showSuccess, setShowSuccess] = useState(false);
+  // Mascarado na tela; o backend normaliza para dígitos ao gravar. Validar aqui
+  // evita mandar documento quebrado que só o provedor de pagamento recusaria depois.
+  const [taxId, setTaxId] = useState(() => mascaraCpfCnpj(company.taxId));
+  const taxIdValido = validarCpfCnpj(taxId);
   useEffect(() => {
     if (state.success) {
       startTransition(() => {
@@ -113,16 +119,19 @@ export function CompanyDetail({ company, admins }: CompanyDetailProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="taxId">CNPJ</Label>
+          <Label htmlFor="taxId">CNPJ ou CPF</Label>
           <Input
             id="taxId"
             name="taxId"
-            defaultValue={company.taxId}
-            placeholder="00000000000000"
-            maxLength={14}
+            value={taxId}
+            onChange={(e) => setTaxId(mascaraCpfCnpj(e.target.value))}
+            placeholder="00.000.000/0000-00"
+            inputMode="numeric"
           />
-          <p className="text-xs text-muted-foreground">
-            Somente números, sem pontuação.
+          <p className={`text-xs ${taxIdValido ? 'text-muted-foreground' : 'text-destructive'}`}>
+            {taxIdValido
+              ? 'A pontuação é opcional — o backend guarda só os dígitos.'
+              : 'CPF ou CNPJ inválido — confira os números digitados.'}
           </p>
         </div>
 
@@ -135,7 +144,7 @@ export function CompanyDetail({ company, admins }: CompanyDetailProps) {
         )}
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isPending || !taxIdValido}>
             {isPending ? 'Salvando...' : 'Salvar alterações'}
           </Button>
         </div>

@@ -1,5 +1,7 @@
 'use client';
 
+import { MSG_SOMENTE_LEITURA, useReadOnly } from '@/components/billing/billing-mode';
+
 import { useState, useEffect, useActionState, useRef, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X, ChevronDown, Check, CheckCircle } from 'lucide-react';
@@ -33,6 +35,7 @@ export function CreateWorkspaceInlineTrigger({
   companyId,
   variant = 'icon',
 }: CreateWorkspaceInlineTriggerProps) {
+  const readOnly = useReadOnly();
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createWorkspaceAction, initialState);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -106,7 +109,14 @@ export function CreateWorkspaceInlineTrigger({
 
   const trigger =
     variant === 'button' ? (
-      <Button size="sm" variant="outline" className="w-full text-xs h-8" suppressHydrationWarning>
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-full text-xs h-8"
+        suppressHydrationWarning
+        disabled={readOnly}
+        title={readOnly ? MSG_SOMENTE_LEITURA : undefined}
+      >
         <Plus className="h-3.5 w-3.5 mr-1.5" />
         Novo workspace
       </Button>
@@ -181,6 +191,10 @@ export function CreateWorkspaceInlineTrigger({
                 </div>
               )}
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              Você entra automaticamente como administrador deste workspace.
+            </p>
 
             {companyMembers.length === 0 ? (
               <p className="text-sm text-muted-foreground">

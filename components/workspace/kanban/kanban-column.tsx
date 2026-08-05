@@ -218,6 +218,7 @@ export function KanbanColumnComponent({
     <div
       ref={setNodeRef}
       style={style}
+      data-tour="kanban-coluna"
       className={[
         'flex w-64 md:w-72 flex-shrink-0 flex-col rounded-lg border bg-muted/40 h-full overflow-hidden',
         isDragging ? 'opacity-40' : '',

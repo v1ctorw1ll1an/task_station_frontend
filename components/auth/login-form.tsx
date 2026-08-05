@@ -21,7 +21,7 @@ import {
 
 const initialState: LoginActionState = {};
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const [state, formAction, isPending] = useActionState(loginAction, initialState);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -33,6 +33,9 @@ export function LoginForm() {
   return (
     <Form {...form}>
       <form action={formAction} className="space-y-4">
+        {/* Destino pós-login (ex.: voltar para a tela de convite). Validado no server action. */}
+        {next && <input type="hidden" name="next" value={next} />}
+
         <FormField
           control={form.control}
           name="email"

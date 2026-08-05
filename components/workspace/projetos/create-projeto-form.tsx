@@ -1,5 +1,7 @@
 'use client';
 
+import { MSG_SOMENTE_LEITURA, useReadOnly } from '@/components/billing/billing-mode';
+
 import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PlusCircle } from 'lucide-react';
@@ -27,6 +29,7 @@ interface CreateProjetoFormProps {
 const initialState: CreateProjetoActionState = {};
 
 export function CreateProjetoForm({ workspaceId }: CreateProjetoFormProps) {
+  const readOnly = useReadOnly();
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createProjetoAction, initialState);
   const [icon, setIcon] = useState(DEFAULT_ICON);
@@ -56,7 +59,12 @@ export function CreateProjetoForm({ workspaceId }: CreateProjetoFormProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button
+          size="sm"
+          data-tour="novo-projeto"
+          disabled={readOnly}
+          title={readOnly ? MSG_SOMENTE_LEITURA : undefined}
+        >
           <PlusCircle className="h-4 w-4 mr-2" />
           Novo projeto
         </Button>

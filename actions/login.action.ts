@@ -8,6 +8,17 @@ export interface LoginActionState {
   error?: string;
 }
 
+/**
+ * Só caminhos internos são aceitos como destino pós-login. Sem isto, um link
+ * `/login?next=https://phishing.example` levaria o usuário recém-autenticado
+ * para fora do site (open redirect). `//host` também é URL absoluta.
+ */
+function destinoSeguro(next: FormDataEntryValue | null): string | null {
+  if (typeof next !== 'string') return null;
+  if (!next.startsWith('/') || next.startsWith('//')) return null;
+  return next;
+}
+
 export async function loginAction(
   _prev: LoginActionState,
   formData: FormData,
@@ -65,5 +76,5 @@ export async function loginAction(
     redirect('/first-access');
   }
 
-  redirect('/dashboard');
+  redirect(destinoSeguro(formData.get('next')) ?? '/dashboard');
 }

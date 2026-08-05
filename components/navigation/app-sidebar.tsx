@@ -8,6 +8,7 @@ import {
     Megaphone,
     Settings,
     Users,
+    Wallet,
     PanelLeftClose,
     PanelLeftOpen,
     CalendarDays,
@@ -655,6 +656,7 @@ export function AppSidebar({
                     <Link
                         href={`/empresa/${companyId}/membros`}
                         onClick={handleNavigate}
+                        data-tour="sidebar-membros"
                         className={cn(
                             "flex items-center py-1.5 rounded-md text-sm transition-colors",
                             collapsed
@@ -669,6 +671,9 @@ export function AppSidebar({
                         {!collapsed && <span>Membros</span>}
                     </Link>
                 )}
+
+                {/* Cobrança não mora mais aqui: desceu para o rodapé, junto do perfil.
+                    As duas são telas de conta, não de trabalho do dia. */}
 
                 {isCompanyAdmin && (
                     <Link
@@ -715,7 +720,10 @@ export function AppSidebar({
                 {/* Workspaces section — hidden when collapsed */}
                 {!collapsed && (
                     <>
-                        <div className="pt-3 pb-1 flex items-center justify-between px-2">
+                        <div
+                            data-tour="sidebar-workspaces"
+                            className="pt-3 pb-1 flex items-center justify-between px-2"
+                        >
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                                 Workspaces
                             </span>
@@ -825,8 +833,26 @@ export function AppSidebar({
                 )}
             </nav>
 
-            {/* Profile footer */}
+            {/* Rodapé: as telas de conta, fora do fluxo de trabalho da navegação. */}
             <div className="border-t">
+                {isCompanyAdmin && (
+                    <Link
+                        href={`/empresa/${companyId}/cobranca`}
+                        onClick={handleNavigate}
+                        title="Planos"
+                        className={cn(
+                            "flex items-center px-3 py-2 text-sm transition-colors",
+                            collapsed ? "justify-center" : "gap-2.5",
+                            pathname.startsWith(`/empresa/${companyId}/cobranca`)
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                        )}
+                    >
+                        <Wallet className="h-4 w-4 shrink-0" />
+                        {!collapsed && <span>Planos</span>}
+                    </Link>
+                )}
+
                 <Link
                     href="/perfil"
                     onClick={handleNavigate}

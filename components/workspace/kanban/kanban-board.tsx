@@ -1,5 +1,7 @@
 "use client";
 
+import { useReadOnly } from "@/components/billing/billing-mode";
+
 import { useState, useEffect, useRef, useTransition, useCallback } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import {
@@ -103,6 +105,7 @@ export function KanbanBoard({
     currentUserId,
     token,
 }: KanbanBoardProps) {
+    const readOnly = useReadOnly();
     const store = useKanbanStore();
     const columns = useKanbanStore((s) => s.columns);
     const taskPrefix = computeTaskPrefix(data.projectName ?? '');
@@ -407,7 +410,9 @@ export function KanbanBoard({
             </div>
 
             <DndContext
-                sensors={sensors}
+                // Somente leitura: sem sensores, o arrastar simplesmente não engata
+                // (o backend recusaria a reordenação de qualquer forma).
+                sensors={readOnly ? [] : sensors}
                 collisionDetection={collisionDetection}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
@@ -434,7 +439,7 @@ export function KanbanBoard({
                         ))}
                     </SortableContext>
 
-                    {isAdmin && (
+                    {isAdmin && !readOnly && (
                         <Dialog
                             open={createColOpen}
                             onOpenChange={setCreateColOpen}

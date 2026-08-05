@@ -9,6 +9,8 @@ export interface UserProfile {
   phone: string | null;
   photoUrl: string | null;
   createdAt: string;
+  /** Nulo = nunca viu o tutorial; o tour abre sozinho. */
+  tutorialSeenAt: string | null;
 }
 
 export async function getProfileAction(): Promise<{ data?: UserProfile; error?: string }> {

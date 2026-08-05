@@ -1,5 +1,7 @@
 'use client';
 
+import { MSG_SOMENTE_LEITURA, useReadOnly } from '@/components/billing/billing-mode';
+
 import { useActionState, useEffect, useState, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, UserPlus } from 'lucide-react';
@@ -33,6 +35,7 @@ interface AddMembroFormProps {
 const initialState: AddMembroActionState = {};
 
 export function AddMembroForm({ workspaceId, availableMembers }: AddMembroFormProps) {
+  const readOnly = useReadOnly();
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(addMembroAction, initialState);
   const router = useRouter();
@@ -72,9 +75,9 @@ export function AddMembroForm({ workspaceId, availableMembers }: AddMembroFormPr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button size="sm" disabled={readOnly} title={readOnly ? MSG_SOMENTE_LEITURA : undefined}>
           <UserPlus className="h-4 w-4 mr-2" />
-          Adicionar membro
+          Adicionar membro neste workspace
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">

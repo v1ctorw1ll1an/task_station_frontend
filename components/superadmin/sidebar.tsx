@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, Megaphone, Users, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import {
+  Building2,
+  Megaphone,
+  Users,
+  Wallet,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useMobileNav } from '@/components/navigation/sidebar-shell';
@@ -11,6 +18,7 @@ import { useMobileNav } from '@/components/navigation/sidebar-shell';
 const navItems = [
   { href: '/superadmin/empresas', label: 'Empresas', icon: Building2 },
   { href: '/superadmin/usuarios', label: 'Usuários', icon: Users },
+  { href: '/superadmin/financeiro', label: 'Financeiro', icon: Wallet },
   { href: '/superadmin/broadcast', label: 'Comunicados', icon: Megaphone },
 ];
 

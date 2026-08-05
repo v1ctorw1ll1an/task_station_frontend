@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
+import { redirecionaSeSessaoInvalida } from '@/lib/session-guard';
 import { cookies } from 'next/headers';
 
 export default async function DashboardPage() {
@@ -16,6 +17,10 @@ export default async function DashboardPage() {
     headers: { Authorization: `Bearer ${session.token}` },
     cache: 'no-store',
   });
+
+  // Um assento = um login: se este usuário entrou em outro dispositivo, o token
+  // daqui deixou de valer — sai pela rota que apaga o cookie (senão vira loop).
+  await redirecionaSeSessaoInvalida(res);
 
   const companies: Array<{ companyId: string; legalName: string; role: string }> = res.ok
     ? await res.json()

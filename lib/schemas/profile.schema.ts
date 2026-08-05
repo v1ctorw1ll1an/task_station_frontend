@@ -1,10 +1,12 @@
 import { z } from 'zod';
+import { PASSWORD_MAX, PASSWORD_MIN } from '@/lib/limits';
 
 export const NAME_MAX = 120;
 export const PHONE_MAX = 20;
 export const EMAIL_MAX = 254;
-export const PASSWORD_MIN = 8;
-export const PASSWORD_MAX = 72;
+// Reexportados por compatibilidade: o número agora mora em lib/limits.ts, junto
+// com o espelho do backend.
+export { PASSWORD_MIN, PASSWORD_MAX };
 
 export const updateProfileSchema = z
   .object({

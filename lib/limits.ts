@@ -58,3 +58,14 @@ export const FREE = LIMITS.free;
  * Espelho de `backend/src/common/limits.ts`.
  */
 export const TASK_HISTORY_MAX = 15;
+
+/**
+ * Tamanho da senha — usado por todo schema que define ou troca senha.
+ * Espelho de `backend/src/common/limits.ts` (lá é quem valida de verdade).
+ */
+export const PASSWORD_MIN = 6;
+export const PASSWORD_MAX = 72;
+
+/** Telefone (só dígitos: DDD + número, 10 ou 11). */
+export const PHONE_MIN_DIGITS = 10;
+export const PHONE_MAX_DIGITS = 11;

@@ -1,12 +1,13 @@
 import { z } from 'zod';
+import { PASSWORD_MAX, PASSWORD_MIN } from '@/lib/limits';
 
 export const confirmResetPasswordSchema = z
   .object({
     newPassword: z
       .string()
-      .min(8, 'Mínimo 8 caracteres')
-      .max(72, 'Máximo 72 caracteres'),
-    confirmPassword: z.string().max(72, 'Máximo 72 caracteres'),
+      .min(PASSWORD_MIN, `Mínimo ${PASSWORD_MIN} caracteres`)
+      .max(PASSWORD_MAX, `Máximo ${PASSWORD_MAX} caracteres`),
+    confirmPassword: z.string().max(PASSWORD_MAX, `Máximo ${PASSWORD_MAX} caracteres`),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: 'As senhas não coincidem',

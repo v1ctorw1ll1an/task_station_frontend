@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession } from '@/lib/auth';
+import { extractActionError } from '@/lib/action-error';
 
 export interface CreateTaskActionState {
   error?: string;
@@ -61,7 +62,7 @@ export async function createTaskAction(
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      return { error: data.message ?? 'Erro ao criar task' };
+      return { error: extractActionError(data, 'Erro ao criar task').message };
     }
 
     const task = await res.json().catch(() => null);

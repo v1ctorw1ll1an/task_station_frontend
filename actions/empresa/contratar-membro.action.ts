@@ -2,12 +2,23 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession } from '@/lib/auth';
+import { extractActionError } from '@/lib/action-error';
 
 export interface ContratarMembroActionState {
   error?: string;
+  /** Erro de plano lotado: a tela oferece o caminho para contratar mais usuários. */
+  seatLimit?: boolean;
   success?: boolean;
   emailFailed?: boolean;
+  /** Link de primeiro acesso (conta nova) ou de convite (conta que já existia). */
   magicLink?: string;
+  /**
+   * `hired` = conta criada e já vinculada à empresa.
+   * `invited` = o e-mail já tinha conta no TaskDY, então foi enviado um convite —
+   * a pessoa só entra na empresa depois de aceitar.
+   */
+  mode?: 'hired' | 'invited';
+  email?: string;
 }
 
 export async function contratarMembroAction(
@@ -50,15 +61,21 @@ export async function contratarMembroAction(
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      return { error: data.message ?? 'Erro ao adicionar membro' };
+      const erro = extractActionError(data, 'Erro ao adicionar membro');
+      return { error: erro.message, seatLimit: erro.seatLimit };
     }
 
     const data = await res.json().catch(() => ({}));
     revalidatePath(`/empresa/${companyId}/membros`);
-    if (data.emailSent === false && data.magicLink) {
-      return { success: true, emailFailed: true, magicLink: data.magicLink as string };
+
+    const mode = data.mode === 'invited' ? 'invited' : 'hired';
+    // Conta nova → magicLink de primeiro acesso; conta existente → inviteLink.
+    const link = (mode === 'invited' ? data.inviteLink : data.magicLink) as string | undefined;
+
+    if (data.emailSent === false && link) {
+      return { success: true, emailFailed: true, magicLink: link, mode, email: body.email };
     }
-    return { success: true };
+    return { success: true, mode, email: body.email };
   } catch {
     return { error: 'Erro ao conectar com o servidor' };
   }

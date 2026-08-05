@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { Building2 } from 'lucide-react';
 import { logoutAction } from '@/actions/logout.action';
 import { selectCompanyAction } from '@/actions/select-company.action';
+import { SemEmpresaOnboarding } from '@/components/empresa/sem-empresa-onboarding';
 import { Button } from '@/components/ui/button';
 
 const roleLabels: Record<string, string> = {
@@ -33,23 +34,10 @@ export default async function SelecionarEmpresaPage() {
   const companies: Array<{ companyId: string; legalName: string; role: string }> =
     await res.json();
 
-  // Sem empresa vinculada
+  // Sem empresa vinculada: quem chegou aqui pelo auto-cadastro de funcionário só
+  // precisa que o gerente tenha o e-mail dele — a tela entrega isso pronto.
   if (companies.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <Building2 className="h-12 w-12 text-muted-foreground mx-auto" />
-          <h1 className="text-xl font-semibold">Sem acesso</h1>
-          <p className="text-sm text-muted-foreground max-w-sm">
-            Você não está vinculado a nenhuma empresa. Entre em contato com o administrador da
-            plataforma.
-          </p>
-          <form action={logoutAction}>
-            <Button variant="outline" type="submit">Sair</Button>
-          </form>
-        </div>
-      </div>
-    );
+    return <SemEmpresaOnboarding email={session.user.email} />;
   }
 
   // Seletor de empresa

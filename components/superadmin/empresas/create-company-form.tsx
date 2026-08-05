@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { PlusCircle, Info, Mail, Link2, Check, UserCog } from 'lucide-react';
 import { createCompanySchema, CreateCompanyFormData } from '@/lib/schemas/create-company.schema';
+import { mascaraCpfCnpj } from '@/lib/mascaras';
 import { createCompanyAction, CreateCompanyActionState } from '@/actions/superadmin/create-company.action';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -166,9 +167,14 @@ export function CreateCompanyForm() {
                   name="taxId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>CNPJ</FormLabel>
+                      <FormLabel>CNPJ ou CPF</FormLabel>
                       <FormControl>
-                        <Input placeholder="00000000000100" {...field} />
+                        <Input
+                          placeholder="00.000.000/0000-00"
+                          inputMode="numeric"
+                          {...field}
+                          onChange={(e) => field.onChange(mascaraCpfCnpj(e.target.value))}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

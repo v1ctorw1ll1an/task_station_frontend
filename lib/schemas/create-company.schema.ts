@@ -1,11 +1,12 @@
 import { z } from 'zod';
+import { somenteDigitos, validarCpfCnpj } from '@/lib/tax-id';
 
 export const createCompanySchema = z.object({
   legalName: z.string().min(1, 'Obrigatório').max(120, 'Máximo 120 caracteres'),
   taxId: z
     .string()
-    .min(11, 'CNPJ deve ter ao menos 11 caracteres')
-    .max(18, 'Máximo 18 caracteres'),
+    .refine(validarCpfCnpj, 'CPF ou CNPJ inválido — confira os números digitados')
+    .transform(somenteDigitos),
   adminName: z
     .string()
     .min(2, 'Mínimo 2 caracteres')

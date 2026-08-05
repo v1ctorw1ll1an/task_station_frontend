@@ -15,15 +15,11 @@ interface TrackingWidgetProps {
 
 export function TrackingWidget({ initialSessions }: TrackingWidgetProps) {
   const store = useTaskTrackingStore();
-  const [collapsed, setCollapsed] = useState(false);
-
-  // Sync collapsed state from localStorage after hydration to avoid SSR mismatch
-  useEffect(() => {
-    if (localStorage.getItem('tracking-widget-collapsed') === 'true') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCollapsed(true);
-    }
-  }, []);
+  // Sempre começa fechado, em toda carga de página. Antes o estado era guardado no
+  // localStorage: quem expandisse uma vez ficava com o painel aberto para sempre,
+  // tapando o canto inferior direito de todas as telas. Fechado ele não some — o
+  // cabeçalho continua dizendo quantas tarefas estão ativas, com o ponto pulsando.
+  const [collapsed, setCollapsed] = useState(true);
 
   // Hydrate store with server-fetched sessions on mount
   useEffect(() => {
@@ -31,9 +27,7 @@ export function TrackingWidget({ initialSessions }: TrackingWidgetProps) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleCollapsed() {
-    const next = !collapsed;
-    setCollapsed(next);
-    localStorage.setItem('tracking-widget-collapsed', String(next));
+    setCollapsed((c) => !c);
   }
 
   const sessions = store.sessions;
@@ -51,7 +45,10 @@ export function TrackingWidget({ initialSessions }: TrackingWidgetProps) {
   }, [runningCount]);
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-72 shadow-lg rounded-lg border bg-popover">
+    <div
+      data-tour="tracking-widget"
+      className="fixed bottom-4 right-4 z-50 w-72 shadow-lg rounded-lg border bg-popover"
+    >
       {/* Header */}
       <button
         type="button"
