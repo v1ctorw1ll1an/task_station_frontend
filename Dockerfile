@@ -16,6 +16,13 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
+# Auto-cadastro de empresa (link no login + página /register). Precisa existir
+# AQUI, não só no ambiente do container: `NEXT_PUBLIC_*` é gravada no bundle
+# durante o `pnpm build`, então definir só em runtime deixa o valor `undefined`
+# e a tela some. O enforcement real é o PUBLIC_SIGNUP_ENABLED do backend.
+ARG NEXT_PUBLIC_SIGNUP_ENABLED
+ENV NEXT_PUBLIC_SIGNUP_ENABLED=$NEXT_PUBLIC_SIGNUP_ENABLED
+
 # Stable encryption key for Server Action IDs — must match across builds/replicas,
 # otherwise clients get "Failed to find Server Action" after redeploys.
 ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
