@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession } from '@/lib/auth';
+import { extractActionError } from '@/lib/action-error';
 
 export type WorkspaceMemberRole = 'workspace_admin' | 'project_admin' | 'member' | null;
 
@@ -28,8 +29,10 @@ export async function setWorkspaceMemberRoleAction(
       },
     );
     if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { message?: string };
-      return { error: body.message ?? 'Erro ao atualizar papel' };
+      const body = await res.json().catch(() => ({}));
+      // Dar acesso a quem ainda não é da empresa ocupa assento — pode vir SEAT_LIMIT.
+      const { message, seatLimit } = extractActionError(body, 'Erro ao atualizar papel');
+      return { error: message, seatLimit };
     }
     revalidatePath(`/empresa/${companyId}/membros`);
     return { success: true };

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession } from '@/lib/auth';
+import { extractActionError } from '@/lib/action-error';
 
 export async function promoteWorkspaceAdminAction(
   companyId: string,
@@ -25,8 +26,11 @@ export async function promoteWorkspaceAdminAction(
       },
     );
     if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { message?: string };
-      return { error: body.message ?? 'Erro ao promover admin de workspace' };
+      const body = await res.json().catch(() => ({}));
+      // Entrar na empresa ocupa assento: este fluxo pode devolver SEAT_LIMIT, e a
+      // tela precisa da flag para oferecer os planos em vez de só mostrar o texto.
+      const { message, seatLimit } = extractActionError(body, 'Erro ao promover admin de workspace');
+      return { error: message, seatLimit };
     }
     revalidatePath(`/empresa/${companyId}/membros`);
     return { success: true };

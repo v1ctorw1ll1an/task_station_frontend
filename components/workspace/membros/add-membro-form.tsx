@@ -4,6 +4,7 @@ import { MSG_SOMENTE_LEITURA, useReadOnly } from '@/components/billing/billing-m
 
 import { useActionState, useEffect, useState, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Check, UserPlus } from 'lucide-react';
 import {
   addMembroAction,
@@ -29,12 +30,13 @@ interface AvailableMember {
 
 interface AddMembroFormProps {
   workspaceId: string;
+  companyId: string;
   availableMembers: AvailableMember[];
 }
 
 const initialState: AddMembroActionState = {};
 
-export function AddMembroForm({ workspaceId, availableMembers }: AddMembroFormProps) {
+export function AddMembroForm({ workspaceId, companyId, availableMembers }: AddMembroFormProps) {
   const readOnly = useReadOnly();
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(addMembroAction, initialState);
@@ -165,7 +167,21 @@ export function AddMembroForm({ workspaceId, availableMembers }: AddMembroFormPr
             )}
           </div>
 
-          {state.error && <p className="text-sm text-destructive">{state.error}</p>}
+          {state.error &&
+            (state.seatLimit ? (
+              /* Entrar no workspace faz a pessoa entrar na empresa, e isso ocupa
+                 assento. Plano lotado tem uma saída só, e a mensagem já manda
+                 contratar — deixar o admin procurar a tela sozinho é pedir para ele
+                 desistir no meio do caminho. */
+              <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2">
+                <p className="text-sm text-destructive">{state.error}</p>
+                <Button asChild size="sm" className="w-full">
+                  <Link href={`/empresa/${companyId}/cobranca`}>Ver planos</Link>
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-destructive">{state.error}</p>
+            ))}
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

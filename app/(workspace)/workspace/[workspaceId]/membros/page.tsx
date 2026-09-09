@@ -87,8 +87,12 @@ export default async function MembrosPage({ params, searchParams }: PageProps) {
             Gerencie os membros e administradores deste workspace.
           </p>
         </div>
-        {canAddMembers && (
-          <AddMembroForm workspaceId={workspaceId} availableMembers={availableMembers} />
+        {canAddMembers && wsInfo && (
+          <AddMembroForm
+            workspaceId={workspaceId}
+            companyId={wsInfo.companyId}
+            availableMembers={availableMembers}
+          />
         )}
       </div>
 

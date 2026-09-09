@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession } from '@/lib/auth';
+import { extractActionError } from '@/lib/action-error';
 import { z } from 'zod';
 
 const addMembroSchema = z.object({
@@ -10,6 +11,8 @@ const addMembroSchema = z.object({
 
 export interface AddMembroActionState {
   error?: string;
+  /** true quando o plano está sem usuário livre — a tela oferece os planos. */
+  seatLimit?: boolean;
   success?: boolean;
 }
 
@@ -41,7 +44,10 @@ export async function addMembroAction(
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      return { error: body.message ?? 'Erro ao adicionar membro' };
+      // Entrar no workspace faz a pessoa entrar na empresa, e isso ocupa assento:
+      // este fluxo pode devolver SEAT_LIMIT.
+      const { message, seatLimit } = extractActionError(body, 'Erro ao adicionar membro');
+      return { error: message, seatLimit };
     }
   } catch {
     return { error: 'Erro ao conectar com o servidor' };

@@ -12,6 +12,7 @@ import {
   ChevronRight,
   FolderOpen,
 } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -200,6 +201,8 @@ export function RolesModal({ companyId, userId, userName, onChanged }: RolesModa
   const [localRoles, setLocalRoles] = useState<MemberRolesResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Plano lotado: dar acesso a quem ainda não é da empresa ocupa assento. */
+  const [seatLimit, setSeatLimit] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [confirmPromoteAdmin, setConfirmPromoteAdmin] = useState(false);
   const [confirmSave, setConfirmSave] = useState(false);
@@ -307,6 +310,7 @@ export function RolesModal({ companyId, userId, userName, onChanged }: RolesModa
   function handleSave() {
     if (!roles || !localRoles) return;
     setError(null);
+    setSeatLimit(false);
     startTransition(async () => {
       // Company admin
       const wasAdmin = roles.companyRole === 'admin';
@@ -334,6 +338,7 @@ export function RolesModal({ companyId, userId, userName, onChanged }: RolesModa
         );
         if (result?.error) {
           setError(result.error);
+          setSeatLimit(!!result.seatLimit);
           await loadRoles();
           return;
         }
@@ -492,7 +497,20 @@ export function RolesModal({ companyId, userId, userName, onChanged }: RolesModa
                 )}
               </div>
 
-              {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+              {error &&
+                (seatLimit ? (
+                  /* Dar acesso a um workspace faz a pessoa entrar na empresa, e isso
+                     ocupa assento. A mensagem já manda contratar — sem o caminho, o
+                     admin fica sabendo do bloqueio e não do que fazer com ele. */
+                  <div className="mt-2 space-y-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2">
+                    <p className="text-sm text-destructive">{error}</p>
+                    <Button asChild size="sm" className="w-full">
+                      <Link href={`/empresa/${companyId}/cobranca`}>Ver planos</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-destructive mt-2">{error}</p>
+                ))}
             </div>
           ) : null}
         </div>
