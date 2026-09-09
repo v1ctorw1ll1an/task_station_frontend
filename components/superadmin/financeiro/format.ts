@@ -26,6 +26,7 @@ export const SUBSCRIPTION_STATUS: Record<string, { label: string; variant: Badge
 
 export const METHOD_LABELS: Record<string, string> = {
   monthly_card: 'Mensal (cartão)',
+  monthly_pix: 'Mensal (Pix)',
   annual_pix: 'Anual (Pix)',
   annual_card: 'Anual (cartão)',
 };

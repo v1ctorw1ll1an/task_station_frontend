@@ -101,14 +101,14 @@ export function PlansShowcase({
               <span className="text-sm text-muted-foreground">/mês</span>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              No cartão, recorrente. Cancele quando quiser.
+              No cartão ou no Pix. Cancele quando quiser.
             </p>
             <div className="mt-5">
               <CheckoutDialog
                 companyId={companyId}
                 seats={seats}
                 prices={prices}
-                initialMethod="monthly"
+                initialMethod="monthly_card"
                 perfilCompleto={perfilCompleto}
             onPedirCadastro={onPedirCadastro}
                 assentosOcupados={assentosOcupados}
@@ -153,7 +153,7 @@ export function PlansShowcase({
               </p>
             )}
             <p className="mt-2 text-xs text-muted-foreground">
-              Pix à vista ou cartão em até 12× — mesmo valor nos dois.
+              Pix ou cartão, mesmo valor nos dois. Renova automaticamente todo ano.
             </p>
             <div className="mt-5">
               <CheckoutDialog

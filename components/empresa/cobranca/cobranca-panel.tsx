@@ -122,7 +122,6 @@ interface BillingStatus {
     id: string;
     paymentKind: string;
     amountCents: number;
-    installments: number;
     invoiceUrl: string | null;
     /** Checkout ainda válido — o "continuar pagamento" de quem saiu no meio. */
     checkoutUrl: string | null;
@@ -143,7 +142,6 @@ interface Charge {
   paymentKind: string;
   status: string;
   amountCents: number;
-  installments: number;
   invoiceUrl: string | null;
   createdAt: string;
   /** Quando o dinheiro entrou — é dela que corre o prazo de arrependimento. */
@@ -190,10 +188,14 @@ export function CobrancaPanel({
   // plano/assentos saem, e o histórico aparece apenas quando há cobranças.
   const full = variant !== 'paywall';
   const showHistory = full || charges.length > 0;
-  // O anual no cartão não renova sozinho (é compra única parcelada): a partir de D-30
-  // o botão de renovar aparece, para contratar o próximo ano sem deixar vencer (R47).
-  // O anual no Pix virou assinatura e renova sozinho — mas manter o botão não atrapalha.
+  // Os dois anuais renovam sozinhos hoje, então este botão não é mais "renove antes de
+  // vencer": ele é o caminho do R47 para **mudar** o plano ou a quantidade de usuários
+  // valendo do próximo ciclo, sem pagar duas vezes o período em curso. Aparece a partir
+  // de D-30, que é quando a decisão passa a ser urgente.
   const anual = status.method === 'annual_pix' || status.method === 'annual_card';
+  // Paga com cartão — o que decide se reativar precisa reinformar o cartão no Asaas e
+  // se existe cartão para trocar. Não confundir com "é mensal".
+  const noCartao = status.method === 'monthly_card' || status.method === 'annual_card';
   // Lido uma vez na montagem: "agora" no corpo do render é impuro, e um dia a mais ou
   // a menos na contagem não muda nada — o que importa é a janela de 30 dias.
   const [diasParaRenovar] = useState(() =>
@@ -204,7 +206,9 @@ export function CobrancaPanel({
   const podeRenovar =
     isActive && anual && !status.cancelAtPeriodEnd && diasParaRenovar != null && diasParaRenovar <= 30;
   // Trocar o cartão só faz sentido onde existe recorrência — e é o conserto da carência.
-  const podeTrocarCartao = status.method === 'monthly_card' && (isActive || isPastDue);
+  // Vale nos dois planos de cartão: no anual o cartão fica guardado no Asaas por um ano
+  // e costuma expirar antes da renovação.
+  const podeTrocarCartao = noCartao && (isActive || isPastDue);
   // `purchasedSeats` é o nome do campo, não a verdade da tela: o trial nasce com os
   // lugares do teste sem ninguém ter comprado nada, e chamar isso de "comprado" faz o
   // cliente achar que já está pagando. `method === null` cobre quem saiu do trial sem
@@ -342,20 +346,13 @@ export function CobrancaPanel({
             <Field label="Método" value={status.method ? METHOD_LABELS[status.method] ?? status.method : '—'} />
             {/* Só o preço da cadência contratada: mostrar "mensal" num plano anual
                 (ainda mais no Pix, que é à vista) confunde quem já pagou o ano. */}
-            {status.method === 'monthly_card' && (
+            {/* Derivado da cadência, não enumerado por método: listar os métodos um a
+                um deixou o card sem valor nenhum assim que surgiu um método novo. */}
+            {status.method && !anual && (
               <Field label="Valor mensal" value={`${formatCents(status.prices.monthlyCents)}/mês`} />
             )}
-            {status.method === 'annual_pix' && (
-              <Field
-                label="Valor anual (Pix)"
-                value={`${formatCents(status.prices.annualCents)}/ano`}
-              />
-            )}
-            {status.method === 'annual_card' && (
-              <Field
-                label="Valor anual (cartão)"
-                value={`${formatCents(status.prices.annualCents)}/ano`}
-              />
+            {status.method && anual && (
+              <Field label="Valor anual" value={`${formatCents(status.prices.annualCents)}/ano`} />
             )}
             {!status.method && (
               <>
@@ -390,8 +387,9 @@ export function CobrancaPanel({
                   seatsEditaveis
                 />
               )}
-              {/* Renovar sem deixar vencer: o anual não renova sozinho, e antes disto o
-                  cliente só conseguia pagar de novo DEPOIS de perder o acesso. */}
+              {/* O anual renova sozinho, então isto não é "renove antes de vencer": é
+                  onde o cliente troca de plano ou de quantidade de usuários valendo do
+                  próximo ciclo (R47), sem pagar de novo o período em curso. */}
               {podeRenovar && (
                 <CheckoutDialog
                   companyId={companyId}
@@ -401,12 +399,12 @@ export function CobrancaPanel({
                   proximoCicloEm={status.currentPeriodEnd}
                   perfilCompleto={status.profileComplete}
                   onPedirCadastro={() => setOpenCadastro(true)}
-                  titulo="Renovar o plano"
+                  titulo="Alterar o plano"
                   trigger={
-                    <Button size="sm">
-                      Renovar agora
+                    <Button size="sm" variant="outline">
+                      Alterar plano
                       {diasParaRenovar != null && diasParaRenovar >= 0
-                        ? ` (vence em ${diasParaRenovar} dia${diasParaRenovar === 1 ? '' : 's'})`
+                        ? ` (renova em ${diasParaRenovar} dia${diasParaRenovar === 1 ? '' : 's'})`
                         : ''}
                     </Button>
                   }
@@ -417,7 +415,7 @@ export function CobrancaPanel({
                   companyId={companyId}
                   seats={status.purchasedSeats}
                   prices={status.prices}
-                  initialMethod={status.method === 'monthly_card' ? 'annual_pix' : 'monthly'}
+                  initialMethod={anual ? 'monthly_card' : 'annual_pix'}
                   proximoCicloEm={status.currentPeriodEnd}
                   perfilCompleto={status.profileComplete}
                   onPedirCadastro={() => setOpenCadastro(true)}
@@ -482,7 +480,7 @@ export function CobrancaPanel({
               )}
               {isActive &&
                 status.cancelAtPeriodEnd &&
-                (status.method === 'monthly_card' ? (
+                (noCartao ? (
                   // A recorrência foi encerrada no Asaas ao cancelar e o cartão mora lá:
                   // reativar é informá-lo de novo, na página segura do provedor.
                   <ConfirmButton
@@ -657,11 +655,8 @@ export function CobrancaPanel({
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              {formatCents(status.pendingCharge.amountCents)}
-              {status.pendingCharge.installments > 1
-                ? ` em ${status.pendingCharge.installments}×`
-                : ''}{' '}
-              · {PAYMENT_KIND[status.pendingCharge.paymentKind] ?? status.pendingCharge.paymentKind}{' '}
+              {formatCents(status.pendingCharge.amountCents)} ·{' '}
+              {PAYMENT_KIND[status.pendingCharge.paymentKind] ?? status.pendingCharge.paymentKind}{' '}
               · enviado em {formatDateTime(status.pendingCharge.createdAt)}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -740,7 +735,6 @@ export function CobrancaPanel({
                         <TableCell className="text-sm">{CHARGE_TYPE[c.type] ?? c.type}</TableCell>
                         <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                           {PAYMENT_KIND[c.paymentKind] ?? c.paymentKind}
-                          {c.installments > 1 ? ` ${c.installments}×` : ''}
                         </TableCell>
                         <TableCell>
                           <Badge variant={cs.variant}>{cs.label}</Badge>

@@ -7,6 +7,7 @@ import {
   fetchCheckoutPreviewAction,
   subscribeAnnualCardAction,
   subscribeAnnualPixAction,
+  subscribeMonthlyPixAction,
   subscribeMonthlyAction,
   type CheckoutPreview,
 } from '@/actions/empresa/billing.action';
@@ -23,16 +24,20 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { formatCents } from '@/components/superadmin/financeiro/format';
 
-type Method = 'monthly' | 'annual_pix' | 'annual_card';
+/**
+ * As quatro formas de pagamento, com o mesmo vocabulário do backend (`status.method`).
+ * Antes o mensal se chamava só `'monthly'`, e essa ambiguidade — cadência ou forma? —
+ * era o que fazia a tela tratar todo mensal como cartão.
+ */
+type Method = 'monthly_card' | 'monthly_pix' | 'annual_pix' | 'annual_card';
+
+/** Paga com cartão → o cliente sai do app para a página do Asaas. */
+const noCartao = (m: Method) => m === 'monthly_card' || m === 'annual_card';
+/** Paga com Pix → o QR aparece aqui mesmo, depois do refresh. */
+const noPix = (m: Method) => m === 'monthly_pix' || m === 'annual_pix';
+const mensal = (m: Method) => m === 'monthly_card' || m === 'monthly_pix';
 
 interface Prices {
   monthlyCents: number;
@@ -64,7 +69,7 @@ export function CheckoutDialog({
   companyId,
   seats,
   prices,
-  initialMethod = 'monthly',
+  initialMethod = 'monthly_card',
   trigger,
   proximoCicloEm,
   titulo,
@@ -109,15 +114,13 @@ export function CheckoutDialog({
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [method, setMethod] = useState<Method>(initialMethod);
-  const [installments, setInstallments] = useState('1');
   const [qtd, setQtd] = useState(String(seats));
-  // Mensal e anual à vista sempre (é o que permite comparar antes de escolher);
-  // o anual parcelado só quando selecionado, porque depende do nº de parcelas.
+  // Dois preços bastam: os dois métodos anuais custam o mesmo (o desconto vale para
+  // Pix e cartão, e não há mais parcelamento para diferenciá-los).
   const [precos, setPrecos] = useState<{
     monthly: CheckoutPreview | null;
     annual: CheckoutPreview | null;
-    selecionado: CheckoutPreview | null;
-  }>({ monthly: null, annual: null, selecionado: null });
+  }>({ monthly: null, annual: null });
 
   const minSeats = Math.max(1, assentosOcupados);
   const assentos = Number(qtd);
@@ -143,23 +146,20 @@ export function CheckoutDialog({
     let ativo = true;
     const t = setTimeout(() => {
       void Promise.all([
+        // `'monthly'` aqui é CADÊNCIA (vocabulário do preview): os dois mensais custam
+        // o mesmo, então uma consulta serve aos dois.
         fetchCheckoutPreviewAction(companyId, assentos, 'monthly'),
         fetchCheckoutPreviewAction(companyId, assentos, 'annual_pix'),
-        method === 'annual_card'
-          ? fetchCheckoutPreviewAction(companyId, assentos, 'annual_card', Number(installments))
-          : Promise.resolve(null),
-      ]).then(([monthly, annual, card]) => {
+      ]).then(([monthly, annual]) => {
         if (!ativo) return;
-        const selecionado =
-          method === 'monthly' ? monthly : method === 'annual_pix' ? annual : card;
-        setPrecos({ monthly, annual, selecionado });
+        setPrecos({ monthly, annual });
       });
     }, 300);
     return () => {
       ativo = false;
       clearTimeout(t);
     };
-  }, [open, companyId, assentos, qtdValida, method, installments]);
+  }, [open, companyId, assentos, qtdValida]);
 
   // O preview carrega a quantidade que ele precificou: comparar com a digitada é o
   // que impede exibir o total de 3 assentos enquanto o campo já mostra 30 (o
@@ -174,8 +174,10 @@ export function CheckoutDialog({
   // Quanto o anual poupa contra 12 mensalidades da MESMA quantidade de usuários —
   // por isso sai dos preços já calculados, e não de `prices`, que é o preço base.
   const economiaAnualCents = Math.max(0, mensalCents * 12 - anualCents);
+  // O preço do método escolhido. Os dois anuais compartilham o mesmo preview.
+  const selecionado = precoNoAr && (mensal(method) ? precoNoAr.monthly : precoNoAr.annual);
 
-  const usesCard = method === 'monthly' || method === 'annual_card';
+  const usesCard = noCartao(method);
 
   function submit() {
     setError(null);
@@ -198,11 +200,13 @@ export function CheckoutDialog({
     const seatsEscolhidos = seatsEditaveis ? assentos : undefined;
     start(async () => {
       const r =
-        method === 'monthly'
+        method === 'monthly_card'
           ? await subscribeMonthlyAction(companyId, seatsEscolhidos)
-          : method === 'annual_pix'
-            ? await subscribeAnnualPixAction(companyId, seatsEscolhidos)
-            : await subscribeAnnualCardAction(companyId, Number(installments), seatsEscolhidos);
+          : method === 'monthly_pix'
+            ? await subscribeMonthlyPixAction(companyId, seatsEscolhidos)
+            : method === 'annual_pix'
+              ? await subscribeAnnualPixAction(companyId, seatsEscolhidos)
+              : await subscribeAnnualCardAction(companyId, seatsEscolhidos);
       if (r.error) {
         setError(r.error);
         return;
@@ -217,7 +221,7 @@ export function CheckoutDialog({
       setOpen(false);
       router.refresh();
       // Pix gerado → rola até o QR (que só aparece após o refresh do servidor).
-      if (method === 'annual_pix') scrollToPix();
+      if (noPix(method)) scrollToPix();
     });
   }
 
@@ -347,17 +351,22 @@ export function CheckoutDialog({
         )}
 
         <RadioGroup value={method} onValueChange={(v) => setMethod(v as Method)} className="gap-2">
-          {/* Mensal, anual no cartão, anual no Pix. As duas opções anuais ficam
-              lado a lado para a comparação do desconto acontecer sem rolagem. */}
+          {/* Duas cadências × duas formas. Os pares ficam juntos para a comparação
+              — mensal × anual, e dentro de cada um cartão × Pix — acontecer sem rolagem. */}
           <MethodOption
-            value="monthly"
+            value="monthly_card"
             label="Mensal no cartão"
-            hint={`${formatCents(mensalCents)}/mês, recorrente`}
+            hint={`${formatCents(mensalCents)}/mês, cobrado automaticamente`}
+          />
+          <MethodOption
+            value="monthly_pix"
+            label="Mensal via Pix"
+            hint={`${formatCents(mensalCents)}/mês — você paga um QR novo a cada mês`}
           />
           <MethodOption
             value="annual_card"
-            label="Anual no cartão (até 12×)"
-            hint={`${formatCents(anualCents)}/ano — mesmo valor à vista ou parcelado`}
+            label="Anual no cartão"
+            hint={`${formatCents(anualCents)}/ano, renova sozinho`}
             economia={
               economiaAnualCents > 0 ? `${formatCents(economiaAnualCents)}/ano` : undefined
             }
@@ -365,30 +374,12 @@ export function CheckoutDialog({
           <MethodOption
             value="annual_pix"
             label="Anual via Pix"
-            hint={`${formatCents(anualCents)} à vista`}
+            hint={`${formatCents(anualCents)}/ano, renova sozinho`}
             economia={
               economiaAnualCents > 0 ? `${formatCents(economiaAnualCents)}/ano` : undefined
             }
           />
         </RadioGroup>
-
-        {method === 'annual_card' && (
-          <div className="space-y-1">
-            <Label>Parcelas</Label>
-            <Select value={installments} onValueChange={setInstallments}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                  <SelectItem key={n} value={String(n)}>
-                    {n}×
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
 
         {usesCard && (
           <p className="rounded-md border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
@@ -397,28 +388,19 @@ export function CheckoutDialog({
           </p>
         )}
 
-        {/* O que vai ser cobrado neste clique, no método escolhido. Parcelar não muda
-            o total (R36), então aqui a diferença para a conta acima é só a cadência. */}
-        {(precoNoAr?.selecionado || calculando) && (
+        {/* O que vai ser cobrado neste clique, no método escolhido. A diferença para a
+            conta acima é só a cadência — os dois anuais custam o mesmo. */}
+        {(selecionado || calculando) && (
           <div className="flex items-baseline justify-between rounded-md border bg-muted/40 px-3 py-2.5">
             <span className="text-sm text-muted-foreground">
-              {method === 'monthly' ? 'Cobrança mensal' : 'Total a pagar'}
+              {mensal(method) ? 'Cobrança mensal' : 'Cobrança anual'}
             </span>
-            {precoNoAr?.selecionado && !calculando ? (
+            {selecionado && !calculando ? (
               <span className="text-right">
-                <span className="text-lg font-semibold">
-                  {formatCents(precoNoAr.selecionado.totalCents)}
+                <span className="text-lg font-semibold">{formatCents(selecionado.totalCents)}</span>
+                <span className="text-sm text-muted-foreground">
+                  {mensal(method) ? '/mês' : '/ano'}
                 </span>
-                {method === 'monthly' && (
-                  <span className="text-sm text-muted-foreground">/mês</span>
-                )}
-                {precoNoAr.selecionado.installments > 1 &&
-                  precoNoAr.selecionado.installmentCents && (
-                    <span className="block text-xs text-muted-foreground">
-                      {precoNoAr.selecionado.installments}× de{' '}
-                      {formatCents(precoNoAr.selecionado.installmentCents)}
-                    </span>
-                  )}
               </span>
             ) : (
               <span className="text-sm text-muted-foreground">calculando…</span>
@@ -430,7 +412,7 @@ export function CheckoutDialog({
           <Button disabled={pending || (seatsEditaveis && !qtdValida)} onClick={submit}>
             {pending
               ? 'Processando...'
-              : method === 'annual_pix'
+              : noPix(method)
                 ? 'Gerar Pix'
                 : !perfilCompleto
                   ? 'Completar cadastro'

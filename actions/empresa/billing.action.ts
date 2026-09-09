@@ -102,17 +102,22 @@ export async function subscribeAnnualPixAction(companyId: string, seats?: number
 }
 
 /**
- * `installments` é o **teto** de parcelas oferecido na página do Asaas — quem escolhe
- * em quantas vezes vai pagar é o cliente, lá.
+ * Mensal no Pix. Como o anual no Pix, não passa por checkout: o QR aparece na própria
+ * tela após o refresh. Por isso também não devolve `checkoutUrl`.
+ */
+export async function subscribeMonthlyPixAction(companyId: string, seats?: number) {
+  return post(companyId, 'assinar/mensal-pix', seats ? { seats } : {});
+}
+
+/**
+ * Anual no cartão: pagamento único por ano, com renovação automática. O cartão é
+ * digitado na página do Asaas e fica guardado lá para a renovação.
  */
 export async function subscribeAnnualCardAction(
   companyId: string,
-  installments: number,
   seats?: number,
 ): Promise<CheckoutSessionResult> {
-  return comoCheckout(
-    await post(companyId, 'assinar/anual-cartao', { installments, ...(seats ? { seats } : {}) }),
-  );
+  return comoCheckout(await post(companyId, 'assinar/anual-cartao', seats ? { seats } : {}));
 }
 
 /**
@@ -186,10 +191,6 @@ export interface CheckoutPreview {
   method: 'monthly' | 'annual_pix' | 'annual_card';
   seats: number;
   totalCents: number;
-  installments: number;
-  /** Só no anual-cartão parcelado: valor de cada parcela e o ajuste na última. */
-  installmentCents?: number;
-  lastInstallmentCents?: number;
 }
 
 /**
@@ -201,13 +202,11 @@ export async function fetchCheckoutPreviewAction(
   companyId: string,
   seats: number,
   method: 'monthly' | 'annual_pix' | 'annual_card',
-  installments?: number,
 ): Promise<CheckoutPreview | null> {
   const session = await getSession();
   if (!session || seats < 1) return null;
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const params = new URLSearchParams({ seats: String(seats), method });
-  if (installments && installments > 1) params.set('installments', String(installments));
   try {
     const res = await fetch(`${apiUrl}/api/v1/billing/empresa/${companyId}/preview?${params}`, {
       headers: { Authorization: `Bearer ${session.token}` },

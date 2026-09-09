@@ -61,7 +61,6 @@ interface Charge {
   paymentKind: string;
   status: string;
   amountCents: number;
-  installments: number;
   seats: number;
   invoiceUrl: string | null;
   paidAt: string | null;
@@ -352,7 +351,6 @@ export function CompanyBillingPanel({ companyId, detail }: { companyId: string; 
                   <TableHead className="hidden md:table-cell">Método</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="hidden lg:table-cell text-center">Parcelas</TableHead>
                   <TableHead className="text-right">Fatura</TableHead>
                 </TableRow>
               </TableHeader>
@@ -382,9 +380,6 @@ export function CompanyBillingPanel({ companyId, detail }: { companyId: string; 
                           )}
                         </TableCell>
                         <TableCell className="text-right text-sm">{formatCents(c.amountCents)}</TableCell>
-                        <TableCell className="hidden lg:table-cell text-center text-sm">
-                          {c.installments > 1 ? `${c.installments}×` : '—'}
-                        </TableCell>
                         <TableCell className="text-right">
                           {c.invoiceUrl ? (
                             <a
