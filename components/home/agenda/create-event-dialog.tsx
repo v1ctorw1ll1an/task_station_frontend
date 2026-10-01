@@ -56,6 +56,8 @@ export function CreateEventDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const open = isControlled ? openProp : internalOpen;
   const [formState, setFormState] = useState<EventFormState>(() => buildStateForDate(defaultDate));
+  // Empresa atual (visível só nesta empresa) ou Pessoal (aparece em todas).
+  const [scope, setScope] = useState<'company' | 'personal'>('company');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -77,6 +79,7 @@ export function CreateEventDialog({
     setPrevOpen(open);
     if (open) {
       setFormState(buildStateForDate(defaultDate));
+      setScope('company');
       setError(null);
     }
   }
@@ -114,7 +117,7 @@ export function CreateEventDialog({
           <DialogTitle>Novo evento</DialogTitle>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
-          <input type="hidden" name="companyId" value={companyId} />
+          {scope === 'company' && <input type="hidden" name="companyId" value={companyId} />}
           <input type="hidden" name="title" value={formState.title} />
           <input type="hidden" name="description" value={formState.description} />
           <input type="hidden" name="location" value={formState.location} />
@@ -144,6 +147,37 @@ export function CreateEventDialog({
           />
           <input type="hidden" name="reminders" value={formState.reminders.join(',')} />
           <input type="hidden" name="guestEmails" value={formState.guestEmails.join(',')} />
+
+          <div className="space-y-1.5">
+            <div className="inline-flex rounded-md border p-0.5" role="radiogroup" aria-label="Agenda">
+              {(
+                [
+                  ['company', 'Empresa atual'],
+                  ['personal', 'Pessoal'],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={scope === value}
+                  onClick={() => setScope(value)}
+                  className={
+                    scope === value
+                      ? 'rounded px-3 py-1 text-xs font-medium bg-primary text-primary-foreground'
+                      : 'rounded px-3 py-1 text-xs text-muted-foreground hover:text-foreground'
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {scope === 'personal' && (
+              <p className="text-xs text-muted-foreground">
+                Evento pessoal: aparece na sua agenda em todas as empresas.
+              </p>
+            )}
+          </div>
 
           <EventFormFields state={formState} onChange={setFormState} />
 

@@ -138,7 +138,7 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
     });
   }
 
-  const canEdit = occurrence.isOwner;
+  const canEdit = occurrence.isOwner && !occurrence.externalReadOnly;
 
   return (
     <>
@@ -226,6 +226,13 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
                   {occurrence.location}
                 </p>
               )}
+              {occurrence.isOwner && occurrence.externalReadOnly && (
+                <p className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  Este evento vem do Google Agenda e só pode ser editado por lá — a
+                  alteração aparece aqui na próxima sincronização.
+                </p>
+              )}
+              {!occurrence.isOwner && (
               <div className="border-t pt-3 space-y-2">
                 <p className="text-sm font-medium">Você foi convidado</p>
                 <div className="flex gap-2">
@@ -255,6 +262,7 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
                   </Button>
                 </div>
               </div>
+              )}
             </div>
           )}
         </DialogContent>

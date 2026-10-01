@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Bell, AtSign, UserCheck, MessageSquare, Pencil, Megaphone, X, ChevronRight } from 'lucide-react';
+import { Bell, AtSign, UserCheck, MessageSquare, Pencil, Megaphone, X, ChevronRight, CalendarX } from 'lucide-react';
 import type { AppNotification } from '@/lib/stores/notification-store';
 import { cn } from '@/lib/utils';
 import { ICON_MAP, DEFAULT_ICON } from '@/lib/icons/project-icons';
@@ -15,6 +15,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; bg: string; color: 
   TASK_ASSIGNED:   { icon: UserCheck,     bg: 'bg-emerald-100 dark:bg-emerald-900/40', color: 'text-emerald-600 dark:text-emerald-400' },
   TASK_COMMENT:    { icon: MessageSquare, bg: 'bg-orange-100 dark:bg-orange-900/40', color: 'text-orange-600 dark:text-orange-400' },
   TASK_UPDATED:    { icon: Pencil,        bg: 'bg-cyan-100 dark:bg-cyan-900/40',     color: 'text-cyan-600 dark:text-cyan-400' },
+  INTEGRATION_ALERT: { icon: CalendarX,   bg: 'bg-red-100 dark:bg-red-900/40',       color: 'text-red-600 dark:text-red-400' },
 };
 
 function ProjectIconDisplay({ icon, color, size = 11 }: { icon: string | null; color: string | null; size?: number }) {
@@ -41,12 +42,17 @@ export function NotificationItem({ notification: n, onRead, onDelete, onClose, o
       ? `/workspace/${n.project.workspaceId}/projetos/${n.project.id}?task=${n.task.id}`
       : null;
 
-  const isClickable = n.type === 'ADMIN_BROADCAST' || !!taskUrl;
+  const isClickable = n.type === 'ADMIN_BROADCAST' || n.type === 'INTEGRATION_ALERT' || !!taskUrl;
 
   function handleClick() {
     if (!n.isRead) onRead(n.id);
     if (n.type === 'ADMIN_BROADCAST') {
       onOpenBroadcast?.(n);
+      return;
+    }
+    if (n.type === 'INTEGRATION_ALERT') {
+      onClose?.();
+      router.push('/perfil/integracoes');
       return;
     }
     if (taskUrl) {

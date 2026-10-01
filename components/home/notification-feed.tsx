@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
-import { AtSign, UserPlus, MessageCircle, RefreshCw, Megaphone, Bell } from 'lucide-react';
+import { AtSign, UserPlus, MessageCircle, RefreshCw, Megaphone, Bell, CalendarX } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNotificationStore, type AppNotification } from '@/lib/stores/notification-store';
@@ -15,6 +15,7 @@ const TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
   TASK_COMMENT: MessageCircle,
   TASK_UPDATED: RefreshCw,
   ADMIN_BROADCAST: Megaphone,
+  INTEGRATION_ALERT: CalendarX,
 };
 
 interface NotificationFeedProps {

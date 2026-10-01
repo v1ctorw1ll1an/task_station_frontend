@@ -26,6 +26,7 @@ import { CreateEventDialog } from './create-event-dialog';
 import { EditEventDialog } from './edit-event-dialog';
 import { AgendaTaskDialog } from './agenda-task-dialog';
 import { AgendaSearch } from './agenda-search';
+import { GoogleCalendarButton } from './google-calendar-button';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -150,6 +151,10 @@ export function Agenda({ companyId, initialTasks, initialEvents, currentUserId }
                 {v.label}
               </button>
             ))}
+          </div>
+
+          <div className="ml-auto">
+            <GoogleCalendarButton />
           </div>
         </div>
 

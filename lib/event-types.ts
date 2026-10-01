@@ -41,4 +41,8 @@ export interface CalendarEventOccurrence {
   taskId: string | null;
   workspaceId: string | null;
   companyId: string | null;
+  /** Série do Google sem tradução fiel (ou de calendário só-leitura): editar só lá. */
+  externalReadOnly: boolean;
+  /** Importado do Google Agenda. */
+  fromGoogle: boolean;
 }

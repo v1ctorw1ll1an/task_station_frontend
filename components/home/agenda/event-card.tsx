@@ -74,9 +74,23 @@ export function EventCard({ event, onClick, compact }: EventCardProps) {
             {event.title}
           </h3>
         </div>
-        {event.isRecurringInstance && (
-          <Repeat className="h-3 w-3 shrink-0 text-muted-foreground mt-0.5" aria-label="Recorrente" />
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {event.fromGoogle && (
+            <span
+              className="rounded-full border px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground"
+              title={
+                event.externalReadOnly
+                  ? 'Importado do Google Agenda — edite por lá'
+                  : 'Importado do Google Agenda'
+              }
+            >
+              Google
+            </span>
+          )}
+          {event.isRecurringInstance && (
+            <Repeat className="h-3 w-3 text-muted-foreground mt-0.5" aria-label="Recorrente" />
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">

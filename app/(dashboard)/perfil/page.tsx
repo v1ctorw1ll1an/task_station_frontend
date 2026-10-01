@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Eye, EyeOff, Loader2, Save } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Eye, EyeOff, Loader2, Plug, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -138,6 +138,20 @@ export default function PerfilPage() {
         </div>
 
         <Separator />
+
+        <Link
+          href="/perfil/integracoes"
+          className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-muted/30"
+        >
+          <div className="rounded-full bg-muted p-2 shrink-0">
+            <Plug className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">Integrações</p>
+            <p className="text-xs text-muted-foreground">Google Agenda</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        </Link>
 
         {/* Dados Pessoais card */}
         <Card>
