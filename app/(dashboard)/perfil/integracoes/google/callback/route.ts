@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest } from 'next/server';
 import { getSession } from '@/lib/auth';
+import { relativeRedirect } from '@/lib/relative-redirect';
 
 /**
  * Volta do consentimento do Google. Fica no front porque é aqui que existe a sessão:
@@ -10,13 +11,11 @@ import { getSession } from '@/lib/auth';
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const back = (query: Record<string, string>) => {
-    const url = new URL('/perfil/integracoes', request.url);
-    Object.entries(query).forEach(([k, v]) => url.searchParams.set(k, v));
-    return NextResponse.redirect(url);
+    return relativeRedirect(`/perfil/integracoes?${new URLSearchParams(query)}`);
   };
 
   const session = await getSession();
-  if (!session) return NextResponse.redirect(new URL('/login', request.url));
+  if (!session) return relativeRedirect('/login');
 
   // Usuário negou o consentimento (ou o Google devolveu erro).
   if (params.get('error')) return back({ google: 'cancelled' });

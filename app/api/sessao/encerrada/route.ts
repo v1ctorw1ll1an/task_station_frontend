@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { relativeRedirect } from '@/lib/relative-redirect';
 
 /**
  * Saída da sessão derrubada (um assento = um login).
@@ -8,9 +8,8 @@ import { NextResponse } from 'next/server';
  * 401 de novo: ping-pong infinito (C12). Aqui, num Route Handler, o cookie morre de
  * verdade antes do redirect.
  */
-export function GET(request: Request) {
-  const destino = new URL('/login?sessao=encerrada', request.url);
-  const res = NextResponse.redirect(destino);
+export function GET() {
+  const res = relativeRedirect('/login?sessao=encerrada');
   res.cookies.delete('access_token');
   res.cookies.delete('user');
   return res;
