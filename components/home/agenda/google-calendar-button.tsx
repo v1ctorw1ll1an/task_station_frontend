@@ -57,7 +57,7 @@ export function GoogleCalendarButton() {
   if (!connected && !status.canConnect) return null;
 
   const buttonClass =
-    'relative h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent transition-colors shrink-0';
+    'relative h-9 flex items-center gap-2 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent transition-colors shrink-0';
 
   function handleConnect() {
     setError(null);
@@ -84,8 +84,9 @@ export function GoogleCalendarButton() {
         <TooltipTrigger asChild>
           {connected ? (
             <Link href="/perfil/integracoes" className={buttonClass} aria-label={label}>
-              <GoogleCalendarIcon className="h-4.5 w-4.5" />
-              <span className="absolute bottom-0.5 right-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-card" />
+              <GoogleCalendarIcon className="h-6 w-6" />
+              <span>Google Agenda conectado</span>
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
             </Link>
           ) : (
             <button
@@ -96,10 +97,11 @@ export function GoogleCalendarButton() {
               aria-label={label}
             >
               {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               ) : (
-                <GoogleCalendarIcon className="h-4.5 w-4.5" />
+                <GoogleCalendarIcon className="h-6 w-6" />
               )}
+              <span>Conectar ao Google Agenda</span>
             </button>
           )}
         </TooltipTrigger>
