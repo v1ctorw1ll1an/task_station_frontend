@@ -7,7 +7,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
-          <Link href="/login" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <Image src="/taskDY/taskDY.png" alt="TaskDY" width={28} height={28} className="h-7 w-auto" />
             <span className="text-sm font-semibold tracking-tight">TaskDY</span>
           </Link>
