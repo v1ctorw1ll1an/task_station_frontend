@@ -36,6 +36,7 @@ interface Admin {
     email: string;
     phone: string | null;
     isActive: boolean;
+    lastLoginAt: string | null;
   };
 }
 
@@ -52,6 +53,19 @@ interface CompanyDetailProps {
 }
 
 const initialState: UpdateCompanyActionState = {};
+
+// A partir de quantos dias sem login o usuário é destacado como inativo.
+const INACTIVE_DAYS = 30;
+
+function daysSince(value: string): number {
+  return Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000);
+}
+
+function formatSince(days: number): string {
+  if (days <= 0) return 'hoje';
+  if (days === 1) return 'há 1 dia';
+  return `há ${days} dias`;
+}
 
 export function CompanyDetail({ company, admins }: CompanyDetailProps) {
   const router = useRouter();
@@ -89,6 +103,14 @@ export function CompanyDetail({ company, admins }: CompanyDetailProps) {
       router.push('/superadmin/empresas');
     });
   }
+
+  // Mais recente primeiro; quem nunca entrou vai para o fim.
+  const logins = [...admins].sort(
+    (a, b) =>
+      (b.user.lastLoginAt ? new Date(b.user.lastLoginAt).getTime() : 0) -
+      (a.user.lastLoginAt ? new Date(a.user.lastLoginAt).getTime() : 0),
+  );
+  const lastCompanyLogin = logins[0]?.user.lastLoginAt ?? null;
 
   async function handleDeactivateMembership(membershipId: string) {
     setRemovingId(membershipId);
@@ -168,6 +190,54 @@ export function CompanyDetail({ company, admins }: CompanyDetailProps) {
               {company.projectsCount === 1 ? 'Projeto' : 'Projetos'}
             </p>
           </div>
+        </div>
+
+        <div className="space-y-2 pt-2">
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-sm font-medium">Últimos logins</h3>
+            <p className="text-xs text-muted-foreground">
+              {lastCompanyLogin
+                ? `Último acesso da empresa ${formatSince(daysSince(lastCompanyLogin))}`
+                : 'Nenhum login registrado'}
+            </p>
+          </div>
+          {logins.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">Nenhum usuário vinculado.</p>
+          ) : (
+            <div className="rounded-md border divide-y">
+              {logins.map(({ membershipId, user }) => {
+                const days = user.lastLoginAt ? daysSince(user.lastLoginAt) : null;
+                const inactive = days === null || days >= INACTIVE_DAYS;
+                return (
+                  <div key={membershipId} className="flex items-center justify-between px-4 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{user.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                    <div className="text-right shrink-0 ml-3">
+                      {user.lastLoginAt ? (
+                        <>
+                          <p className="text-sm">
+                            {new Date(user.lastLoginAt).toLocaleString('pt-BR', {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                            })}
+                          </p>
+                          <p
+                            className={`text-xs ${inactive ? 'text-destructive' : 'text-muted-foreground'}`}
+                          >
+                            {formatSince(days!)}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-destructive">Sem login registrado</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

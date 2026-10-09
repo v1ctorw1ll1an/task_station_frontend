@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCallback } from 'react';
 import Link from 'next/link';
-import { Search, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,12 +22,32 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  SUBSCRIPTION_STATUS,
+  type BadgeVariant,
+} from '@/components/superadmin/financeiro/format';
+
 interface Company {
   id: string;
   legalName: string;
   taxId: string;
   isActive: boolean;
   createdAt: string;
+  subscription: {
+    status: string;
+    superadminLocked: boolean;
+    accessSuspended: boolean;
+  } | null;
+}
+
+// Suspensão e bloqueio manual definem o acesso de fato, então sobrepõem o status.
+function billingBadge(sub: NonNullable<Company['subscription']>): {
+  label: string;
+  variant: BadgeVariant;
+} {
+  if (sub.accessSuspended) return { label: 'Suspenso', variant: 'destructive' };
+  if (sub.superadminLocked) return { label: 'Bloqueado', variant: 'destructive' };
+  return SUBSCRIPTION_STATUS[sub.status] ?? { label: sub.status, variant: 'outline' };
 }
 
 interface CompaniesTableProps {
@@ -99,8 +119,8 @@ export function CompaniesTable({ data, total, page, limit }: CompaniesTableProps
               <TableHead>Razão Social</TableHead>
               <TableHead className="hidden md:table-cell">CNPJ</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Financeiro</TableHead>
               <TableHead className="hidden md:table-cell">Criado em</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -113,22 +133,37 @@ export function CompaniesTable({ data, total, page, limit }: CompaniesTableProps
             ) : (
               data.map((company) => (
                 <TableRow key={company.id}>
-                  <TableCell className="font-medium">{company.legalName}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/superadmin/empresas/${company.id}`}
+                      className="hover:underline underline-offset-4"
+                    >
+                      {company.legalName}
+                    </Link>
+                  </TableCell>
                   <TableCell className="hidden md:table-cell font-mono text-sm">{company.taxId}</TableCell>
                   <TableCell>
                     <Badge variant={company.isActive ? 'default' : 'secondary'}>
                       {company.isActive ? 'Ativo' : 'Inativo'}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    {company.subscription ? (
+                      <Link
+                        href={`/superadmin/financeiro/${company.id}`}
+                        title="Ver financeiro"
+                        className="inline-flex hover:opacity-80"
+                      >
+                        <Badge variant={billingBadge(company.subscription).variant}>
+                          {billingBadge(company.subscription).label}
+                        </Badge>
+                      </Link>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                     {new Date(company.createdAt).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/superadmin/empresas/${company.id}`}>
-                        <Pencil className="h-4 w-4" />
-                      </Link>
-                    </Button>
                   </TableCell>
                 </TableRow>
               ))

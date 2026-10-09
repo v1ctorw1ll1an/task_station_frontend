@@ -16,6 +16,7 @@ interface Admin {
     email: string;
     phone: string | null;
     isActive: boolean;
+    lastLoginAt: string | null;
   };
 }
 
