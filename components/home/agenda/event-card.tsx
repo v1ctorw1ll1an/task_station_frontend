@@ -31,11 +31,12 @@ export function EventCard({ event, onClick, compact }: EventCardProps) {
         title={`Evento: ${event.title} · ${timeLabel}`}
         className={cn(
           'flex w-full items-center gap-1 rounded-full px-1.5 py-1 text-xs truncate text-left transition-opacity hover:opacity-90 font-medium',
+          event.fromGoogle && 'relative google-border',
         )}
         style={{
           backgroundColor: `${color}26`,
           color: color,
-          boxShadow: `inset 0 0 0 1px ${color}40`,
+          boxShadow: event.fromGoogle ? undefined : `inset 0 0 0 1px ${color}40`,
         }}
       >
         <CalendarDays className="h-3 w-3 shrink-0" />
@@ -55,10 +56,13 @@ export function EventCard({ event, onClick, compact }: EventCardProps) {
       onClick={onClick}
       className={cn(
         'group flex w-full flex-col gap-1 rounded-md px-3 py-2 text-left transition-opacity hover:opacity-90',
+        event.fromGoogle && 'relative google-border',
       )}
       style={{
         backgroundColor: `${color}1f`,
-        boxShadow: `inset 0 0 0 1px ${color}40, inset 4px 0 0 0 ${color}`,
+        boxShadow: event.fromGoogle
+          ? `inset 4px 0 0 0 ${color}`
+          : `inset 0 0 0 1px ${color}40, inset 4px 0 0 0 ${color}`,
       }}
     >
       <div className="flex items-start justify-between gap-2">

@@ -105,11 +105,14 @@ export function AgendaMonth({ anchor, tasks, events, companyId, onCreateAt, date
                         type="button"
                         onClick={() => setSelectedEvent(ev)}
                         title={`Evento: ${ev.title}`}
-                        className="flex w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] truncate text-left transition-opacity hover:opacity-90 font-medium"
+                        className={cn(
+                          'flex w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] truncate text-left transition-opacity hover:opacity-90 font-medium',
+                          ev.fromGoogle && 'relative google-border',
+                        )}
                         style={{
                           backgroundColor: `${color}26`,
                           color,
-                          boxShadow: `inset 0 0 0 1px ${color}40`,
+                          boxShadow: ev.fromGoogle ? undefined : `inset 0 0 0 1px ${color}40`,
                         }}
                       >
                         <CalendarDays className="h-2.5 w-2.5 shrink-0" />

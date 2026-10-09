@@ -160,3 +160,31 @@
     background: transparent;
   }
 }
+
+/*
+ * Borda nas 4 cores do Google para eventos importados do Google Agenda.
+ * Anel desenhado por ::before mascarado — o fundo (translúcido) do card fica
+ * intacto. Não define `position`: o elemento precisa ser relative/absolute.
+ */
+@utility google-border {
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(
+      90deg,
+      #4285f4 0 25%,
+      #ea4335 25% 50%,
+      #fbbc05 50% 75%,
+      #34a853 75% 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}

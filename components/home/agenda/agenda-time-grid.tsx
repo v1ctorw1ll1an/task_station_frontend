@@ -233,14 +233,19 @@ function TimedEventBlock({ item, onClick }: { item: TimelineItem; onClick: () =>
       type="button"
       onClick={onClick}
       title={`Evento: ${ev.title} · ${timeLabel}`}
-      className="absolute z-10 overflow-hidden rounded-md px-1.5 py-0.5 text-left text-[11px] leading-tight transition-opacity hover:opacity-90"
+      className={cn(
+        'absolute z-10 overflow-hidden rounded-md px-1.5 py-0.5 text-left text-[11px] leading-tight transition-opacity hover:opacity-90',
+        ev.fromGoogle && 'google-border',
+      )}
       style={{
         top: (item.startMin / 60) * HOUR_PX,
         height,
         left: `calc(${item.col * widthPct}% + 1px)`,
         width: `calc(${widthPct}% - 2px)`,
         backgroundColor: `${color}1f`,
-        boxShadow: `inset 0 0 0 1px ${color}40, inset 3px 0 0 0 ${color}`,
+        boxShadow: ev.fromGoogle
+          ? `inset 3px 0 0 0 ${color}`
+          : `inset 0 0 0 1px ${color}40, inset 3px 0 0 0 ${color}`,
         color,
       }}
     >
