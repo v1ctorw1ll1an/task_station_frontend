@@ -86,6 +86,7 @@ interface StickyNotesStore {
   updateColor: (id: string, color: StickyNoteColor) => void;
   updatePosition: (id: string, x: number, y: number) => void;
   toggleVisible: (id: string) => void;
+  hideAll: () => void;
   toggleMinimized: (id: string) => void;
   deleteNote: (id: string) => void;
   bringToFront: (id: string) => void;
@@ -211,6 +212,24 @@ export const useStickyNotesStore = create<StickyNotesStore>()((set, get) => ({
         }));
       }
     });
+  },
+
+  hideAll() {
+    const ids = get().notes.filter((n) => n.visible).map((n) => n.id);
+    if (!ids.length) return;
+    set((s) => ({
+      notes: s.notes.map((n) => (ids.includes(n.id) ? { ...n, visible: false } : n)),
+    }));
+    // No batch endpoint — one update per note, rolling back only the ones that fail
+    for (const id of ids) {
+      updateStickyNoteAction(id, { visible: false }).then((r) => {
+        if (!r.success) {
+          set((s) => ({
+            notes: s.notes.map((n) => (n.id === id ? { ...n, visible: true } : n)),
+          }));
+        }
+      });
+    }
   },
 
   toggleMinimized(id) {

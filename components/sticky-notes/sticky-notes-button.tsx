@@ -8,10 +8,11 @@ import { useStickyNotesStore, NOTE_COLORS } from '@/lib/stores/sticky-notes-stor
 import { cn } from '@/lib/utils';
 
 export default function StickyNotesButton() {
-  const { notes, addNote, toggleVisible, deleteNote } = useStickyNotesStore();
+  const { notes, addNote, toggleVisible, hideAll, deleteNote } = useStickyNotesStore();
   const [open, setOpen] = useState(false);
 
   const count = notes.length;
+  const visibleCount = notes.filter((n) => n.visible).length;
   const sortedNotes = [...notes].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
@@ -55,15 +56,28 @@ export default function StickyNotesButton() {
         {/* Panel header */}
         <div className="flex items-center justify-between px-3 py-2.5 border-b">
           <span className="text-sm font-medium">Notas adesivas</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 gap-1 text-xs"
-            onClick={handleNewNote}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Nova nota
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              title="Ocultar todas as notas abertas"
+              disabled={visibleCount === 0}
+              onClick={hideAll}
+            >
+              <EyeOff className="h-3.5 w-3.5" />
+              Ocultar todas
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              onClick={handleNewNote}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Nova nota
+            </Button>
+          </div>
         </div>
 
         {/* Notes list */}
