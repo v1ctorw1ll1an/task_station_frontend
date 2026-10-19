@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Building2,
+  Plug,
   Megaphone,
   Users,
   Wallet,
@@ -20,6 +21,7 @@ const navItems = [
   { href: '/superadmin/usuarios', label: 'Usuários', icon: Users },
   { href: '/superadmin/financeiro', label: 'Financeiro', icon: Wallet },
   { href: '/superadmin/broadcast', label: 'Comunicados', icon: Megaphone },
+  { href: '/superadmin/integracoes', label: 'Integrações', icon: Plug },
 ];
 
 interface SuperadminSidebarProps {

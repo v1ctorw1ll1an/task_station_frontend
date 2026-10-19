@@ -14,6 +14,8 @@ export interface GoogleCalendarStatus {
   allowed: boolean;
   /** Tem ao menos uma empresa com plano elegível. */
   canConnect: boolean;
+  /** Direção global definida pelo superusuário. */
+  direction: 'both' | 'google_to_app' | 'app_to_google';
   connection: {
     status: 'active' | 'revoked' | 'error';
     googleEmail: string;

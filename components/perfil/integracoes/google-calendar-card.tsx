@@ -40,6 +40,14 @@ const STATUS_LABEL: Record<string, string> = {
   canceled: 'cancelada',
 };
 
+/** Aviso quando o superusuário restringiu a sincronização a um sentido só. */
+const DIRECTION_NOTICE: Record<string, string> = {
+  google_to_app:
+    'No momento a sincronização está só no sentido Google → TaskDY: o que você cria ou muda no TaskDY não vai para o Google.',
+  app_to_google:
+    'No momento a sincronização está só no sentido TaskDY → Google: mudanças feitas no Google não entram no TaskDY.',
+};
+
 const RETURN_MESSAGES: Record<string, { type: 'ok' | 'err'; text: string }> = {
   connected: {
     type: 'ok',
@@ -235,6 +243,13 @@ export function GoogleCalendarCard() {
                   Sincronizar agora
                 </Button>
               </div>
+
+              {DIRECTION_NOTICE[status.direction] && (
+                <p className="flex items-start gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  {DIRECTION_NOTICE[status.direction]}
+                </p>
+              )}
 
               {conn.lastError && (
                 <p className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-300">
