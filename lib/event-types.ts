@@ -45,4 +45,6 @@ export interface CalendarEventOccurrence {
   externalReadOnly: boolean;
   /** Importado do Google Agenda. */
   fromGoogle: boolean;
+  /** Escolha do dono: false = não vai para o Google Agenda dele. */
+  syncToGoogle: boolean;
 }

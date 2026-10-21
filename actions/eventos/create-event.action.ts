@@ -90,6 +90,7 @@ export async function createEventAction(
   if (attendeeUserIds && attendeeUserIds.length > 0) body.attendeeUserIds = attendeeUserIds;
   if (guestEmails && guestEmails.length > 0) body.guestEmails = guestEmails;
   if (reminders && reminders.length > 0) body.reminders = reminders;
+  if (formData.get('syncToGoogle') === 'false') body.syncToGoogle = false;
 
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/me/calendar-events`, {

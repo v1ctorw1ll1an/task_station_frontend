@@ -8,6 +8,8 @@ import { TimePicker } from '@/components/ui/time-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { HelpCircle } from 'lucide-react';
 import { EventColorPicker, EVENT_COLOR_PRESETS } from './event-color-picker';
 import { RecurrencePicker } from './recurrence-picker';
 
@@ -93,6 +95,26 @@ export function buildInitialFormState(occurrence?: {
 // Reexport para os diálogos de evento que já importam daqui.
 export { combineDateAndTime };
 
+/** "?" ao lado do rótulo: a explicação do campo só aparece no hover/foco, poupando altura. */
+export function FieldHint({ children }: { children: React.ReactNode }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex text-muted-foreground/70 hover:text-foreground"
+            aria-label="Ajuda"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-64">{children}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 interface EventFormFieldsProps {
   state: EventFormState;
   onChange: (state: EventFormState) => void;
@@ -145,7 +167,7 @@ export function EventFormFields({ state, onChange }: EventFormFieldsProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="space-y-1.5">
         <Label htmlFor="event-title">Título</Label>
         <Input
@@ -225,7 +247,7 @@ export function EventFormFields({ state, onChange }: EventFormFieldsProps) {
           id="event-description"
           value={state.description}
           onChange={(e) => patch({ description: e.target.value })}
-          rows={3}
+          rows={2}
           className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
           placeholder="Detalhes do evento"
         />
@@ -237,12 +259,14 @@ export function EventFormFields({ state, onChange }: EventFormFieldsProps) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="event-guest-email" className="text-xs text-muted-foreground">
-          Convidados por email
-        </Label>
-        <p className="text-[11px] text-muted-foreground/80">
-          Recebem notificação ao criar, atualizar ou cancelar, e os lembretes do evento.
-        </p>
+        <div className="flex items-center gap-1">
+          <Label htmlFor="event-guest-email" className="text-xs text-muted-foreground">
+            Convidados por email
+          </Label>
+          <FieldHint>
+            Recebem notificação ao criar, atualizar ou cancelar, e os lembretes do evento.
+          </FieldHint>
+        </div>
         <div className="flex flex-wrap gap-1.5">
           {state.guestEmails.map((email) => (
             <span
@@ -283,11 +307,13 @@ export function EventFormFields({ state, onChange }: EventFormFieldsProps) {
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">Lembretes</Label>
-        <p className="text-[11px] text-muted-foreground/80">
-          Disparam por email, toast no app e notificação do sistema operacional —
-          conforme suas preferências em Perfil → Notificações.
-        </p>
+        <div className="flex items-center gap-1">
+          <Label className="text-xs text-muted-foreground">Lembretes</Label>
+          <FieldHint>
+            Disparam por email, toast no app e notificação do sistema operacional — conforme
+            suas preferências em Perfil → Notificações.
+          </FieldHint>
+        </div>
         <div className="flex flex-wrap gap-2">
           {REMINDER_OPTIONS.map((opt) => {
             const active = state.reminders.includes(opt.minutes);

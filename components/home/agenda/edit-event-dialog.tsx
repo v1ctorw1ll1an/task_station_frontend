@@ -32,6 +32,7 @@ import {
   combineDateAndTime,
   type EventFormState,
 } from './event-form-fields';
+import { GoogleSyncToggle, useGoogleSyncAvailability } from './google-sync-toggle';
 
 interface EditEventDialogProps {
   occurrence: CalendarEventOccurrence;
@@ -57,6 +58,9 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
       guestEmails: occurrence.guestEmails,
     }),
   );
+  // Parte da escolha salva no evento; com a sincronização inativa, aparece desligado.
+  const googleSync = useGoogleSyncAvailability(open);
+  const [syncToGoogle, setSyncToGoogle] = useState(occurrence.syncToGoogle);
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   const [saveScope, setSaveScope] = useState<'single' | 'all'>('all');
@@ -149,7 +153,7 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
           </DialogHeader>
 
           {canEdit ? (
-            <form action={handleSubmit} className="space-y-4">
+            <form action={handleSubmit} className="space-y-3">
               <input type="hidden" name="eventId" value={occurrence.eventId} />
               <input type="hidden" name="companyId" value={companyId} />
               {/* scope/originalDate/rrule são ajustados em confirmSave conforme a
@@ -184,12 +188,27 @@ export function EditEventDialog({ occurrence, companyId, open, onOpenChange }: E
               <input type="hidden" name="rrule" value={formState.rrule} />
               <input type="hidden" name="reminders" value={formState.reminders.join(',')} />
               <input type="hidden" name="guestEmails" value={formState.guestEmails.join(',')} />
+              {/* Sem a sincronização ativa o toggle fica travado: não mexe na escolha salva. */}
+              {googleSync.active && (
+                <input type="hidden" name="syncToGoogle" value={String(syncToGoogle)} />
+              )}
+
+              {googleSync.available && (
+                <div className="flex justify-end">
+                  <GoogleSyncToggle
+                    availability={googleSync}
+                    checked={syncToGoogle}
+                    onCheckedChange={setSyncToGoogle}
+                  />
+                </div>
+              )}
 
               <EventFormFields state={formState} onChange={setFormState} />
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <DialogFooter className="gap-2 sm:justify-between">
+              {/* Rodapé grudado no fim do diálogo: "Salvar" visível mesmo em telas baixas. */}
+              <DialogFooter className="sticky -bottom-6 -mx-6 -mb-6 gap-2 border-t bg-background px-6 py-3 sm:justify-between">
                 <Button
                   type="button"
                   variant="ghost"

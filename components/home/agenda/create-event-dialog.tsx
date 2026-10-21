@@ -16,10 +16,12 @@ import { createEventAction } from '@/actions/eventos/create-event.action';
 import { notifyAgendaChanged } from '@/lib/agenda-events';
 import {
   EventFormFields,
+  FieldHint,
   buildInitialFormState,
   combineDateAndTime,
   type EventFormState,
 } from './event-form-fields';
+import { GoogleSyncToggle, useGoogleSyncAvailability } from './google-sync-toggle';
 
 interface CreateEventDialogProps {
   companyId: string;
@@ -60,6 +62,9 @@ export function CreateEventDialog({
   const [scope, setScope] = useState<'company' | 'personal'>('company');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Padrão: ligado com a sincronização ativa em Integrações; desligado caso contrário.
+  const googleSync = useGoogleSyncAvailability(open);
+  const [syncToGoogle, setSyncToGoogle] = useState(true);
 
   function setOpen(next: boolean) {
     if (isControlled) {
@@ -80,6 +85,7 @@ export function CreateEventDialog({
     if (open) {
       setFormState(buildStateForDate(defaultDate));
       setScope('company');
+      setSyncToGoogle(true);
       setError(null);
     }
   }
@@ -116,7 +122,7 @@ export function CreateEventDialog({
         <DialogHeader>
           <DialogTitle>Novo evento</DialogTitle>
         </DialogHeader>
-        <form action={handleSubmit} className="space-y-4">
+        <form action={handleSubmit} className="space-y-3">
           {scope === 'company' && <input type="hidden" name="companyId" value={companyId} />}
           <input type="hidden" name="title" value={formState.title} />
           <input type="hidden" name="description" value={formState.description} />
@@ -147,43 +153,57 @@ export function CreateEventDialog({
           />
           <input type="hidden" name="reminders" value={formState.reminders.join(',')} />
           <input type="hidden" name="guestEmails" value={formState.guestEmails.join(',')} />
+          {/* Só envia a escolha com a sincronização ativa: sem ela o evento fica no padrão
+              e entra no Google se a integração for ligada depois. */}
+          {googleSync.active && (
+            <input type="hidden" name="syncToGoogle" value={String(syncToGoogle)} />
+          )}
 
-          <div className="space-y-1.5">
-            <div className="inline-flex rounded-md border p-0.5" role="radiogroup" aria-label="Agenda">
-              {(
-                [
-                  ['company', 'Empresa atual'],
-                  ['personal', 'Pessoal'],
-                ] as const
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={scope === value}
-                  onClick={() => setScope(value)}
-                  className={
-                    scope === value
-                      ? 'rounded px-3 py-1 text-xs font-medium bg-primary text-primary-foreground'
-                      : 'rounded px-3 py-1 text-xs text-muted-foreground hover:text-foreground'
-                  }
-                >
-                  {label}
-                </button>
-              ))}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5">
+              <div className="inline-flex rounded-md border p-0.5" role="radiogroup" aria-label="Agenda">
+                {(
+                  [
+                    ['company', 'Empresa atual'],
+                    ['personal', 'Pessoal'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={scope === value}
+                    onClick={() => setScope(value)}
+                    className={
+                      scope === value
+                        ? 'rounded px-3 py-1 text-xs font-medium bg-primary text-primary-foreground'
+                        : 'rounded px-3 py-1 text-xs text-muted-foreground hover:text-foreground'
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <FieldHint>
+                Empresa atual: aparece só na agenda desta empresa. Pessoal: aparece na sua agenda
+                em todas as empresas.
+              </FieldHint>
             </div>
-            {scope === 'personal' && (
-              <p className="text-xs text-muted-foreground">
-                Evento pessoal: aparece na sua agenda em todas as empresas.
-              </p>
-            )}
+
+            <GoogleSyncToggle
+              availability={googleSync}
+              checked={syncToGoogle}
+              onCheckedChange={setSyncToGoogle}
+            />
           </div>
 
           <EventFormFields state={formState} onChange={setFormState} />
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <DialogFooter className="gap-2">
+          {/* Rodapé grudado no fim do diálogo: o "Criar evento" fica visível mesmo em
+              telas baixas, sem precisar rolar o formulário inteiro. */}
+          <DialogFooter className="sticky -bottom-6 -mx-6 -mb-6 gap-2 border-t bg-background px-6 py-3">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>

@@ -46,6 +46,8 @@ export async function updateEventAction(
   if (typeof endsAt === 'string') body.endsAt = endsAt;
   if (typeof timezone === 'string' && timezone.length > 0) body.timezone = timezone;
   if (allDayRaw !== null) body.allDay = allDayRaw === 'true';
+  const syncToGoogleRaw = formData.get('syncToGoogle');
+  if (syncToGoogleRaw !== null) body.syncToGoogle = syncToGoogleRaw === 'true';
   if (typeof rruleRaw === 'string') body.rrule = rruleRaw.length > 0 ? rruleRaw : null;
   if (typeof attendeeIdsRaw === 'string') {
     body.attendeeUserIds = attendeeIdsRaw.length > 0 ? attendeeIdsRaw.split(',').filter(Boolean) : [];
